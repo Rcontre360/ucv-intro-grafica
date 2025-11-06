@@ -63,21 +63,29 @@ public:
         }
     }
 
+    void drawLine(pair<int,int> a, pair<int,int> b){
+        int den = (b.first - a.first);
+        float m = den==0? 0 : (float)(b.second - a.second) / (float)den;
+        float B = (float)a.second - m*(float)a.first;
+
+        for (int i = std::min(a.first,b.first); i < std::max(a.first,b.first); ++i)
+        {
+            int y = (int)std::round(m*(float)i+B);
+            RGBA color = { (unsigned char)(line_color[0]), (unsigned char)(line_color[1]), (unsigned char)(line_color[2]), 255 };
+            setPixel(i, y, color);
+        }
+    }
+
     void update()
     {
         std::fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
+
+        for (auto x:lines)
+            drawLine(x.first,x.second);
+
         if ((mouseButtonsDown[0] || mouseButtonsDown[1] || mouseButtonsDown[2]) && m_x1 > -1 && m_y1 > -1)
         {
-            int den = (m_x1 - m_x0);
-            float m = den==0? 0 : (float)(m_y1 - m_y0) / (float)den;
-            float b = (float)m_y0 - m*(float)m_x0;
-
-            for (int i = std::min(m_x0,m_x1); i < std::max(m_x0,m_x1); ++i)
-            {
-                int y = (int)std::round(m*(float)i+b);
-                RGBA color = { (unsigned char)(line_color[0]), (unsigned char)(line_color[1]), (unsigned char)(line_color[2]), 255 };
-                setPixel(i, y, color);
-            }
+            drawLine({m_x0, m_y0}, {m_x1,m_y1});
         }
     }
 
@@ -105,16 +113,16 @@ public:
                 mouseButtonsDown[button] = true;
                 m_x0 = xpos;
                 m_y0 = ypos;
-                std::cout << "Mouse button " << button << " pressed at position (" << xpos << ", " << ypos << ")\n";
+                std::cout << "Mouse button " << button << " pressed at position (" << m_x0 << ", " << m_y0 << ")\n";
             }
             else if (action == GLFW_RELEASE)
             {
 
                 mouseButtonsDown[button] = false;
-                LINE cur_line = { {m_x0,m_y0}, {m_x1,m_y1} };
-                m_x1, m_y1 = -1;
+                LINE cur_line = { {m_x0,m_y0}, {xpos,ypos} };
                 lines.push_back(cur_line);
-                std::cout << "Mouse button " << button << " released at position (" << xpos << ", " << ypos << ")\n";
+                std::cout << "Mouse button " << button << " released at position (" << m_x1 << ", " << m_y1 << ")\n";
+                m_x1, m_y1 = -1;
             }
         }
     }
