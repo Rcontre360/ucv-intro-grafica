@@ -86,7 +86,7 @@ bool CPixelRender::setup()
 void CPixelRender::setPixel(int x, int y, const RGBA& color) 
 {
     if (x < 0 || x >= width || y < 0 || y >= height) return;
-    m_buffer[(height - 1 - y) * width + x] = color;
+    m_buffer[y * width + x] = color;
 }
 
 void CPixelRender::update()
