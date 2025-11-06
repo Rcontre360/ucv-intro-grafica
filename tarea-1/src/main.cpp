@@ -12,7 +12,7 @@ using LINE = pair<pair<int,int>, pair<int,int>>;
 class CMyTest : public CPixelRender
 {
 protected:
-    float line_color[3] = {1.0f, 0.5f, 0.0f};
+    float line_color[3] = {255,255,255};
     bool use_bresenham = true;
     int frames_by_second = 0;
     int m_x0 = -1, m_y0 = -1, m_x1 = -1, m_y1 = -1;
@@ -38,9 +38,9 @@ public:
         ImGui::Begin("Control Panel");
         ImGui::SetWindowFontScale(1.5f);
 
-        ImGui::SliderFloat("R", &line_color[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("G", &line_color[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("B", &line_color[2], 0.0f, 1.0f);
+        ImGui::SliderFloat("R", &line_color[0], 0, 255);
+        ImGui::SliderFloat("G", &line_color[1], 0, 255);
+        ImGui::SliderFloat("B", &line_color[2], 0, 255);
 
         if (ImGui::Checkbox("Use Bresenham", &use_bresenham)) {
             printf("Wireframe toggled: %s\n", use_bresenham ? "true" : "false");
@@ -72,10 +72,10 @@ public:
             float m = den==0? 0 : (float)(m_y1 - m_y0) / (float)den;
             float b = (float)m_y0 - m*(float)m_x0;
 
-            for (int i = m_x0; i < m_x1; ++i)
+            for (int i = std::min(m_x0,m_x1); i < std::max(m_x0,m_x1); ++i)
             {
                 int y = (int)std::round(m*(float)i+b);
-                RGBA color = { (unsigned char)(255), (unsigned char)(255), (unsigned char)(255), 255 };
+                RGBA color = { (unsigned char)(line_color[0]), (unsigned char)(line_color[1]), (unsigned char)(line_color[2]), 255 };
                 setPixel(i, y, color);
             }
         }
