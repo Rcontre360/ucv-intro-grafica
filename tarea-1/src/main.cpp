@@ -72,7 +72,7 @@ public:
     }
 
     void drawLineWithBresenham(pair<int,int> a, pair<int,int> b, RGBA color){
-        int dx,dy,x,y,d,inc_e,inc_ne, x_inc;
+        int dx,dy,x,y,d,inc_e,inc_ne;
         dx = b.first - a.first;
         dy = b.second - a.second;
         d = dx - 2*dy;
@@ -81,26 +81,27 @@ public:
         y = a.second;
         setPixel(x,y,color);
 
-        if (dx < 0){
+        int x_inc = dx < 0 ? -1 : 1;
+        int y_inc = dy < 0 ? -1 : 1;
+
+        if (dx < 0)
             dx *= -1;
-            x_inc=-1;
-        } else {
-            x_inc=1;
-        }
+        if (dy < 0)
+            dy *= -1;
 
         int by_x = dx >= dy;
 
         inc_e = -2*(by_x ? dy : dx);
         inc_ne = 2*(dx-dy) * (by_x ? 1 : -1);
 
-        while (y < b.second){
+        while (x > b.first || x < b.first){
             if (d <= 0){
                 d+=inc_ne;
-                by_x ? y++ : x+=x_inc;
+                by_x ? y+=y_inc : x+=x_inc;
             } else 
                 d+=inc_e;
 
-            by_x ? x+=x_inc : y++;
+            by_x ? x+=x_inc : y+=y_inc;
             setPixel(x,y,color);
         }
     }
