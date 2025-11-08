@@ -178,6 +178,7 @@ void CPixelRender::resize(int new_width, int new_height)
     // Redimensionar la textura en GPU
     glBindTexture(GL_TEXTURE_2D, m_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    update();
 }
 
 

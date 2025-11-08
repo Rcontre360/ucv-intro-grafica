@@ -1,13 +1,16 @@
 #include "PixelRender.h"
 #include <iostream>
 #include <cmath>
+#include <random>
 // std::pair
 #include <utility>
 #include <algorithm>
 
 using namespace std;
 
-struct LINE {
+typedef uniform_int_distribution<int> Dist;
+
+struct Line {
     pair<pair<int,int>, pair<int,int>> coord;
     RGBA color;
 };
@@ -15,20 +18,100 @@ struct LINE {
 class CMyTest : public CPixelRender
 {
 protected:
-    float line_color[3] = {255,255,255};
+    //current color config
+    RGBA color = {r:255, g:255, b:255};
+
+    //wether or not to use bresenham
     bool use_bresenham = true;
+
+    //frames by second cache
     int frames_by_second = 0;
+
+    //coordenades for each line
     int m_x0 = -1, m_y0 = -1, m_x1 = -1, m_y1 = -1;
 
-    vector<LINE> lines;
+    //amount or random lines
+    int RAND_LINES = 1000;
 
+    //lines created
+    vector<Line> lines;
 
-    RGBA get_color(){
-        return { (unsigned char)(line_color[0]), (unsigned char)(line_color[1]), (unsigned char)(line_color[2]), 255 };
+    // rand num generation
+    std::mt19937 rand_gen;
+
+    void drawLineWithBresenham(pair<int,int> a, pair<int,int> b, RGBA color){
+        int dx = b.first - a.first;
+        int dy = b.second - a.second;
+        int d = dx - 2*dy;
+        int x_inc = dx < 0 ? -1 : 1;
+        int y_inc = dy < 0 ? -1 : 1;
+
+        if (dx < 0)
+            dx *= -1;
+        if (dy < 0)
+            dy *= -1;
+
+        bool run_on_x = dx >= dy;
+        int inc_e = -2*(run_on_x ? dy : dx);
+        int inc_ne = 2*(dx-dy) * (run_on_x ? 1 : -1);
+
+        int x = a.first;
+        int y = a.second;
+        setPixel(x,y,color);
+
+        while (x > b.first || x < b.first){
+            if (d <= 0){
+                d+=inc_ne;
+                run_on_x ? y+=y_inc : x+=x_inc;
+            } else 
+                d+=inc_e;
+
+            run_on_x ? x+=x_inc : y+=y_inc;
+            setPixel(x,y,color);
+        }
+    }
+
+    void drawLineWithReal(pair<int,int> a, pair<int,int> b, RGBA color){
+        int den = (b.first - a.first);
+        float m = den==0? 0 : (float)(b.second - a.second) / (float)den;
+        float B = (float)a.second - m*(float)a.first;
+
+        for (int i = std::min(a.first,b.first); i < std::max(a.first,b.first); ++i)
+        {
+            int y = (int)std::round(m*(float)i+B);
+            setPixel(i, y, color);
+        }
+    }
+
+    RGBA generateRandomColor(){
+        Dist c_dist(0, 255);
+        return { 
+            (unsigned char)(static_cast<unsigned char>(c_dist(rand_gen))), 
+            (unsigned char)(static_cast<unsigned char>(c_dist(rand_gen))), 
+            (unsigned char)(static_cast<unsigned char>(c_dist(rand_gen))), 
+            255 
+        };
+    }
+
+    pair<int,int> generateRandomPoint(Dist x_dist, Dist y_dist){
+        return make_pair(x_dist(rand_gen), y_dist(rand_gen));
+    }
+
+    Line generateRandomLine(Dist x_dist, Dist y_dist){
+        return {
+            { 
+                generateRandomPoint(x_dist, y_dist), 
+                generateRandomPoint(x_dist, y_dist) 
+            },
+            generateRandomColor()    
+        };
     }
 
 public:
-    CMyTest() {};
+    CMyTest() {
+        random_device rd;
+        rand_gen.seed(rd());
+    };
     ~CMyTest() {};
 
     void drawInterface()
@@ -46,17 +129,18 @@ public:
         ImGui::Begin("Control Panel");
         ImGui::SetWindowFontScale(1.5f);
 
-        ImGui::SliderFloat("R", &line_color[0], 0, 255);
-        ImGui::SliderFloat("G", &line_color[1], 0, 255);
-        ImGui::SliderFloat("B", &line_color[2], 0, 255);
+        float temp_color[3] = {(float)color.r,(float)color.g,(float)color.b};
 
-        if (ImGui::Checkbox("Use Bresenham", &use_bresenham)) {
-            printf("Wireframe toggled: %s\n", use_bresenham ? "true" : "false");
-        }
+        ImGui::SliderFloat("R", &temp_color[0], 0, 255);
+        ImGui::SliderFloat("G", &temp_color[1], 0, 255);
+        ImGui::SliderFloat("B", &temp_color[2], 0, 255);
 
-        if (ImGui::Button("Generate random", ImVec2(200,35))) {
-            printf("Button 'Recalculate Data' pressed!\n");
-        }
+        color = { (unsigned char)(temp_color[0]), (unsigned char)(temp_color[1]), (unsigned char)(temp_color[2]), 255 };
+
+        ImGui::Checkbox("Use Bresenham", &use_bresenham);
+
+        if (ImGui::Button("Generate random", ImVec2(200,35)))
+            drawRandomLines(RAND_LINES);
         
         ImGui::End();
         ImGui::Render();
@@ -71,51 +155,10 @@ public:
         }
     }
 
-    void drawLineWithBresenham(pair<int,int> a, pair<int,int> b, RGBA color){
-        int dx,dy,x,y,d,inc_e,inc_ne;
-        dx = b.first - a.first;
-        dy = b.second - a.second;
-        d = dx - 2*dy;
-
-        x = a.first;
-        y = a.second;
-        setPixel(x,y,color);
-
-        int x_inc = dx < 0 ? -1 : 1;
-        int y_inc = dy < 0 ? -1 : 1;
-
-        if (dx < 0)
-            dx *= -1;
-        if (dy < 0)
-            dy *= -1;
-
-        int by_x = dx >= dy;
-
-        inc_e = -2*(by_x ? dy : dx);
-        inc_ne = 2*(dx-dy) * (by_x ? 1 : -1);
-
-        while (x > b.first || x < b.first){
-            if (d <= 0){
-                d+=inc_ne;
-                by_x ? y+=y_inc : x+=x_inc;
-            } else 
-                d+=inc_e;
-
-            by_x ? x+=x_inc : y+=y_inc;
-            setPixel(x,y,color);
-        }
-    }
-
-    void drawLineWithReal(pair<int,int> a, pair<int,int> b, RGBA color){
-        int den = (b.first - a.first);
-        float m = den==0? 0 : (float)(b.second - a.second) / (float)den;
-        float B = (float)a.second - m*(float)a.first;
-
-        for (int i = std::min(a.first,b.first); i < std::max(a.first,b.first); ++i)
-        {
-            int y = (int)std::round(m*(float)i+B);
-            setPixel(i, y, color);
-        }
+    void drawRandomLines(int amount){
+        Dist x_dist = Dist(0, width), y_dist = Dist(0,height);
+        for (int x = 0; x < amount; x++)
+            lines.push_back(generateRandomLine(x_dist,y_dist));
     }
 
     void drawLine(pair<int,int> a, pair<int,int> b, RGBA color){
@@ -127,20 +170,15 @@ public:
 
     void update()
     {
+        std::fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
 
-        if ((mouseButtonsDown[0] || mouseButtonsDown[1] || mouseButtonsDown[2]) && m_x1 > -1 && m_y1 > -1)
-        {
-            std::fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
-
-            RGBA color = get_color();
-            for (auto x:lines){
-                auto coord = x.coord;
-                RGBA color = x.color;
-                drawLine(coord.first,coord.second, color);
-            }
-
-            drawLine({m_x0, m_y0}, {m_x1,m_y1}, color);
+        for (auto x:lines){
+            auto coord = x.coord;
+            drawLine(coord.first,coord.second, x.color);
         }
+
+        if (mouseButtonsDown[0] && m_x1 > -1 && m_y1 > -1)
+            drawLine({m_x0, m_y0}, {m_x1,m_y1}, color);
     }
 
     void onKey(int key, int scancode, int action, int mods) 
@@ -174,9 +212,9 @@ public:
             {
 
                 mouseButtonsDown[button] = false;
-                LINE cur_line = {
+                Line cur_line = {
                     { {m_x0,m_y0}, {xpos,ypos} },
-                    get_color()    
+                    color
                 };
                 lines.push_back(cur_line);
                 std::cout << "Mouse button " << button << " released at position (" << m_x1 << ", " << m_y1 << ")\n";
