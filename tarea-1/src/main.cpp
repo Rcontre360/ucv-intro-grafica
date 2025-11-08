@@ -37,7 +37,7 @@ protected:
     vector<Line> lines;
 
     // rand num generation
-    std::mt19937 rand_gen;
+    mt19937 rand_gen;
 
     void drawLineWithBresenham(pair<int,int> a, pair<int,int> b, RGBA color){
         int dx = b.first - a.first;
@@ -76,10 +76,19 @@ protected:
         float m = den==0? 0 : (float)(b.second - a.second) / (float)den;
         float B = (float)a.second - m*(float)a.first;
 
-        for (int i = std::min(a.first,b.first); i < std::max(a.first,b.first); ++i)
+        int dx = abs(b.first - a.first), dy = abs(b.second - a.second);
+        int start = dx > dy ? min(a.first,b.first) : min(a.second,b.second);
+        int end = dx > dy ? max(a.first,b.first) : max(a.second,b.second);
+
+        for (int i = start; i < end; ++i)
         {
-            int y = (int)std::round(m*(float)i+B);
-            setPixel(i, y, color);
+            if (dx > dy){
+                int y = (int)round(m*(float)i+B);
+                setPixel(i, y, color);
+            } else {
+                int x = (int)round(((float)i-B) / m);
+                setPixel(x, i, color);
+            }
         }
     }
 
@@ -170,7 +179,7 @@ public:
 
     void update()
     {
-        std::fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
+        fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
 
         for (auto x:lines){
             auto coord = x.coord;
@@ -185,12 +194,12 @@ public:
     {
         if (action == GLFW_PRESS)
         {
-            std::cout << "Key " << key << " pressed\n";
+            cout << "Key " << key << " pressed\n";
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(m_window, GLFW_TRUE);
         }
         else if (action == GLFW_RELEASE)
-            std::cout << "Key " << key << " released\n";
+            cout << "Key " << key << " released\n";
     }
 
 
@@ -206,7 +215,7 @@ public:
                 mouseButtonsDown[button] = true;
                 m_x0 = xpos;
                 m_y0 = ypos;
-                std::cout << "Mouse button " << button << " pressed at position (" << m_x0 << ", " << m_y0 << ")\n";
+                cout << "Mouse button " << button << " pressed at position (" << m_x0 << ", " << m_y0 << ")\n";
             }
             else if (action == GLFW_RELEASE)
             {
@@ -217,7 +226,7 @@ public:
                     color
                 };
                 lines.push_back(cur_line);
-                std::cout << "Mouse button " << button << " released at position (" << m_x1 << ", " << m_y1 << ")\n";
+                cout << "Mouse button " << button << " released at position (" << m_x1 << ", " << m_y1 << ")\n";
                 m_x1 = -1; 
                 m_y1 = -1;
             }
