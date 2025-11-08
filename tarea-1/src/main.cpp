@@ -205,20 +205,21 @@ public:
 
     void update()
     {
+        //Performance improvement to only render when the UI is updated
+        //if (mouseButtonsDown[0] && m_x1 > -1 && m_y1 > -1){
         fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
 
         for (auto x:lines){
             drawLine(x);
         }
 
-        if (mouseButtonsDown[0] && m_x1 > -1 && m_y1 > -1){
-            Line line = {
-                { {m_x0,m_y0}, {m_x1,m_y1} },
-                color,
-                thickness
-            };
-            drawLine(line);
-        }
+        Line line = {
+            { {m_x0,m_y0}, {m_x1,m_y1} },
+            color,
+            thickness
+        };
+        drawLine(line);
+        //}
     }
 
     void onKey(int key, int scancode, int action, int mods) 
