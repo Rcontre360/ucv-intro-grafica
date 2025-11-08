@@ -13,6 +13,7 @@ typedef uniform_int_distribution<int> Dist;
 struct Line {
     pair<pair<int,int>, pair<int,int>> coord;
     RGBA color;
+    int thickness;
 };
 
 class CMyTest : public CPixelRender
@@ -26,6 +27,9 @@ protected:
 
     //frames by second cache
     int frames_by_second = 0;
+
+    //special value for thickness
+    int thickness = 0;
 
     //coordenades for each line
     int m_x0 = -1, m_y0 = -1, m_x1 = -1, m_y1 = -1;
@@ -134,15 +138,16 @@ public:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::SetNextWindowSize(ImVec2(350, 200), ImGuiCond_Once); // Adjusted size for new controls
+        ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_Once); // Adjusted size for new controls
         ImGui::Begin("Control Panel");
         ImGui::SetWindowFontScale(1.5f);
 
-        float temp_color[3] = {(float)color.r,(float)color.g,(float)color.b};
+        int temp_color[3] = {(int)color.r,(int)color.g,(int)color.b};
 
-        ImGui::SliderFloat("R", &temp_color[0], 0, 255);
-        ImGui::SliderFloat("G", &temp_color[1], 0, 255);
-        ImGui::SliderFloat("B", &temp_color[2], 0, 255);
+        ImGui::SliderInt("R", &temp_color[0], 0, 255);
+        ImGui::SliderInt("G", &temp_color[1], 0, 255);
+        ImGui::SliderInt("B", &temp_color[2], 0, 255);
+        ImGui::SliderInt("Thickness", &thickness, 0, 10);
 
         color = { (unsigned char)(temp_color[0]), (unsigned char)(temp_color[1]), (unsigned char)(temp_color[2]), 255 };
 
@@ -150,6 +155,9 @@ public:
 
         if (ImGui::Button("Generate random", ImVec2(200,35)))
             drawRandomLines(RAND_LINES);
+        if (ImGui::Button("Clear", ImVec2(200,35)))
+            lines.clear();
+
         
         ImGui::End();
         ImGui::Render();
@@ -170,11 +178,29 @@ public:
             lines.push_back(generateRandomLine(x_dist,y_dist));
     }
 
-    void drawLine(pair<int,int> a, pair<int,int> b, RGBA color){
-        if (use_bresenham)
-            drawLineWithBresenham(a,b,color);
-        else
-            drawLineWithReal(a,b,color);
+    void drawLine(Line line){
+        auto a = line.coord.first;
+        auto b = line.coord.second;
+        auto color = line.color;
+
+        // we draw the lines
+        drawLineWithBresenham(a,b,color);
+        drawLineWithReal(a,b,color);
+
+        // only if thickness is above 0
+        for (int i=0; i < line.thickness; i++){
+            if (use_bresenham){
+                drawLineWithBresenham(make_pair(a.first - i,a.second),make_pair(b.first - i, b.second),color);
+                drawLineWithBresenham(make_pair(a.first,a.second - i),make_pair(b.first,b.second - i),color);
+                drawLineWithBresenham(make_pair(a.first + i,a.second),make_pair(b.first + i, b.second),color);
+                drawLineWithBresenham(make_pair(a.first,a.second + i),make_pair(b.first,b.second + i),color);
+            }else{
+                drawLineWithReal(make_pair(a.first - i,a.second),make_pair(b.first - i, b.second),color);
+                drawLineWithReal(make_pair(a.first,a.second - i),make_pair(b.first,b.second - i),color);
+                drawLineWithReal(make_pair(a.first + i,a.second),make_pair(b.first + i, b.second),color);
+                drawLineWithReal(make_pair(a.first,a.second + i),make_pair(b.first,b.second + i),color);
+            }
+        }
     }
 
     void update()
@@ -182,12 +208,17 @@ public:
         fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
 
         for (auto x:lines){
-            auto coord = x.coord;
-            drawLine(coord.first,coord.second, x.color);
+            drawLine(x);
         }
 
-        if (mouseButtonsDown[0] && m_x1 > -1 && m_y1 > -1)
-            drawLine({m_x0, m_y0}, {m_x1,m_y1}, color);
+        if (mouseButtonsDown[0] && m_x1 > -1 && m_y1 > -1){
+            Line line = {
+                { {m_x0,m_y0}, {m_x1,m_y1} },
+                color,
+                thickness
+            };
+            drawLine(line);
+        }
     }
 
     void onKey(int key, int scancode, int action, int mods) 
@@ -223,7 +254,8 @@ public:
                 mouseButtonsDown[button] = false;
                 Line cur_line = {
                     { {m_x0,m_y0}, {xpos,ypos} },
-                    color
+                    color,
+                    thickness
                 };
                 lines.push_back(cur_line);
                 cout << "Mouse button " << button << " released at position (" << m_x1 << ", " << m_y1 << ")\n";
