@@ -158,8 +158,6 @@ public:
         if (ImGui::Button("Clear", ImVec2(200,35)))
             lines.clear();
 
-        printf("LINES: %i\n",lines.size());
-        
         ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -184,9 +182,10 @@ public:
         auto b = line.coord.second;
         auto color = line.color;
 
-        // we draw the lines
-        drawLineWithBresenham(a,b,color);
-        drawLineWithReal(a,b,color);
+        if (use_bresenham)
+            drawLineWithBresenham(a,b,color);
+        else
+            drawLineWithReal(a,b,color);
 
         // only if thickness is above 0
         for (int i=0; i < line.thickness; i++){
