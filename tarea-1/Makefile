@@ -22,7 +22,7 @@ INCLUDES = -I./include \
 LIBS = -lglfw -lGL -lGLU
 
 # Output executable name
-TARGET = Proyecto1
+TARGET = tarea-1
 
 # Directory for intermediate object files
 OBJ_DIR = obj

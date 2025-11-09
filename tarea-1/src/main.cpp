@@ -158,6 +158,7 @@ public:
         if (ImGui::Button("Clear", ImVec2(200,35)))
             lines.clear();
 
+        printf("LINES: %i\n",lines.size());
         
         ImGui::End();
         ImGui::Render();
@@ -206,19 +207,21 @@ public:
     void update()
     {
         //Performance improvement to only render when the UI is updated
-        //if (mouseButtonsDown[0] && m_x1 > -1 && m_y1 > -1){
+        //if (mouseButtonsDown[0]){
         fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
 
         for (auto x:lines){
             drawLine(x);
         }
 
-        Line line = {
-            { {m_x0,m_y0}, {m_x1,m_y1} },
-            color,
-            thickness
-        };
-        drawLine(line);
+        if (m_x1 > -1 && m_y1 > -1){
+            Line line = {
+                { {m_x0,m_y0}, {m_x1,m_y1} },
+                color,
+                thickness
+            };
+            drawLine(line);
+        }
         //}
     }
 
