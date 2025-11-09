@@ -20,7 +20,7 @@ class CMyTest : public CPixelRender
 {
 protected:
     //current color config
-    RGBA color = {r:255, g:255, b:255};
+    RGBA color = {255, 255, 255, 255};
 
     //wether or not to use bresenham
     bool use_bresenham = true;
