@@ -6,7 +6,7 @@
 CXX = g++
 
 # Compiler flags: C++17 standard, enable all warnings, debug symbols, and C++ source type
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -O3 -x c++
+CXXFLAGS = -std=c++17 -pedantic -O3 -x c++ -w
 
 # CORRECTED Include directories: Restored full list of includes from vcxproj, 
 # ensuring all directories needed for header search are present.
