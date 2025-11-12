@@ -25,9 +25,6 @@ protected:
     //current color config
     RGBA color = {255, 255, 255, 255};
 
-    //wether or not to use bresenham
-    bool use_bresenham = false;
-
     //frames by second cache
     int frames_by_second = 0;
 
@@ -48,6 +45,33 @@ protected:
             (unsigned char)(static_cast<unsigned char>(c_dist(rand_gen))), 
             255 
         };
+    }
+
+    Point generateRandomPoint(){
+        Dist x_dist(0, width);
+        Dist y_dist(0, height);
+
+        return { 
+            x_dist(rand_gen),
+            y_dist(rand_gen),
+        };
+    }
+
+    Ellipse generateRandomEllipse(){
+        Point a = generateRandomPoint();
+        Point b = generateRandomPoint();
+
+        return {
+            {(a.x + b.x)>>1, (a.y + b.y)>>1},
+            abs(b.x - a.x)>>1, 
+            abs(b.y - a.y)>>1,
+            color
+        };
+    }
+
+    void generateRandomEllipses(int num){
+        for (int i=0; i < num; i++)
+            ellipses.push_back(generateRandomEllipse());
     }
 
 public:
@@ -80,10 +104,6 @@ public:
 
         color = { (unsigned char)(temp_color[0]), (unsigned char)(temp_color[1]), (unsigned char)(temp_color[2]), 255 };
 
-        ImGui::Checkbox("Use Optimizd", &use_bresenham);
-
-        if (ImGui::Button("Generate random", ImVec2(200,35)))
-            printf("UNIMPLEMENTED");
         if (ImGui::Button("Clear", ImVec2(200,35)))
             ellipses.clear();
 
@@ -108,9 +128,55 @@ public:
         int y_mid = y - center.y;
 
         setPixel(x,y,c);
-        setPixel(x - 2*x_mid,y,c);
-        setPixel(x,y - 2*y_mid,c);
-        setPixel(x - 2*x_mid,y - 2*y_mid,c);
+        setPixel(x - x_mid - x_mid,y,c);
+        setPixel(x,y - y_mid - y_mid,c);
+        setPixel(x - x_mid - x_mid,y - y_mid - y_mid,c);
+    }
+
+    void drawEllipseOptimized(Ellipse e){
+        RGBA c = e.color;
+
+        int a = e.a;
+        int b = e.b;
+
+        int x = 0;
+        int y = b;
+
+        long long d = 4*b*b - 4*a*a*b + a*a;
+        long long m_x = 0; //8*b*b*x
+        long long m_y = 8*a*a*y;
+
+        int aux1 = 12*b*b;
+        int aux2 = 8*b*b;
+        int aux3 = 8*a*a;
+
+        while (m_x < m_y){
+            drawSymetric(e.center, {x,y}, c);
+
+            if (d < 0)
+                d += m_x + aux1;
+            else {
+                y--;
+                d += m_x + aux1 - m_y + 8;
+                m_y -= aux3;
+            }
+            x++;
+
+            m_x += aux2;
+        }
+
+        d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
+        while (y > 0){
+            drawSymetric(e.center, {x,y}, c);
+
+            if (d < 0){
+                d += 4*(b*b*(2*x+2)+a*a *(-2*y+3));
+                x++;
+            } else 
+                d += 4*a*a*(-2*y+3);
+
+            y--;
+        }
     }
 
     void drawEllipse(Ellipse e){
@@ -157,26 +223,20 @@ public:
 
     void update()
     {
-        //Performance improvement to only render when the UI is updated
-        if (mouseButtonsDown[0]){
         fill(m_buffer.begin(), m_buffer.end(), RGBA{ 0,0,0,0 });
 
-        //for (auto x:ellipses){
-            //drawEllipse(x);
-        //}
+        for (auto x:ellipses){
+            drawEllipseOptimized(x);
+        }
 
         if (m_x1 > -1 && m_y1 > -1){
             Ellipse e = {
-                // scaled center 2*
-                {(m_x0 + m_x1)/2, (m_y0 + m_y1)/2},
-                // scaled a
-                abs(m_x1 - m_x0)/2, 
-                // scaled b
-                abs(m_y1 - m_y0)/2,
+                {(m_x0 + m_x1)>>1, (m_y0 + m_y1)>>1},
+                abs(m_x1 - m_x0)>>1, 
+                abs(m_y1 - m_y0)>>1,
                 color
             };
-            drawEllipse(e);
-        }
+            drawEllipseOptimized(e);
         }
     }
 
@@ -211,11 +271,13 @@ public:
             {
 
                 mouseButtonsDown[button] = false;
-                //Ellipse cur_line = {
-                    //{m_x0,m_y0}, {xpos,ypos},
-                    //color
-                //};
-                //ellipses.push_back(cur_line);
+                Ellipse e = {
+                    {(m_x0 + m_x1)>>1, (m_y0 + m_y1)>>1},
+                    abs(m_x1 - m_x0)>>1, 
+                    abs(m_y1 - m_y0)>>1,
+                    color
+                };
+                ellipses.push_back(e);
                 cout << "Mouse button " << button << " released at position (" << m_x1 << ", " << m_y1 << ")\n";
                 m_x1 = -1; 
                 m_y1 = -1;
