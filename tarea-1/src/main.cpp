@@ -124,13 +124,14 @@ public:
         int x = p.x + center.x;
         int y = p.y + center.y;
 
-        int x_mid = x - center.x;
-        int y_mid = y - center.y;
+        // could just << 1 but the rule is "no multiplications"
+        int x_mid = (x - center.x) + (x - center.x);
+        int y_mid = (y - center.y) + (y - center.y);
 
         setPixel(x,y,c);
-        setPixel(x - x_mid - x_mid,y,c);
-        setPixel(x,y - y_mid - y_mid,c);
-        setPixel(x - x_mid - x_mid,y - y_mid - y_mid,c);
+        setPixel(x - x_mid,y,c);
+        setPixel(x,y - y_mid,c);
+        setPixel(x - x_mid,y - y_mid,c);
     }
 
     void drawEllipseOptimized(Ellipse e){
@@ -145,10 +146,11 @@ public:
         long long d = 4*b*b - 4*a*a*b + a*a;
         long long m_x = 0; //8*b*b*x
         long long m_y = 8*a*a*y;
+        int sum_mx = 8*b*b;
+        int sum_my = 8*a*a;
 
         int aux1 = 12*b*b;
-        int aux2 = 8*b*b;
-        int aux3 = 8*a*a;
+        int aux2 = aux1 + sum_my;
 
         while (m_x < m_y){
             drawSymetric(e.center, {x,y}, c);
@@ -156,26 +158,31 @@ public:
             if (d < 0)
                 d += m_x + aux1;
             else {
+                d += m_x - m_y + aux2;
                 y--;
-                d += m_x + aux1 - m_y + 8;
-                m_y -= aux3;
+                m_y -= sum_my;
             }
             x++;
 
-            m_x += aux2;
+            m_x += sum_mx;
         }
+
+        int aux3 = 12*a*a;
+        int aux4 = aux3 + 8;
 
         d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
         while (y > 0){
             drawSymetric(e.center, {x,y}, c);
 
             if (d < 0){
-                d += 4*(b*b*(2*x+2)+a*a *(-2*y+3));
+                d += m_x - m_y + aux4;
                 x++;
+                m_x += sum_mx;
             } else 
-                d += 4*a*a*(-2*y+3);
+                d += aux3 - m_y;
 
             y--;
+            m_y -= sum_my;
         }
     }
 
