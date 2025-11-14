@@ -9,11 +9,11 @@ INCLUDES = -I./include \
            -I./include/imgui
 LIBS = -lglfw -lGL -lGLU
 
-TARGET = tarea-1
+TARGET = test
 OBJ_DIR = obj
 
 SRCS = src/glad.c \
-       src/main.cpp \
+       src/test.cpp \
        src/PixelRender.cpp \
        include/imgui/backends/imgui_impl_glfw.cpp \
        include/imgui/backends/imgui_impl_opengl3.cpp \
@@ -52,3 +52,4 @@ clean:
 	@rm -rf $(OBJ_DIR) $(TARGET)
 
 -include $(OBJS:.o=.d)
+
