@@ -25,8 +25,7 @@ class EllipseTest : public EllipseRender
                     cnt++;
             }
 
-            printf("diff on %i points\n", cnt);
-            // must have same number of points
+            printf("RESULT %b\n",a.size() == b.size() && cnt == 0);
             return a.size() == b.size() && cnt == 0;
         }
 
@@ -39,21 +38,33 @@ class EllipseTest : public EllipseRender
         }
 
         void comparisonTest(){
+            bool success = true;
             height = 15000;
             width = 15000;
-            Ellipse e = generateRandomEllipse();
 
-            use_optimized = false;
-            drawEllipse(e);
+            for (int i=0; i < 15; i++){
+                Ellipse e = generateRandomEllipse();
 
-            use_optimized = true;
-            drawEllipse(e);
+                use_optimized = false;
+                drawEllipse(e);
 
-            printf("created %i and %i points\n", ellipse1.size(),ellipse1.size());
-            if (isSameEllipse(ellipse1, ellipse2))
+                use_optimized = true;
+                drawEllipse(e);
+
+                success &= isSameEllipse(ellipse1, ellipse2);
+
+                clear();
+            }
+
+            if (success)
                 printf("SUCCESS\n");
             else
                 printf("FAILURE\n");
+        }
+
+        void clear(){
+            ellipse1.clear();
+            ellipse2.clear();
         }
 };
 

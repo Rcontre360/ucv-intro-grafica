@@ -145,7 +145,6 @@ public:
     }
 
     void drawEllipse2(Ellipse e){
-        printf("draw ellipse2\n");
         RGBA c = e.color;
 
         int a = e.a;
@@ -155,24 +154,37 @@ public:
         int y = b;
 
         long long d = 4*b*b - 4*a*a*b + a*a;
-        long long m_x = 0; //8*b*b*x
-        long long m_y = 8*a*a*y;
-        int sum_mx = 8*b*b;
-        int sum_my = 8*a*a;
+        long long m_x = b*b*2; //2*b*b*(0 + 1)
+        long long m_y = 2*a*a*y - a*a;
+        int sum_mx = 0; //8*b*b*x
+        int sum_my = 8*a*a*b;
 
-        int aux1 = 12*b*b;
-        int aux2 = aux1 + sum_my;
+        int auxb1 = 12*b*b;
+        int auxb2 = 8*b*b;
+        int auxb3 = 2*b*b;
+        int auxa1 = 8*a*a;
+        int auxa2 = 2*a*a;
 
+        //iterations
+        //2 - 0  | 6*2
+        //4 - 8  | 4*6
+        //6 - 16 | 6*6
         drawSymetric(e.center, {x,y}, c);
-        while (b*b*2*(x+1) < a*a*(2*y-1)){
+        while (m_x < m_y){
 
             if (d < 0)
-                d += 4*(b*b*(2*x+3));
+                d += sum_mx + auxb1;
             else {
-                d += 4*b*b*(2*x+3) + 4*a*a*(-2*y+2);
+                d += sum_mx + auxb1 - sum_my + auxa1;
                 y--;
+                m_y -= auxa2;
+                sum_my -= auxa1;
             }
             x++;
+            
+            m_x += auxb3;
+            sum_mx += auxb2;
+
             drawSymetric(e.center, {x,y}, c);
         }
 
@@ -223,7 +235,6 @@ public:
     }
 
     void drawEllipse1(Ellipse e){
-        printf("draw ellipse1\n");
         RGBA c = e.color;
 
         int a = e.a;
