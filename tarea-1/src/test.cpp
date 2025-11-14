@@ -1,8 +1,7 @@
 #include "EllipseRender.h"
+#include <unordered_set>
 
 using namespace std;
-
-typedef uniform_int_distribution<int> Dist;
 
 class EllipseTest : public EllipseRender
 {
@@ -13,12 +12,22 @@ class EllipseTest : public EllipseRender
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
             // at least 1 point of difference is wrong
-            for (int i = 0; i < a.size(); i++)
-                if (a[i].x != b[i].x || a[i].y != b[i].y)
-                    return false;
+            int cnt = 0;
+            for (auto pa:a){
+                bool found = false;
+                for (auto pb:b)
+                    if (pa.x == pb.x && pa.y == pb.y){
+                        found = true;
+                        break;
+                    }
 
+                if (!found)
+                    cnt++;
+            }
+
+            printf("diff on %i points\n", cnt);
             // must have same number of points
-            return a.size() == b.size();
+            return a.size() == b.size() && cnt == 0;
         }
 
         //overwritting set pixel
@@ -30,8 +39,8 @@ class EllipseTest : public EllipseRender
         }
 
         void comparisonTest(){
-            height = 10000;
-            width = 10000;
+            height = 15000;
+            width = 15000;
             Ellipse e = generateRandomEllipse();
 
             use_optimized = false;
@@ -39,6 +48,12 @@ class EllipseTest : public EllipseRender
 
             use_optimized = true;
             drawEllipse(e);
+
+            printf("created %i and %i points\n", ellipse1.size(),ellipse1.size());
+            if (isSameEllipse(ellipse1, ellipse2))
+                printf("SUCCESS\n");
+            else
+                printf("FAILURE\n");
         }
 };
 
