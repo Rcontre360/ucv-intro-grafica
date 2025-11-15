@@ -9,6 +9,7 @@
 using namespace std;
 
 typedef uniform_int_distribution<int> Dist;
+typedef long long ll;
 
 struct Point{
     int x;
@@ -147,17 +148,17 @@ public:
     void drawEllipse2(Ellipse e){
         RGBA c = e.color;
 
-        int a = e.a;
-        int b = e.b;
+        ll a = e.a;
+        ll b = e.b;
 
         int x = 0;
         int y = b;
 
-        long long d = 4*b*b - 4*a*a*b + a*a;
-        long long m_x = b*b*2; //2*b*b*(0 + 1)
-        long long m_y = 2*a*a*y - a*a;
-        int sum_mx = 0; //8*b*b*x
-        int sum_my = 8*a*a*b;
+        ll d = 4*b*b - 4*a*a*b + a*a;
+        ll m_x = b*b*2; //2*b*b*(0 + 1)
+        ll m_y = 2*a*a*y - a*a;
+        ll sum_mx = 0; //8*b*b*x
+        ll sum_my = 8*a*a*b;
 
         int auxb1 = 12*b*b;
         int auxb2 = 8*b*b;
@@ -188,7 +189,7 @@ public:
         int auxa3 = 12*a*a;
         int auxba = 8*b*b + auxa3;
 
-        d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
+        d = b*b*(4*x*x+4*x+1) + a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
         while (y > 0){
 
             if (d < 0){
@@ -207,13 +208,13 @@ public:
     void drawEllipse1(Ellipse e){
         RGBA c = e.color;
 
-        int a = e.a;
-        int b = e.b;
+        ll a = e.a;
+        ll b = e.b;
 
         int x = 0;
         int y = b;
 
-        long long d = 4*b*b - 4*a*a*b + a*a;
+        ll d = 4*b*b - 4*a*a*b + a*a;
 
         drawSymetric(e.center, {x,y}, c);
         while (b*b*2*(x+1) < a*a*(2*y-1)){

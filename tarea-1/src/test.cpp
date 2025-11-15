@@ -12,10 +12,10 @@ class EllipseTest : public EllipseRender
         vector<Point> ellipse2;
 
         bool is_benchmark;
-        const int BENCHMARK_MAX_ELLIPSES = 500000;
+        const int BENCHMARK_MAX_ELLIPSES = 350000;
         const int BENCHMARK_STEP = 1000;
-        const int BENCHMARK_HEIGHT = 800;
-        const int BENCHMARK_WIDTH = 800;
+        const int BENCHMARK_HEIGHT = 200;
+        const int BENCHMARK_WIDTH = 200;
 
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
@@ -54,30 +54,42 @@ class EllipseTest : public EllipseRender
 
             ofstream file("benchmark.csv");
             file << "num_ellipses,time,algorithm\n";
+            // single ellipse for all tests. 
+            // circle to use both parts of the algorithm the same.
+            // on the middle of all and with max space
+            Ellipse e = {
+                {width / 2, height / 2},
+                width / 2 - 1, 
+                height / 2 - 1,
+                {255,255,255,255}
+            };
 
             use_optimized = false;
             for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
-                printf("step %i\n",i);
                 auto start = chrono::high_resolution_clock::now();
                 for (int j=1; j <= i; j++){
-                    Ellipse e = generateRandomEllipse();
                     drawEllipse(e);
                 }
                 auto end = chrono::high_resolution_clock::now();
                 chrono::duration<double> diff = end-start;
                 file << i << "," << diff.count() << "," << "vanilla\n";
+
+                // log every 100 steps
+                if ((i/BENCHMARK_STEP)%100 == 0)
+                    printf("benchmarked vanilla %i\n",i);
             }
 
             use_optimized = true;
             for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
                 auto start = chrono::high_resolution_clock::now();
                 for (int j=1; j <= i; j++){
-                    Ellipse e = generateRandomEllipse();
                     drawEllipse(e);
                 }
                 auto end = chrono::high_resolution_clock::now();
                 chrono::duration<double> diff = end-start;
                 file << i << "," << diff.count() << "," << "optimized\n";
+                if ((i/BENCHMARK_STEP)%100 == 0)
+                    printf("benchmarked optimized %i\n",i);
             }
 
             printf("\tBENCHMARK FINISHED\n");
@@ -119,7 +131,7 @@ class EllipseTest : public EllipseRender
 int main() {
     EllipseTest* test = new EllipseTest();
 
-    test->comparisonTest();
+    //test->comparisonTest();
     test->benchmark();
 
     return 0;
