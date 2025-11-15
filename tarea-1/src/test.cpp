@@ -1,5 +1,7 @@
 #include "EllipseRender.h"
 #include <unordered_set>
+#include <fstream>
+#include <chrono>
 
 using namespace std;
 
@@ -9,10 +11,15 @@ class EllipseTest : public EllipseRender
         vector<Point> ellipse1;
         vector<Point> ellipse2;
 
+        bool is_benchmark;
+        const int BENCHMARK_MAX_ELLIPSES = 500000;
+        const int BENCHMARK_STEP = 1000;
+        const int BENCHMARK_HEIGHT = 800;
+        const int BENCHMARK_WIDTH = 800;
+
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
             // at least 1 point of difference is wrong
-            int cnt = 0;
             for (auto pa:a){
                 bool found = false;
                 for (auto pb:b)
@@ -22,27 +29,68 @@ class EllipseTest : public EllipseRender
                     }
 
                 if (!found)
-                    cnt++;
+                    return false;
             }
 
-            printf("RESULT %b\n",a.size() == b.size() && cnt == 0);
-            return a.size() == b.size() && cnt == 0;
+            return a.size() == b.size();
         }
 
         //overwritting set pixel
         void setPixel(int x, int y, const RGBA& _){
+            if (is_benchmark)
+                return;
+
             if (use_optimized)
                 ellipse2.push_back({x,y});
             else
                 ellipse1.push_back({x,y});
         }
 
-        void comparisonTest(){
-            bool success = true;
-            height = 15000;
-            width = 15000;
+        void benchmark(){
+            printf("RUNNING BENCHMARK\n");
+            height = BENCHMARK_HEIGHT;
+            width = BENCHMARK_WIDTH;
+            is_benchmark = true;
 
-            for (int i=0; i < 15; i++){
+            ofstream file("benchmark.csv");
+            file << "num_ellipses,time,algorithm\n";
+
+            use_optimized = false;
+            for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
+                printf("step %i\n",i);
+                auto start = chrono::high_resolution_clock::now();
+                for (int j=1; j <= i; j++){
+                    Ellipse e = generateRandomEllipse();
+                    drawEllipse(e);
+                }
+                auto end = chrono::high_resolution_clock::now();
+                chrono::duration<double> diff = end-start;
+                file << i << "," << diff.count() << "," << "vanilla\n";
+            }
+
+            use_optimized = true;
+            for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
+                auto start = chrono::high_resolution_clock::now();
+                for (int j=1; j <= i; j++){
+                    Ellipse e = generateRandomEllipse();
+                    drawEllipse(e);
+                }
+                auto end = chrono::high_resolution_clock::now();
+                chrono::duration<double> diff = end-start;
+                file << i << "," << diff.count() << "," << "optimized\n";
+            }
+
+            printf("\tBENCHMARK FINISHED\n");
+        }
+
+        void comparisonTest(){
+            printf("RUNNING COMPARISON TEST\n");
+
+            bool success = true;
+            height = 20000;
+            width = 20000;
+
+            for (int i=0; i < 50; i++){
                 Ellipse e = generateRandomEllipse();
 
                 use_optimized = false;
@@ -57,9 +105,9 @@ class EllipseTest : public EllipseRender
             }
 
             if (success)
-                printf("SUCCESS\n");
+                printf("\tSUCCESS COMPARISON TEST\n");
             else
-                printf("FAILURE\n");
+                printf("\tFAILURE COMPARISON TEST\n");
         }
 
         void clear(){
@@ -72,7 +120,7 @@ int main() {
     EllipseTest* test = new EllipseTest();
 
     test->comparisonTest();
-    //delete test;
+    test->benchmark();
 
     return 0;
 }

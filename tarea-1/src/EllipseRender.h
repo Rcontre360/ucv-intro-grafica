@@ -164,18 +164,15 @@ public:
         int auxb3 = 2*b*b;
         int auxa1 = 8*a*a;
         int auxa2 = 2*a*a;
+        int auxab = auxb1 + auxa1;
 
-        //iterations
-        //2 - 0  | 6*2
-        //4 - 8  | 4*6
-        //6 - 16 | 6*6
         drawSymetric(e.center, {x,y}, c);
         while (m_x < m_y){
 
             if (d < 0)
                 d += sum_mx + auxb1;
             else {
-                d += sum_mx + auxb1 - sum_my + auxa1;
+                d += sum_mx - sum_my + auxab;
                 y--;
                 m_y -= auxa2;
                 sum_my -= auxa1;
@@ -188,48 +185,21 @@ public:
             drawSymetric(e.center, {x,y}, c);
         }
 
-        //while (m_x < m_y){
-            //drawSymetric(e.center, {x,y}, c);
+        int auxa3 = 12*a*a;
+        int auxba = 8*b*b + auxa3;
 
-            //if (d < 0)
-                //d += m_x + aux1;
-            //else {
-                //d += m_x - m_y + aux2;
-                //y--;
-                //m_y -= sum_my;
-            //}
-            //x++;
-
-            //m_x += sum_mx;
-        //}
-
-        int aux3 = 12*a*a;
-        int aux4 = aux3 + 8;
-
-        //d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
-        //while (y > 0){
-            //drawSymetric(e.center, {x,y}, c);
-
-            //if (d < 0){
-                //d += m_x - m_y + aux4;
-                //x++;
-                //m_x += sum_mx;
-            //} else 
-                //d += aux3 - m_y;
-
-            //y--;
-            //m_y -= sum_my;
-        //}
         d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
         while (y > 0){
 
             if (d < 0){
-                d += 4*(b*b*(2*x+2)+a*a *(-2*y+3));
+                d += sum_mx - sum_my + auxba;
                 x++;
+                sum_mx += auxb2;
             } else 
-                d += 4*a*a*(-2*y+3);
+                d += -sum_my + auxa3;
 
             y--;
+            sum_my -= auxa1;
             drawSymetric(e.center, {x,y}, c);
         }
     }
