@@ -131,18 +131,11 @@ public:
         }
     }
 
-    void drawSymetric(Point center, Point p, RGBA c){
-        int x = p.x + center.x;
-        int y = p.y + center.y;
-
-        // could just << 1 but the rule is "no multiplications"
-        int x_mid = (x - center.x) + (x - center.x);
-        int y_mid = (y - center.y) + (y - center.y);
-
-        setPixel(x,y,c);
-        setPixel(x - x_mid,y,c);
-        setPixel(x,y - y_mid,c);
-        setPixel(x - x_mid,y - y_mid,c);
+    void drawSymetric(Point cn, Point p, RGBA c){
+        setPixel(cn.x + p.x, cn.y + p.y, c);
+        setPixel(cn.x - p.x, cn.y + p.y, c);
+        setPixel(cn.x - p.x, cn.y - p.y, c);
+        setPixel(cn.x + p.x, cn.y - p.y, c);
     }
 
     void drawEllipse2(Ellipse e){
@@ -153,48 +146,54 @@ public:
 
         int x = 0;
         int y = b;
+        //vars to sum to mx and my to reduce sums inside loop
+        int aux1 =(12*b*b - 8*b*b);
 
         ll d = 4*b*b - 4*a*a*b + a*a;
-        ll m_x = 8*b*b; 
-        ll m_y = 8*a*a*y - 4*a*a;
+        ll m_x = 8*b*b + aux1; 
+        ll m_y = 8*a*a*y - 4*a*a + aux1;
 
-        int auxb1 = 12*b*b - m_x;
-        int auxb2 = 8*b*b;
-        int auxa1 = 8*a*a;
-        int auxab = auxb1 + auxa1 - 4*a*a;
+        int sum_mx = 8*b*b;
+        int sum_my = 8*a*a;
+        int const_d1 = 12*b*b - 8*b*b + 8*a*a - 4*a*a;
 
         drawSymetric(e.center, {x,y}, c);
         while (m_x < m_y){
 
             if (d < 0)
-                d += m_x + auxb1;
+                d += m_x;
             else {
-                d += m_x - m_y + auxab;
+                d += m_x - m_y + const_d1;
                 y--;
-                m_y -= auxa1;
+                m_y -= sum_my;
             }
             x++;
             
-            m_x += auxb2;
+            m_x += sum_mx;
 
             drawSymetric(e.center, {x,y}, c);
         }
 
-        int auxa3 = 8*a*a;
+        //vars to sum to mx and my to reduce sums inside loop
+        int aux2 = 8*a*a + aux1;
+        int const_d2 = aux2 - aux1;
 
         d = b*b*(4*x*x+4*x+1) + a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
+
+        m_x -= aux2;
+        m_y -= aux2;
 
         while (y > 0){
 
             if (d < 0){
-                d += m_x - m_y + auxa3;
+                d += m_x - m_y + const_d2;
                 x++;
-                m_x += auxb2;
+                m_x += sum_mx;
             } else 
-                d += -m_y + auxa3;
+                d -= m_y;
 
             y--;
-            m_y -= auxa1;
+            m_y -= sum_my;
             drawSymetric(e.center, {x,y}, c);
         }
     }
