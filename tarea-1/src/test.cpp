@@ -95,14 +95,14 @@ class EllipseTest : public EllipseRender
             printf("\tBENCHMARK FINISHED\n");
         }
 
-        void comparisonTest(){
+        void comparisonTest(int h, int w){
             printf("RUNNING COMPARISON TEST\n");
 
             bool success = true;
-            height = 20000;
-            width = 20000;
+            height = h;
+            width = w;
 
-            for (int i=0; i < 50; i++){
+            for (int i=0; i < 1000; i++){
                 Ellipse e = generateRandomEllipse();
 
                 use_optimized = false;
@@ -113,14 +113,13 @@ class EllipseTest : public EllipseRender
 
                 success &= isSameEllipse(ellipse1, ellipse2);
 
-                printf("%b\n",success);
                 clear();
             }
 
             if (success)
-                printf("\tSUCCESS COMPARISON TEST\n");
+                printf("\tSUCCESS\n");
             else
-                printf("\tFAILURE COMPARISON TEST\n");
+                printf("\tFAILURE\n");
         }
 
         void clear(){
@@ -132,7 +131,10 @@ class EllipseTest : public EllipseRender
 int main() {
     EllipseTest* test = new EllipseTest();
 
-    test->comparisonTest();
+    test->comparisonTest(100,100);
+    test->comparisonTest(200,200);
+    test->comparisonTest(500,500);
+    test->comparisonTest(1500,1500);
     //test->benchmark();
 
     return 0;

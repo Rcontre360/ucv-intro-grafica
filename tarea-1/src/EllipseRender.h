@@ -155,7 +155,7 @@ public:
         int y = b;
 
         ll d = 4*b*b - 4*a*a*b + a*a;
-        ll m_x = 8*b*b; //2*b*b*(0 + 1)
+        ll m_x = 8*b*b; 
         ll m_y = 8*a*a*y - 4*a*a;
 
         int auxb1 = 12*b*b - m_x;
@@ -180,33 +180,21 @@ public:
             drawSymetric(e.center, {x,y}, c);
         }
 
-        int auxa3 = 12*a*a;
-        int auxba = 8*b*b + auxa3;
+        int auxa3 = 8*a*a;
 
         d = b*b*(4*x*x+4*x+1) + a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
-        //while (y > 0){
-
-            //if (d < 0){
-                //d += sum_mx - sum_my + auxba;
-                //x++;
-                //sum_mx += auxb2;
-            //} else 
-                //d += -sum_my + auxa3;
-
-            //y--;
-            //sum_my -= auxa1;
-            //drawSymetric(e.center, {x,y}, c);
-        //}
 
         while (y > 0){
 
             if (d < 0){
-                d += 4*(b*b*(2*x+2)+a*a *(-2*y+3));
+                d += m_x - m_y + auxa3;
                 x++;
+                m_x += auxb2;
             } else 
-                d += 4*a*a*(-2*y+3);
+                d += -m_y + auxa3;
 
             y--;
+            m_y -= auxa1;
             drawSymetric(e.center, {x,y}, c);
         }
     }
