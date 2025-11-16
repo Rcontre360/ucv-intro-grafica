@@ -155,33 +155,27 @@ public:
         int y = b;
 
         ll d = 4*b*b - 4*a*a*b + a*a;
-        ll m_x = b*b*2; //2*b*b*(0 + 1)
-        ll m_y = 2*a*a*y - a*a;
-        ll sum_mx = 0; //8*b*b*x
-        ll sum_my = 8*a*a*b;
+        ll m_x = 8*b*b; //2*b*b*(0 + 1)
+        ll m_y = 8*a*a*y - 4*a*a;
 
-        int auxb1 = 12*b*b;
+        int auxb1 = 12*b*b - m_x;
         int auxb2 = 8*b*b;
-        int auxb3 = 2*b*b;
         int auxa1 = 8*a*a;
-        int auxa2 = 2*a*a;
-        int auxab = auxb1 + auxa1;
+        int auxab = auxb1 + auxa1 - 4*a*a;
 
         drawSymetric(e.center, {x,y}, c);
         while (m_x < m_y){
 
             if (d < 0)
-                d += sum_mx + auxb1;
+                d += m_x + auxb1;
             else {
-                d += sum_mx - sum_my + auxab;
+                d += m_x - m_y + auxab;
                 y--;
-                m_y -= auxa2;
-                sum_my -= auxa1;
+                m_y -= auxa1;
             }
             x++;
             
-            m_x += auxb3;
-            sum_mx += auxb2;
+            m_x += auxb2;
 
             drawSymetric(e.center, {x,y}, c);
         }
@@ -190,17 +184,29 @@ public:
         int auxba = 8*b*b + auxa3;
 
         d = b*b*(4*x*x+4*x+1) + a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
+        //while (y > 0){
+
+            //if (d < 0){
+                //d += sum_mx - sum_my + auxba;
+                //x++;
+                //sum_mx += auxb2;
+            //} else 
+                //d += -sum_my + auxa3;
+
+            //y--;
+            //sum_my -= auxa1;
+            //drawSymetric(e.center, {x,y}, c);
+        //}
+
         while (y > 0){
 
             if (d < 0){
-                d += sum_mx - sum_my + auxba;
+                d += 4*(b*b*(2*x+2)+a*a *(-2*y+3));
                 x++;
-                sum_mx += auxb2;
             } else 
-                d += -sum_my + auxa3;
+                d += 4*a*a*(-2*y+3);
 
             y--;
-            sum_my -= auxa1;
             drawSymetric(e.center, {x,y}, c);
         }
     }

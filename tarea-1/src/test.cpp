@@ -113,6 +113,7 @@ class EllipseTest : public EllipseRender
 
                 success &= isSameEllipse(ellipse1, ellipse2);
 
+                printf("%b\n",success);
                 clear();
             }
 
@@ -131,8 +132,8 @@ class EllipseTest : public EllipseRender
 int main() {
     EllipseTest* test = new EllipseTest();
 
-    //test->comparisonTest();
-    test->benchmark();
+    test->comparisonTest();
+    //test->benchmark();
 
     return 0;
 }
