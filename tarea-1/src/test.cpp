@@ -64,39 +64,39 @@ class EllipseTest : public EllipseRender
                 {255,255,255,255}
             };
 
-            use_optimized = false;
             for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
+                use_optimized = false;
+
                 auto start = chrono::high_resolution_clock::now();
                 for (int j=1; j <= i; j++){
                     drawEllipse(e);
                 }
                 auto end = chrono::high_resolution_clock::now();
                 chrono::duration<double> diff = end-start;
+
                 file << i << "," << diff.count() << "," << "vanilla\n";
+
+                use_optimized = true;
+
+                start = chrono::high_resolution_clock::now();
+                for (int j=1; j <= i; j++){
+                    drawEllipse(e);
+                }
+                end = chrono::high_resolution_clock::now();
+                diff = end-start;
+
+                file << i << "," << diff.count() << "," << "optimized\n";
 
                 // log every 100 steps
                 if ((i/BENCHMARK_STEP)%100 == 0)
-                    printf("benchmarked vanilla %i\n",i);
-            }
-
-            use_optimized = true;
-            for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
-                auto start = chrono::high_resolution_clock::now();
-                for (int j=1; j <= i; j++){
-                    drawEllipse(e);
-                }
-                auto end = chrono::high_resolution_clock::now();
-                chrono::duration<double> diff = end-start;
-                file << i << "," << diff.count() << "," << "optimized\n";
-                if ((i/BENCHMARK_STEP)%100 == 0)
-                    printf("benchmarked optimized %i\n",i);
+                    printf("\033[0;34mbenchmarked %i ellipses\033[0m\n",i);
             }
 
             printf("\tBENCHMARK FINISHED\n");
         }
 
         void comparisonTest(int h, int w){
-            printf("RUNNING COMPARISON TEST FOR %ix%i SCREEN\n", h,w);
+            printf("RUNNING COMPARISON TEST FOR \033[0;34m%ix%i\033[0m SCREEN\n", h,w);
 
             bool success = true;
             height = h;
@@ -117,9 +117,10 @@ class EllipseTest : public EllipseRender
             }
 
             if (success)
-                printf("\tSUCCESS\n");
+                printf("\033[1;32mSUCCESS\033[0m\n");
             else
-                printf("\tFAILURE\n");
+                printf("\033[0;31mFAILURE\033[0m\n");
+
         }
 
         void clear(){
