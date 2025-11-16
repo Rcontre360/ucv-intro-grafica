@@ -24,8 +24,7 @@ public:
 
     bool setup();
 
-    // set as virtual for testing
-    virtual void setPixel(int x, int y, const RGBA& color);
+    void setPixel(int x, int y, const RGBA& color);
 
     virtual void update();
 

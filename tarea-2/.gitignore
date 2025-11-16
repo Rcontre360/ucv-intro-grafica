@@ -1,0 +1,10 @@
+obj
+
+# ejecutables
+performance_graph.png
+tarea-1
+test
+imgui.ini
+/venv/
+benchmark.csv
+.venv/
