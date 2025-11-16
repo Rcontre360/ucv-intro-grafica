@@ -147,15 +147,15 @@ public:
         int x = 0;
         int y = b;
         //vars to sum to mx and my to reduce sums inside loop
-        int aux1 =(12*b*b - 8*b*b);
+        int aux1 =4*b*b;
 
         ll d = 4*b*b - 4*a*a*b + a*a;
-        ll m_x = 8*b*b + aux1; 
+        ll m_x = 12*b*b; 
         ll m_y = 8*a*a*y - 4*a*a + aux1;
 
         int sum_mx = 8*b*b;
         int sum_my = 8*a*a;
-        int const_d1 = 12*b*b - 8*b*b + 8*a*a - 4*a*a;
+        int const_d1 = 4*b*b + 4*a*a;
 
         drawSymetric(e.center, {x,y}, c);
         while (m_x < m_y){
@@ -175,8 +175,8 @@ public:
         }
 
         //vars to sum to mx and my to reduce sums inside loop
-        int aux2 = 8*a*a + aux1;
-        int const_d2 = aux2 - aux1;
+        int aux2 = 8*a*a + 4*b*b;
+        int const_d2 = 8*a*a;
 
         d = b*b*(4*x*x+4*x+1) + a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
 

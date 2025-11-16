@@ -12,10 +12,10 @@ class EllipseTest : public EllipseRender
         vector<Point> ellipse2;
 
         bool is_benchmark;
-        const int BENCHMARK_MAX_ELLIPSES = 350000;
+        const int BENCHMARK_MAX_ELLIPSES = 500000;
         const int BENCHMARK_STEP = 1000;
-        const int BENCHMARK_HEIGHT = 200;
-        const int BENCHMARK_WIDTH = 200;
+        const int BENCHMARK_HEIGHT = 1000;
+        const int BENCHMARK_WIDTH = 1000;
 
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
@@ -96,7 +96,7 @@ class EllipseTest : public EllipseRender
         }
 
         void comparisonTest(int h, int w){
-            printf("RUNNING COMPARISON TEST\n");
+            printf("RUNNING COMPARISON TEST FOR %ix%i SCREEN\n", h,w);
 
             bool success = true;
             height = h;
@@ -134,8 +134,9 @@ int main() {
     test->comparisonTest(100,100);
     test->comparisonTest(200,200);
     test->comparisonTest(500,500);
-    test->comparisonTest(1500,1500);
-    //test->benchmark();
+    // 8k screen
+    test->comparisonTest(8000,8000);
+    test->benchmark();
 
     return 0;
 }
