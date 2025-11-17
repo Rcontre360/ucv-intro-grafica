@@ -1,7 +1,10 @@
 obj
 
 # ejecutables
-performance_graph.png
+./**/*.png
+./**/*.csv
+*.png
+*.csv
 tarea-1
 test
 imgui.ini
