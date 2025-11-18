@@ -1,9 +1,12 @@
 #include "EllipseRender.h"
 #include <unordered_set>
 #include <fstream>
+#include <sstream>
 #include <chrono>
+#include <filesystem>
 
 using namespace std;
+namespace fs = filesystem;
 
 class EllipseTest : public EllipseRender
 {
@@ -12,10 +15,8 @@ class EllipseTest : public EllipseRender
         vector<Point> ellipse2;
 
         bool is_benchmark;
-        const int BENCHMARK_MAX_ELLIPSES = 500000;
+        const int BENCHMARK_MAX_ELLIPSES = 800000;
         const int BENCHMARK_STEP = 1000;
-        const int BENCHMARK_HEIGHT = 1000;
-        const int BENCHMARK_WIDTH = 1000;
 
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
@@ -46,53 +47,63 @@ class EllipseTest : public EllipseRender
                 ellipse1.push_back({x,y});
         }
 
-        void benchmark(){
+        void benchmark(int h, int w) {
             printf("RUNNING BENCHMARK\n");
-            height = BENCHMARK_HEIGHT;
-            width = BENCHMARK_WIDTH;
+
+            height = h;
+            width = w;
             is_benchmark = true;
 
-            ofstream file("benchmark.csv");
+            const string dir_path = "./benchmark";
+
+            stringstream filename_ss;
+            filename_ss << dir_path << "/" << h << "x" << w << ".csv";
+            const string file_path = filename_ss.str();
+
+            if (!fs::exists(dir_path))
+                fs::create_directory(dir_path);
+
+            ofstream file(file_path);
+            
             file << "num_ellipses,time,algorithm\n";
-            // single ellipse for all tests. 
-            // circle to use both parts of the algorithm the same.
-            // on the middle of all and with max space
+
             Ellipse e = {
                 {width / 2, height / 2},
                 width / 2 - 1, 
                 height / 2 - 1,
-                {255,255,255,255}
+                {255, 255, 255, 255}
             };
 
-            for (int i=BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i+=BENCHMARK_STEP){
+            for (int i = BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i += BENCHMARK_STEP) {
+                
+                // Vanilla Algorithm 
                 use_optimized = false;
-
-                auto start = chrono::high_resolution_clock::now();
-                for (int j=1; j <= i; j++){
+                auto start_vanilla = chrono::high_resolution_clock::now();
+                for (int j = 1; j <= i; j++) {
                     drawEllipse(e);
                 }
-                auto end = chrono::high_resolution_clock::now();
-                chrono::duration<double> diff = end-start;
+                auto end_vanilla = chrono::high_resolution_clock::now();
+                chrono::duration<double> diff_vanilla = end_vanilla - start_vanilla;
 
-                file << i << "," << diff.count() << "," << "vanilla\n";
+                file << i << "," << diff_vanilla.count() << "," << "vanilla\n";
 
+                // Optimized Algorithm Run
                 use_optimized = true;
-
-                start = chrono::high_resolution_clock::now();
-                for (int j=1; j <= i; j++){
+                auto start_optimized = chrono::high_resolution_clock::now();
+                for (int j = 1; j <= i; j++) {
                     drawEllipse(e);
                 }
-                end = chrono::high_resolution_clock::now();
-                diff = end-start;
+                auto end_optimized = chrono::high_resolution_clock::now();
+                chrono::duration<double> diff_optimized = end_optimized - start_optimized;
 
-                file << i << "," << diff.count() << "," << "optimized\n";
+                file << i << "," << diff_optimized.count() << "," << "optimized\n";
 
                 // log every 100 steps
-                if ((i/BENCHMARK_STEP)%100 == 0)
-                    printf("\033[0;34mbenchmarked %i ellipses\033[0m\n",i);
+                if ((i / BENCHMARK_STEP) % 100 == 0)
+                    printf("\033[0;34mbenchmarked %i ellipses\033[0m\n", i);
             }
 
-            printf("\tBENCHMARK FINISHED\n");
+            file.close();
         }
 
         void comparisonTest(int h, int w){
@@ -137,7 +148,7 @@ int main() {
     test->comparisonTest(500,500);
     // 8k screen
     test->comparisonTest(8000,8000);
-    test->benchmark();
+    test->benchmark(2000,2000);
 
     return 0;
 }
