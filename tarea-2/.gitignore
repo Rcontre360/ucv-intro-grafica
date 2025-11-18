@@ -11,3 +11,4 @@ imgui.ini
 /venv/
 benchmark.csv
 .venv/
+/comparison/

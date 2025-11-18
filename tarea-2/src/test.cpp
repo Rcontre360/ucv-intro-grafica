@@ -15,8 +15,8 @@ class EllipseTest : public EllipseRender
         vector<Point> ellipse2;
 
         bool is_benchmark;
-        const int BENCHMARK_MAX_ELLIPSES = 800000;
-        const int BENCHMARK_STEP = 1000;
+        const int BENCHMARK_MAX_ELLIPSES = 1000000;
+        const int BENCHMARK_STEP = 10000;
 
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
@@ -48,38 +48,36 @@ class EllipseTest : public EllipseRender
         }
 
         void benchmark(int h, int w) {
-            printf("RUNNING BENCHMARK\n");
-
+            printf("RUNNING BENCHMARK %ix%i\n",h,w);
+            
             height = h;
             width = w;
             is_benchmark = true;
 
-            const string dir_path = "./benchmark";
+            const string dir = "./benchmark";
 
             stringstream filename_ss;
-            filename_ss << dir_path << "/" << h << "x" << w << ".csv";
+            filename_ss << dir << "/" << h << "x" << w << ".csv";
             const string file_path = filename_ss.str();
 
-            if (!fs::exists(dir_path))
-                fs::create_directory(dir_path);
+            if (!fs::exists(dir)) 
+                fs::create_directory(dir);
 
             ofstream file(file_path);
-            
             file << "num_ellipses,time,algorithm\n";
-
-            Ellipse e = {
-                {width / 2, height / 2},
-                width / 2 - 1, 
-                height / 2 - 1,
-                {255, 255, 255, 255}
-            };
 
             for (int i = BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i += BENCHMARK_STEP) {
                 
-                // Vanilla Algorithm 
+                vector<Ellipse> ellipses_for_test;
+                ellipses_for_test.reserve(i);
+                for (int j = 0; j < i; j++) {
+                    ellipses_for_test.push_back(generateRandomEllipse());
+                }
+
+                //VANILLA ALGO
                 use_optimized = false;
                 auto start_vanilla = chrono::high_resolution_clock::now();
-                for (int j = 1; j <= i; j++) {
+                for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
                 auto end_vanilla = chrono::high_resolution_clock::now();
@@ -87,10 +85,10 @@ class EllipseTest : public EllipseRender
 
                 file << i << "," << diff_vanilla.count() << "," << "vanilla\n";
 
-                // Optimized Algorithm Run
+                // OPTIMIZED ALGO
                 use_optimized = true;
                 auto start_optimized = chrono::high_resolution_clock::now();
-                for (int j = 1; j <= i; j++) {
+                for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
                 auto end_optimized = chrono::high_resolution_clock::now();
@@ -104,6 +102,7 @@ class EllipseTest : public EllipseRender
             }
 
             file.close();
+            printf("\tBENCHMARK FINISHED. Results saved to: %s\n", file_path.c_str());
         }
 
         void comparisonTest(int h, int w){
@@ -113,7 +112,12 @@ class EllipseTest : public EllipseRender
             height = h;
             width = w;
 
-            for (int i=0; i < 1000; i++){
+            stringstream dir_ss;
+            dir_ss << "./comparison/" << h << "x" << w;
+            string dir_path = dir_ss.str();
+            fs::create_directories(dir_path);
+
+            for (int i=0; i < 50; i++){
                 Ellipse e = generateRandomEllipse();
 
                 use_optimized = false;
@@ -121,6 +125,23 @@ class EllipseTest : public EllipseRender
 
                 use_optimized = true;
                 drawEllipse(e);
+
+                stringstream test_dir_ss;
+                test_dir_ss << dir_path << "/test_" << i;
+                string test_dir_path = test_dir_ss.str();
+                fs::create_directory(test_dir_path);
+
+                ofstream file1(test_dir_path + "/draw_ellipse_1.txt");
+                for (const auto& point : ellipse1) {
+                    file1 << point.x << " " << point.y << "\n";
+                }
+                file1.close();
+
+                ofstream file2(test_dir_path + "/draw_ellipse_2.txt");
+                for (const auto& point : ellipse2) {
+                    file2 << point.x << " " << point.y << "\n";
+                }
+                file2.close();
 
                 success &= isSameEllipse(ellipse1, ellipse2);
 
@@ -148,7 +169,11 @@ int main() {
     test->comparisonTest(500,500);
     // 8k screen
     test->comparisonTest(8000,8000);
-    test->benchmark(2000,2000);
+
+    cout << "\nComparison tests finished. Press Enter to start benchmarks..." << endl;
+    cin.get();
+
+    test->benchmark(4000,4000);
 
     return 0;
 }
