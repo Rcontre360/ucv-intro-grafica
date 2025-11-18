@@ -16,7 +16,7 @@ class EllipseTest : public EllipseRender
 
         bool is_benchmark;
         const int BENCHMARK_MAX_ELLIPSES = 1000000;
-        const int BENCHMARK_STEP = 10000;
+        const int BENCHMARK_STEP = 5000;
 
     public:
         bool isSameEllipse(vector<Point> a, vector<Point> b){
@@ -74,16 +74,11 @@ class EllipseTest : public EllipseRender
                     ellipses_for_test.push_back(generateRandomEllipse());
                 }
 
-                //VANILLA ALGO
-                use_optimized = false;
-                auto start_vanilla = chrono::high_resolution_clock::now();
+                // WARM-UP OPTIMIZED
+                use_optimized = true;
                 for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
-                auto end_vanilla = chrono::high_resolution_clock::now();
-                chrono::duration<double> diff_vanilla = end_vanilla - start_vanilla;
-
-                file << i << "," << diff_vanilla.count() << "," << "vanilla\n";
 
                 // OPTIMIZED ALGO
                 use_optimized = true;
@@ -93,8 +88,24 @@ class EllipseTest : public EllipseRender
                 }
                 auto end_optimized = chrono::high_resolution_clock::now();
                 chrono::duration<double> diff_optimized = end_optimized - start_optimized;
-
                 file << i << "," << diff_optimized.count() << "," << "optimized\n";
+
+                // WARM-UP VANILLA
+                use_optimized = false;
+                for (const auto& e : ellipses_for_test) {
+                    drawEllipse(e);
+                }
+
+                //VANILLA ALGO
+                use_optimized = false;
+                auto start_vanilla = chrono::high_resolution_clock::now();
+                for (const auto& e : ellipses_for_test) {
+                    drawEllipse(e);
+                }
+                auto end_vanilla = chrono::high_resolution_clock::now();
+                chrono::duration<double> diff_vanilla = end_vanilla - start_vanilla;
+                file << i << "," << diff_vanilla.count() << "," << "vanilla\n";
+
 
                 // log every 100 steps
                 if ((i / BENCHMARK_STEP) % 100 == 0)
@@ -167,13 +178,15 @@ int main() {
     test->comparisonTest(100,100);
     test->comparisonTest(200,200);
     test->comparisonTest(500,500);
-    // 8k screen
+    //// 8k screen
     test->comparisonTest(8000,8000);
 
     cout << "\nComparison tests finished. Press Enter to start benchmarks..." << endl;
     cin.get();
 
+    test->benchmark(1000,1000);
     test->benchmark(4000,4000);
+    test->benchmark(8000,8000);
 
     return 0;
 }
