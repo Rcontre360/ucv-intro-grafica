@@ -148,11 +148,13 @@ public:
         int _x = e.center.x - a;
         int end = e.center.x - x_drawed;
 
+        //left line
         while (_x < end){
             setPixel(_x,e.center.y,e.color);
             _x++;
         }
 
+        //right line
         _x = e.center.x + x_drawed;
         end = e.center.x + a;
         while (_x < end){
