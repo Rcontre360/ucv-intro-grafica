@@ -47,6 +47,7 @@ class EllipseTest : public EllipseRender
                 ellipse1.push_back({x,y});
         }
 
+        // benchmark, was hard to setup because of caching issues and having to use random ellipses
         void benchmark(int h, int w) {
             printf("RUNNING BENCHMARK %ix%i\n",h,w);
             
@@ -68,19 +69,20 @@ class EllipseTest : public EllipseRender
 
             for (int i = BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i += BENCHMARK_STEP) {
                 
+                // we generate random ellipses
                 vector<Ellipse> ellipses_for_test;
                 ellipses_for_test.reserve(i);
                 for (int j = 0; j < i; j++) {
                     ellipses_for_test.push_back(generateRandomEllipse());
                 }
 
-                // WARM-UP OPTIMIZED
+                // we warm up the CPU (fill its cache). So we run the optimized algo with all ellipses
                 use_optimized = true;
                 for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
 
-                // OPTIMIZED ALGO
+                // we run the actual benchmark
                 use_optimized = true;
                 auto start_optimized = chrono::high_resolution_clock::now();
                 for (const auto& e : ellipses_for_test) {
@@ -90,13 +92,13 @@ class EllipseTest : public EllipseRender
                 chrono::duration<double> diff_optimized = end_optimized - start_optimized;
                 file << i << "," << diff_optimized.count() << "," << "optimized\n";
 
-                // WARM-UP VANILLA
+                // warm up with the vanilla algorithm (the original one)
                 use_optimized = false;
                 for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
 
-                //VANILLA ALGO
+                // run benchmarks for the original algo
                 use_optimized = false;
                 auto start_vanilla = chrono::high_resolution_clock::now();
                 for (const auto& e : ellipses_for_test) {
@@ -116,6 +118,7 @@ class EllipseTest : public EllipseRender
             printf("\tBENCHMARK FINISHED. Results saved to: %s\n", file_path.c_str());
         }
 
+        // not only compares but creates a "comparison" directory with all the tests results
         void comparisonTest(int h, int w){
             printf("RUNNING COMPARISON TEST FOR \033[0;34m%ix%i\033[0m SCREEN\n", h,w);
 
