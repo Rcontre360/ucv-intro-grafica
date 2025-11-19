@@ -131,16 +131,21 @@ public:
         }
     }
 
-    void drawEdgeCase(Ellipse e){
-        // we should draw a points, center and a points after. total of 1 + a*2 points
+    void drawEdgeCase(Ellipse e, int x_drawed){
         int a = e.a, b = e.b;
-        if (b == 0){
-            int _x = e.center.x - a;
-            int end = e.center.x + a;
-            while (_x <= end){
-                setPixel(_x,e.center.y,e.color);
-                _x++;
-            }
+        int _x = e.center.x - a;
+        int end = e.center.x - x_drawed;
+
+        while (_x < end){
+            setPixel(_x,e.center.y,e.color);
+            _x++;
+        }
+
+        _x = e.center.x + x_drawed;
+        end = e.center.x + a;
+        while (_x < end){
+            setPixel(_x,e.center.y,e.color);
+            _x++;
         }
     }
 
@@ -157,9 +162,6 @@ public:
 
         ll a = e.a;
         ll b = e.b;
-
-        if (b==0)
-            drawEdgeCase(e);
 
         int x = 0;
         int y = b;
@@ -191,6 +193,9 @@ public:
             drawSymetric(e.center, {x,y}, c);
         }
 
+        if (y <= 0)
+            drawEdgeCase(e, x);
+
         //vars to sum to mx and my to reduce sums inside loop
         int aux2 = 8*a*a + 4*b*b;
         int const_d2 = 8*a*a;
@@ -221,9 +226,6 @@ public:
         ll a = e.a;
         ll b = e.b;
 
-        if (b==0)
-            drawEdgeCase(e);
-
         int x = 0;
         int y = b;
 
@@ -241,6 +243,9 @@ public:
             x++;
             drawSymetric(e.center, {x,y}, c);
         }
+
+        if (y <= 0)
+            drawEdgeCase(e, x);
 
         d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
         while (y > 0){
