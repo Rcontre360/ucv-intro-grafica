@@ -131,6 +131,19 @@ public:
         }
     }
 
+    void drawEdgeCase(Ellipse e){
+        // we should draw a points, center and a points after. total of 1 + a*2 points
+        int a = e.a, b = e.b;
+        if (b == 0){
+            int _x = e.center.x - a;
+            int end = e.center.x + a;
+            while (_x <= end){
+                setPixel(_x,e.center.y,e.color);
+                _x++;
+            }
+        }
+    }
+
     void drawSymetric(Point cn, Point p, RGBA c){
         setPixel(cn.x + p.x, cn.y + p.y, c);
         setPixel(cn.x - p.x, cn.y + p.y, c);
@@ -138,11 +151,15 @@ public:
         setPixel(cn.x + p.x, cn.y - p.y, c);
     }
 
+    // exact same algorithm used on the guide. Has an issue when the ellipse is almost flat on the x axis
     void drawEllipse2(Ellipse e){
         RGBA c = e.color;
 
         ll a = e.a;
         ll b = e.b;
+
+        if (b==0)
+            drawEdgeCase(e);
 
         int x = 0;
         int y = b;
@@ -203,6 +220,9 @@ public:
 
         ll a = e.a;
         ll b = e.b;
+
+        if (b==0)
+            drawEdgeCase(e);
 
         int x = 0;
         int y = b;

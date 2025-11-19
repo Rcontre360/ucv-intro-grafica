@@ -5,7 +5,7 @@ obj
 ./**/*.csv
 *.png
 *.csv
-tarea-1
+tarea
 test
 imgui.ini
 /venv/

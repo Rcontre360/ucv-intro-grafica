@@ -9,7 +9,7 @@ INCLUDES = -I./include \
            -I./include/imgui
 LIBS = -lglfw -lGL -lGLU
 
-TARGET = tarea-1
+TARGET = tarea
 OBJ_DIR = obj
 
 SRCS = src/glad.c \
