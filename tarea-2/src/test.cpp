@@ -131,7 +131,7 @@ class EllipseTest : public EllipseRender
             string dir_path = dir_ss.str();
             fs::create_directories(dir_path);
 
-            for (int i=0; i < 50; i++){
+            for (int i=0; i < 10000; i++){ //10k tests
                 Ellipse e = generateRandomEllipse();
 
                 use_optimized = false;
@@ -182,7 +182,7 @@ int main() {
     test->comparisonTest(200,200);
     test->comparisonTest(500,500);
     //// 8k screen
-    test->comparisonTest(8000,8000);
+    test->comparisonTest(4000,4000);
 
     cout << "\nComparison tests finished. Press Enter to start benchmarks..." << endl;
     cin.get();
