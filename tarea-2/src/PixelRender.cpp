@@ -271,6 +271,8 @@ void CPixelRender::keyCallbackStatic(GLFWwindow* window, int key, int scancode, 
 void CPixelRender::mouseButtonCallbackStatic(GLFWwindow* window, int button, int action, int mods) 
 {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+    if (ImGui::GetIO().WantCaptureMouse)
+        return;
     CPixelRender* self = (CPixelRender*)glfwGetWindowUserPointer(window);
     if (self)
     {

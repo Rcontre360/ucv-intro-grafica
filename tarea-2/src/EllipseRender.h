@@ -113,6 +113,8 @@ public:
 
         color = { (unsigned char)(temp_color[0]), (unsigned char)(temp_color[1]), (unsigned char)(temp_color[2]), 255 };
 
+        if (ImGui::Button("Generate Random", ImVec2(200,35)))
+            generateRandomEllipses(1000);
         if (ImGui::Button("Clear", ImVec2(200,35)))
             ellipses.clear();
 
@@ -131,6 +133,37 @@ public:
         }
     }
 
+    // if we draw an ellipse and shrink "a" as much as possible (towards 0), the height of the ellipse doesnt change and everything looks ok.
+    // BUT if we do the same with "b" weird things happen, draw an ellipse and shrink it on b and see how it stops having the same
+    // width and seems to not fully form on a horizontal ellipse. 
+    // This issue comes from the original algorithm given in class, that algorithm doesnt address this edge case, only addresses it 
+    // when "a" shrinks to 0.
+    // I solved this issue by drawing a line from center.x - a towards center.x + a. 
+    // If there are pixels on y+1 or y-1 (on the same level of that line), we dont draw.
+    // If y > 0 we dont draw either since the ellipse is incomplete and this edge case dont apply.
+    // Test it yourself. This function should only be executed when (on the ellipse edges on x axis),
+    // the space between the top and bottom are 1 and should be lower (0, thus this line)
+    void drawEdgeCase(Ellipse e, int x_drawed){
+        int a = e.a, b = e.b;
+        int _x = e.center.x - a;
+        int end = e.center.x - x_drawed;
+
+        //left line
+        while (_x < end){
+            setPixel(_x,e.center.y,e.color);
+            _x++;
+        }
+
+        //right line
+        _x = e.center.x + x_drawed;
+        end = e.center.x + a;
+        while (_x < end){
+            setPixel(_x,e.center.y,e.color);
+            _x++;
+        }
+    }
+
+    // draw symetric using the center and the current point we are drawing.
     void drawSymetric(Point cn, Point p, RGBA c){
         setPixel(cn.x + p.x, cn.y + p.y, c);
         setPixel(cn.x - p.x, cn.y + p.y, c);
@@ -138,6 +171,7 @@ public:
         setPixel(cn.x + p.x, cn.y - p.y, c);
     }
 
+    // the upgraded algorithm to only use +, - and simple comparisons inside our loops
     void drawEllipse2(Ellipse e){
         RGBA c = e.color;
 
@@ -174,6 +208,10 @@ public:
             drawSymetric(e.center, {x,y}, c);
         }
 
+        //edge case, explained above "drawEdgeCase" and our doc
+        if (y <= 0)
+            drawEdgeCase(e, x);
+
         //vars to sum to mx and my to reduce sums inside loop
         int aux2 = 8*a*a + 4*b*b;
         int const_d2 = 8*a*a;
@@ -198,6 +236,8 @@ public:
         }
     }
 
+    // exact same algorithm used on the guide. Has an issue when the ellipse is almost flat on the x axis.
+    // check drawEdgeCase to see more about the edge case and how I solved it.
     void drawEllipse1(Ellipse e){
         RGBA c = e.color;
 
@@ -221,6 +261,9 @@ public:
             x++;
             drawSymetric(e.center, {x,y}, c);
         }
+
+        if (y <= 0)
+            drawEdgeCase(e, x);
 
         d = b*b*(4*x*x+4*x+1)+a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
         while (y > 0){
@@ -252,6 +295,9 @@ public:
         }
 
         if (m_x1 > -1 && m_y1 > -1){
+            // (x0 + x1)/2 and (y0 + y1)/2 is the center
+            // a = (x1 - x0) / 2
+            // b = (y1 - y0) / 2
             Ellipse e = {
                 {(m_x0 + m_x1)>>1, (m_y0 + m_y1)>>1},
                 abs(m_x1 - m_x0)>>1, 

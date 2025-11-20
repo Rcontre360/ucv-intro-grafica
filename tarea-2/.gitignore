@@ -1,10 +1,14 @@
 obj
 
 # ejecutables
-performance_graph.png
-tarea-1
+./**/*.png
+./**/*.csv
+*.png
+*.csv
+tarea
 test
 imgui.ini
 /venv/
 benchmark.csv
 .venv/
+/comparison/
