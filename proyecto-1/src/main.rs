@@ -1,22 +1,29 @@
-//! A simple paint application that uses `pixels` for the canvas and `egui` for the UI.
+#![deny(clippy::all)]
+#![forbid(unsafe_code)]
 
-use egui_wgpu::ScreenDescriptor;
+use crate::gui::Framework;
+use error_iter::ErrorIter as _;
 use log::error;
-use pixels::{wgpu, Error, Pixels, SurfaceTexture};
-use rand::Rng;
-use winit::{
-    dpi::LogicalSize,
-    event::Event,
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
+use pixels::{Error, Pixels, SurfaceTexture};
+use winit::dpi::LogicalSize;
+use winit::event::{Event, WindowEvent};
+use winit::event_loop::EventLoop;
+use winit::keyboard::KeyCode;
+use winit::window::WindowBuilder;
+use winit_input_helper::WinitInputHelper;
 
-const WIDTH: u32 = 400;
-const HEIGHT: u32 = 300;
+mod gui;
 
-/// Representation of the application state. In this example, a single button state.
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 480;
+const BOX_SIZE: i16 = 64;
+
+/// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
-    should_draw: bool,
+    box_x: i16,
+    box_y: i16,
+    velocity_x: i16,
+    velocity_y: i16,
 }
 
 fn main() -> Result<(), Error> {
@@ -26,7 +33,7 @@ fn main() -> Result<(), Error> {
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         WindowBuilder::new()
-            .with_title("Paint App")
+            .with_title("Hello Pixels + egui")
             .with_inner_size(size)
             .with_min_inner_size(size)
             .build(&event_loop)
@@ -48,15 +55,14 @@ fn main() -> Result<(), Error> {
 
         (pixels, framework)
     };
+    let mut world = World::new();
 
-    let mut world = World { should_draw: false };
-
-    event_loop.run(move |event, _, control_flow| {
+    let res = event_loop.run(|event, elwt| {
         // Handle input events
         if input.update(&event) {
             // Close events
-            if input.key_pressed(VirtualKeyCode::Escape) || input.close_requested() {
-                *control_flow = ControlFlow::Exit;
+            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
+                elwt.exit();
                 return;
             }
 
@@ -67,10 +73,12 @@ fn main() -> Result<(), Error> {
 
             // Resize the window
             if let Some(size) = input.window_resized() {
-                if size.width > 0 && size.height > 0 {
-                    pixels.resize_surface(size.width, size.height).unwrap();
-                    framework.resize(size.width, size.height);
+                if let Err(err) = pixels.resize_surface(size.width, size.height) {
+                    log_error("pixels.resize_surface", err);
+                    elwt.exit();
+                    return;
                 }
+                framework.resize(size.width, size.height);
             }
 
             // Update internal state and request a redraw
@@ -79,189 +87,95 @@ fn main() -> Result<(), Error> {
         }
 
         match event {
-            Event::WindowEvent { event, .. } => {
-                // Update egui inputs
-                framework.handle_event(&event);
-            }
-            // Redraw the application
-            Event::RedrawRequested(_) => {
+            // Draw the current frame
+            Event::WindowEvent {
+                event: WindowEvent::RedrawRequested,
+                ..
+            } => {
                 // Draw the world
                 world.draw(pixels.frame_mut());
 
                 // Prepare egui
-                framework.prepare(&window, &mut world);
+                framework.prepare(&window);
 
-                // Render everything
+                // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {
                     // Render the world texture
                     context.scaling_renderer.render(encoder, render_target);
 
                     // Render egui
-                    framework.render(encoder, render_target, &context.device, &context.queue);
+                    framework.render(encoder, render_target, context);
 
                     Ok(())
                 });
 
-                // Handle rendering errors
+                // Basic error handling
                 if let Err(err) = render_result {
-                    error!("pixels.render_with() failed: {}", err);
-                    *control_flow = ControlFlow::Exit;
+                    log_error("pixels.render", err);
+                    elwt.exit();
                 }
+            }
+            Event::WindowEvent { event, .. } => {
+                // Update egui inputs
+                framework.handle_event(&window, &event);
             }
             _ => (),
         }
     });
+    res.map_err(|e| Error::UserDefined(Box::new(e)))
+}
+
+fn log_error<E: std::error::Error + 'static>(method_name: &str, err: E) {
+    error!("{method_name}() failed: {err}");
+    for source in err.sources().skip(1) {
+        error!("  Caused by: {source}");
+    }
 }
 
 impl World {
-    /// Update the world state.
-    fn update(&mut self) {
-        // This is where you would update your application logic.
-        // For this example, the state is updated in the UI.
-    }
-
-    /// Draw the world to the frame buffer.
-    fn draw(&self, frame: &mut [u8]) {
-        if self.should_draw {
-            let mut rng = rand::thread_rng();
-            for _ in 0..10 {
-                let x = rng.gen_range(0..WIDTH) as usize;
-                let y = rng.gen_range(0..HEIGHT) as usize;
-                let i = (y * WIDTH as usize + x) * 4;
-                let color: [u8; 3] = rng.gen();
-
-                if i + 3 < frame.len() {
-                    frame[i] = color[0]; // R
-                    frame[i + 1] = color[1]; // G
-                    frame[i + 2] = color[2]; // B
-                    frame[i + 3] = 255; // A
-                }
-            }
-        }
-    }
-}
-
-// --- Framework boilerplate ---
-
-/// A wrapper for all the framework state.
-struct Framework {
-    egui_ctx: egui::Context,
-    egui_state: egui_winit::State,
-    screen_descriptor: ScreenDescriptor,
-    renderer: egui_wgpu::Renderer,
-    paint_jobs: Vec<egui::ClippedPrimitive>,
-    textures: egui::TexturesDelta,
-}
-
-impl Framework {
-    /// Create egui.
-    fn new<T>(
-        event_loop: &EventLoop<T>,
-        width: u32,
-        height: u32,
-        scale_factor: f32,
-        pixels: &Pixels,
-    ) -> Self {
-        let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
-
-        let egui_ctx = egui::Context::default();
-        let mut egui_state = egui_winit::State::new(event_loop);
-        egui_state.set_max_texture_side(max_texture_size);
-        egui_state.set_pixels_per_point(scale_factor);
-        let screen_descriptor = ScreenDescriptor {
-            size_in_pixels: [width, height],
-            pixels_per_point: scale_factor,
-        };
-        let renderer = egui_wgpu::Renderer::new(pixels.device(), pixels.render_texture_format(), None, 1);
-        let textures = egui::TexturesDelta::default();
-
+    /// Create a new `World` instance that can draw a moving box.
+    fn new() -> Self {
         Self {
-            egui_ctx,
-            egui_state,
-            screen_descriptor,
-            renderer,
-            paint_jobs: Vec::new(),
-            textures,
+            box_x: 24,
+            box_y: 16,
+            velocity_x: 1,
+            velocity_y: 1,
         }
     }
 
-    /// Handle input events from winit.
-    fn handle_event(&mut self, event: &winit::event::WindowEvent) {
-        let _ = self.egui_state.on_event(&self.egui_ctx, event);
-    }
-
-    /// Resize egui.
-    fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            self.screen_descriptor.size_in_pixels = [width, height];
+    /// Update the `World` internal state; bounce the box around the screen.
+    fn update(&mut self) {
+        if self.box_x <= 0 || self.box_x + BOX_SIZE > WIDTH as i16 {
+            self.velocity_x *= -1;
         }
-    }
-
-    /// Update scaling factor.
-    fn scale_factor(&mut self, scale_factor: f64) {
-        self.screen_descriptor.pixels_per_point = scale_factor as f32;
-    }
-
-    /// Prepare egui.
-    fn prepare(&mut self, window: &winit::window::Window, world: &mut World) {
-        // Run the egui frame and create the UI.
-        let raw_input = self.egui_state.take_egui_input(window);
-        let output = self.egui_ctx.run(raw_input, |egui_ctx| {
-            // Create a simple window.
-            egui::Window::new("Controls").show(egui_ctx, |ui| {
-                if ui.button("Draw 10 Random Pixels").clicked() {
-                    world.should_draw = true;
-                } else {
-                    world.should_draw = false;
-                }
-            });
-        });
-
-        self.textures.append(output.textures_delta);
-        self.egui_state
-            .handle_platform_output(window, &self.egui_ctx, output.platform_output);
-        self.paint_jobs = self.egui_ctx.tessellate(output.shapes);
-    }
-
-    /// Render egui.
-    fn render(
-        &mut self,
-        encoder: &mut wgpu::CommandEncoder,
-        render_target: &wgpu::TextureView,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-    ) {
-        // Upload all resources to the GPU.
-        self.renderer
-            .update_buffers(device, queue, encoder, &self.paint_jobs, &self.screen_descriptor);
-        
-        // Handle texture updates
-        for (id, image_delta) in &self.textures.set {
-            self.renderer.update_texture(device, queue, *id, image_delta);
-        }
-        for id in &self.textures.free {
-            self.renderer.free_texture(id);
+        if self.box_y <= 0 || self.box_y + BOX_SIZE > HEIGHT as i16 {
+            self.velocity_y *= -1;
         }
 
-        // Render egui with a render pass.
-        {
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("egui"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: render_target,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: None,
-            });
+        self.box_x += self.velocity_x;
+        self.box_y += self.velocity_y;
+    }
 
-            self.renderer.render(&mut rpass, &self.paint_jobs, &self.screen_descriptor);
+    /// Draw the `World` state to the frame buffer.
+    ///
+    /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
+    fn draw(&self, frame: &mut [u8]) {
+        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+            let x = (i % WIDTH as usize) as i16;
+            let y = (i / WIDTH as usize) as i16;
+
+            let inside_the_box = x >= self.box_x
+                && x < self.box_x + BOX_SIZE
+                && y >= self.box_y
+                && y < self.box_y + BOX_SIZE;
+
+            let rgba = if inside_the_box {
+                [0x5e, 0x48, 0xe8, 0xff]
+            } else {
+                [0x48, 0xb2, 0xe8, 0xff]
+            };
+
+            pixel.copy_from_slice(&rgba);
         }
-
-        // Cleanup
-        self.textures = egui::TexturesDelta::default();
     }
 }

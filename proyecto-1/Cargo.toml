@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-egui = "0.33.2"
-egui-wgpu = "0.33.2"
-egui-winit = "0.33.2"
+egui = "0.26"
+egui-wgpu = "0.26"
+egui-winit = { version = "0.26", default-features = false, features = ["links"] }
 env_logger = "0.11.8"
 log = "0.4.17"
 pixels = "0.15.0"
 rand = "0.8.5"
-winit = "0.30.12"
-winit_input_helper = "0.17.0"
+winit = "0.29"
+winit_input_helper = "0.15.0"
+error-iter = "0.4.1"
