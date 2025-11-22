@@ -1,6 +1,7 @@
 #![deny(clippy::all)]
 #![forbid(unsafe_code)]
 
+use canvas::Canvas;
 use error_iter::ErrorIter as _;
 use log::error;
 use pixels::{Error, Pixels, SurfaceTexture};
@@ -14,6 +15,7 @@ use winit_input_helper::WinitInputHelper;
 use crate::gui::Framework;
 use crate::state::State;
 
+mod canvas;
 mod gui;
 mod primitives;
 mod state;
@@ -61,19 +63,19 @@ fn main() -> Result<(), Error> {
 
             if input.mouse_pressed(0) {
                 if let Some((x, y)) = input.cursor() {
-                    state.start_current_shape((x.round() as u32, y.round() as u32));
+                    state.start_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
             if input.mouse_held(0) {
                 if let Some((x, y)) = input.cursor() {
-                    state.update_current_shape((x.round() as u32, y.round() as u32));
+                    state.update_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
             if input.mouse_released(0) {
                 if let Some((x, y)) = input.cursor() {
-                    state.end_current_shape((x.round() as u32, y.round() as u32));
+                    state.end_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
@@ -103,7 +105,9 @@ fn main() -> Result<(), Error> {
                 event: WindowEvent::RedrawRequested,
                 ..
             } => {
-                state.draw(pixels.frame_mut());
+                let size = window.inner_size();
+                let mut canvas = Canvas::new(pixels.frame_mut(), size.width, size.height);
+                state.draw(&mut canvas);
 
                 // Prepare egui
                 framework.prepare(&window);

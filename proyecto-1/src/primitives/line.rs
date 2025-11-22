@@ -1,4 +1,6 @@
-use super::core::{Point, ShapeCore, ShapeImpl, RGBA};
+use crate::canvas::Canvas;
+
+use super::core::{Point, ShapeCore, ShapeImpl};
 
 pub struct Line {
     core: ShapeCore,
@@ -17,58 +19,59 @@ impl ShapeImpl for Line {
         self.core.clone()
     }
 
-    fn draw(&self, buffer: &mut [u8]) {
-        // Ensure we have at least two control points (start and end)
-        if self.core.points.len() < 2 {
-            return;
+    //TODO fix drawing error saw in first homework
+    fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
+        let points = &self.core.points;
+        let a = points[0];
+        let b = points[1];
+
+        let mut dx = (b.0 - a.0) as i32;
+        let mut dy = (b.1 - a.1) as i32;
+        let mut d = dx - 2 * dy;
+        let x_inc = if dx < 0 { -1 as i32 } else { 1 };
+        let y_inc = if dy < 0 { -1 as i32 } else { 1 };
+
+        if dx < 0 {
+            dx *= -1;
+        }
+        if dy < 0 {
+            dy *= -1;
         }
 
-        let (x0, y0) = self.core.points[0];
-        let (x1, y1) = self.core.points[1];
-        let color = self.core.color;
+        let run_on_x = dx >= dy;
+        let inc_e = -2 * (if run_on_x { dy } else { dx });
+        let inc_ne = 2 * (dx - dy) * (if run_on_x { 1 } else { -1 });
 
-        let dx = x1 as f32 - x0 as f32;
-        let dy = y1 as f32 - y0 as f32;
+        let mut x = a.0 as i32;
+        let mut y = a.1 as i32;
+        canvas.set_pixel(x, y, self.core.color);
 
-        // The number of steps is the largest absolute difference in coordinates.
-        // This ensures the line moves one pixel at a time along the major axis.
-        let steps = dx.abs().max(dy.abs()).round() as u32;
+        if run_on_x {
+            while x > b.0 || x < b.0 {
+                if d <= 0 {
+                    d += inc_ne;
+                    y += y_inc;
+                } else {
+                    d += inc_e;
+                }
 
-        if steps == 0 {
-            // If start and end are the same, just plot the single point
-            set_pixel(buffer, x0, y0, color);
-            return;
+                // we increase x or y depending on the case (dx >= dy)
+                x += x_inc;
+                canvas.set_pixel(x, y, self.core.color);
+            }
+        } else {
+            while x > b.0 || x < b.0 {
+                if d <= 0 {
+                    d += inc_ne;
+                    x += x_inc;
+                } else {
+                    d += inc_e;
+                }
+
+                // we increase x or y depending on the case (dx >= dy)
+                y += y_inc;
+                canvas.set_pixel(x, y, self.core.color);
+            }
         }
-
-        // Calculate the step increment for each axis for one major step
-        let x_increment = dx / steps as f32;
-        let y_increment = dy / steps as f32;
-
-        let mut x_current = x0 as f32;
-        let mut y_current = y0 as f32;
-
-        // Iterate through all steps, plotting the rounded (x, y) coordinates
-        for _ in 0..=steps {
-            // Plot the current point, rounding to the nearest integer pixel
-            let plot_x = x_current.round() as u32;
-            let plot_y = y_current.round() as u32;
-
-            set_pixel(buffer, plot_x, plot_y, color);
-
-            // Move to the next point using floating-point accumulation
-            x_current += x_increment;
-            y_current += y_increment;
-        }
-    }
-}
-
-/// Helper function to safely set a single pixel in the frame buffer.
-fn set_pixel(frame: &mut [u8], x: u32, y: u32, color: RGBA) {
-    // Calculate the index in the 1D buffer: (y * width + x) * 4 bytes per pixel
-    let index = (y * 640 + x) as usize * 4;
-
-    // Safety check for the end of the buffer
-    if index + 4 <= frame.len() {
-        frame[index..index + 4].copy_from_slice(&color);
     }
 }

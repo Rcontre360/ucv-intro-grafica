@@ -1,5 +1,5 @@
+use crate::canvas::Canvas;
 use core::fmt;
-use std::ffi::os_str::Display;
 
 pub enum Shape {
     Line,
@@ -9,7 +9,7 @@ pub enum Shape {
     Curve,
 }
 
-pub type Point = (u32, u32);
+pub type Point = (i32, i32);
 
 pub type RGBA = [u8; 4];
 
@@ -24,7 +24,7 @@ pub trait ShapeImpl {
 
     fn get_core(&self) -> ShapeCore;
 
-    fn draw(&self, buffer: &mut [u8]);
+    fn draw<'a>(&self, buffer: &mut Canvas<'a>);
 }
 
 #[derive(Clone)]

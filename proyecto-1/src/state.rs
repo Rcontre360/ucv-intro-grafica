@@ -1,9 +1,11 @@
-use crate::primitives::{
-    core::{rgba, Point, Shape, ShapeCore, ShapeImpl, RGBA},
-    line::Line,
+use crate::{
+    canvas::Canvas,
+    primitives::{
+        core::{rgba, Point, Shape, ShapeCore, ShapeImpl, RGBA},
+        line::Line,
+    },
 };
 
-/// Representation of the application state. In this example, a box will bounce around the screen.
 pub struct State {
     current: Shape,
     color: RGBA,
@@ -42,7 +44,6 @@ impl State {
 
     pub fn end_current_shape(&mut self, end: Point) {
         if let Some(cur) = self.cur_shape.take() {
-            println!("LINE! {}", cur.get_core());
             self.update_current_shape(end);
             self.objects.push(cur);
         }
@@ -50,18 +51,15 @@ impl State {
 
     pub fn update(&mut self) {}
 
-    pub fn draw(&self, buffer: &mut [u8]) {
-        let bg_color = self.background_color;
-        for pixel in buffer.chunks_exact_mut(4) {
-            pixel.copy_from_slice(&bg_color);
-        }
+    pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
+        canvas.clear();
 
         for shape in &self.objects {
-            shape.draw(buffer);
+            shape.draw(canvas);
         }
 
         if let Some(cur) = self.cur_shape.as_ref() {
-            cur.draw(buffer);
+            cur.draw(canvas);
         }
     }
 }
