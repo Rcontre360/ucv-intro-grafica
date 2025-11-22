@@ -14,7 +14,6 @@ use winit_input_helper::WinitInputHelper;
 
 use crate::gui::Framework;
 
-
 mod canvas;
 mod gui;
 mod primitives;
@@ -62,19 +61,25 @@ fn main() -> Result<(), Error> {
 
             if input.mouse_pressed(0) {
                 if let Some((x, y)) = input.cursor() {
-                    framework.get_state().start_current_shape((x.round() as i32, y.round() as i32));
+                    framework
+                        .get_state()
+                        .start_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
             if input.mouse_held(0) {
                 if let Some((x, y)) = input.cursor() {
-                    framework.get_state().update_current_shape((x.round() as i32, y.round() as i32));
+                    framework
+                        .get_state()
+                        .update_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
             if input.mouse_released(0) {
                 if let Some((x, y)) = input.cursor() {
-                    framework.get_state().end_current_shape((x.round() as i32, y.round() as i32));
+                    framework
+                        .get_state()
+                        .end_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
@@ -96,6 +101,9 @@ fn main() -> Result<(), Error> {
                             if let Err(err) = pixels.resize_surface(size.width, size.height) {
                                 log_error("pixels.resize_surface", err);
                             }
+                            if let Err(err) = pixels.resize_buffer(size.width, size.height) {
+                                log_error("pixels.resize_surface", err);
+                            }
                             framework.resize(size.width, size.height);
                             window.request_redraw();
                         }
@@ -108,12 +116,13 @@ fn main() -> Result<(), Error> {
                         // Prepare egui
                         framework.prepare(&window);
 
-                        let render_result = pixels.render_with(|encoder, render_target, context| {
-                            context.scaling_renderer.render(encoder, render_target);
-                            framework.render(encoder, render_target, context);
+                        let render_result =
+                            pixels.render_with(|encoder, render_target, context| {
+                                context.scaling_renderer.render(encoder, render_target);
+                                framework.render(encoder, render_target, context);
 
-                            Ok(())
-                        });
+                                Ok(())
+                            });
 
                         if let Err(err) = render_result {
                             log_error("pixels.render", err);
