@@ -1,19 +1,35 @@
-use crate::canvas::Canvas;
 use super::core::{Point, ShapeCore, ShapeImpl};
+use crate::canvas::Canvas;
 
 pub struct Ellipse {
     core: ShapeCore,
+    center: Point,
+    a: i32,
+    b: i32,
 }
 
 impl ShapeImpl for Ellipse {
     fn new(core: ShapeCore) -> Ellipse {
-        Ellipse { core }
+        let (x0, y0) = core.points[0];
+        let (x1, y1) = core.points[1];
+
+        Ellipse {
+            core,
+            center: ((x0 + x1) / 2, (y0 + y1) / 2),
+            a: ((x1 - x0) / 2).abs() as i32,
+            b: ((y1 - y0) / 2).abs() as i32,
+        }
     }
 
     fn update(&mut self, end: Point) {
-        // For an ellipse, the two points define the bounding box.
-        // The center is the midpoint, and the radii are half the width/height.
+        let (x0, y0) = self.core.points[0];
+        let (x1, y1) = end;
+
         self.core.points[1] = end;
+
+        self.center = ((x0 + x1) / 2, (y0 + y1) / 2);
+        self.a = ((x1 - x0) / 2).abs() as i32;
+        self.b = ((y1 - y0) / 2).abs() as i32;
     }
 
     fn get_core(&self) -> ShapeCore {
@@ -21,53 +37,82 @@ impl ShapeImpl for Ellipse {
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        let points = &self.core.points;
-        let (x0, y0) = points[0];
-        let (x1, y1) = points[1];
+        let draw_symmetric = |canvas: &mut Canvas, x, y| {
+            //simple casting
+            let (_x, _y) = (x as i32, y as i32);
+            let (cx, cy) = self.center;
+            canvas.set_pixel(cx + _x, cy + _y, self.core.color);
+            canvas.set_pixel(cx - _x, cy + _y, self.core.color);
+            canvas.set_pixel(cx + _x, cy - _y, self.core.color);
+            canvas.set_pixel(cx - _x, cy - _y, self.core.color);
+        };
 
-        let xc = (x0 + x1) / 2;
-        let yc = (y0 + y1) / 2;
-        let rx = ((x1 - x0) / 2).abs();
-        let ry = ((y1 - y0) / 2).abs();
-
-        let color = self.core.color;
-
-        // Midpoint Ellipse Algorithm
-        let mut x = 0;
-        let mut y = ry;
-        let mut p1 = (ry * ry) - (rx * rx * ry) + (rx * rx / 4);
-
-        // Region 1
-        while (2 * ry * ry * x) < (2 * rx * rx * y) {
-            canvas.set_pixel(xc + x, yc + y, color);
-            canvas.set_pixel(xc - x, yc + y, color);
-            canvas.set_pixel(xc + x, yc - y, color);
-            canvas.set_pixel(xc - x, yc - y, color);
-
-            x += 1;
-            if p1 < 0 {
-                p1 = p1 + (2 * ry * ry * x) + (ry * ry);
-            } else {
-                y -= 1;
-                p1 = p1 + (2 * ry * ry * x) - (2 * rx * rx * y) + (ry * ry);
+        let draw_edge_case = |canvas: &mut Canvas, x_drawn| {
+            let mut x = self.center.0 - self.a;
+            let end = self.center.0 - x_drawn;
+            while x < end {
+                canvas.set_pixel(x, self.center.1, self.core.color);
+                x += 1;
             }
+
+            x = self.center.0 + x_drawn;
+            let end = self.center.0 + self.a;
+            while x < end {
+                canvas.set_pixel(x, self.center.1, self.core.color);
+                x += 1;
+            }
+        };
+
+        let (a, b) = (self.a as i64, self.b as i64);
+        let mut x: i64 = 0;
+        let mut y: i64 = b;
+
+        let mut d: i64 = (4 * b * b) - (4 * a * a * y) + (a * a);
+        let mut m_x: i64 = 12 * b * b;
+        let mut m_y: i64 = (8 * a * a * y) - (4 * a * a) + (4 * b * b);
+
+        let sum_mx: i64 = 8 * b * b;
+        let sum_my: i64 = 8 * a * a;
+        let const_d1: i64 = (4 * b * b) + (4 * a * a);
+
+        draw_symmetric(canvas, x, y);
+
+        while m_x < m_y {
+            if d < 0 {
+                d += m_x;
+            } else {
+                d += m_x - m_y + const_d1;
+                y -= 1;
+                m_y -= sum_my;
+            }
+            x += 1;
+            m_x += sum_mx;
+            draw_symmetric(canvas, x, y);
         }
 
-        // Region 2
-        let mut p2 = (ry * ry * (x + 1 / 2) * (x + 1 / 2)) + (rx * rx * (y - 1) * (y - 1)) - (rx * rx * ry * ry);
-        while y >= 0 {
-            canvas.set_pixel(xc + x, yc + y, color);
-            canvas.set_pixel(xc - x, yc + y, color);
-            canvas.set_pixel(xc + x, yc - y, color);
-            canvas.set_pixel(xc - x, yc - y, color);
+        if y <= 0 {
+            draw_edge_case(canvas, x as i32);
+        }
+
+        let aux2 = (8 * a * a) + (4 * b * b);
+        let const_d2 = 8 * a * a;
+        d = b * b * (4 * x * x + 4 * x + 1) + a * a * (4 * y * y - 8 * y + 4) - 4 * a * a * b * b;
+
+        m_y -= aux2;
+        m_x -= aux2;
+
+        while y > 0 {
+            if d < 0 {
+                d += m_x - m_y + const_d2;
+                x += 1;
+                m_x += sum_mx;
+            } else {
+                d -= m_y;
+            }
 
             y -= 1;
-            if p2 > 0 {
-                p2 = p2 - (2 * rx * rx * y) + (rx * rx);
-            } else {
-                x += 1;
-                p2 = p2 + (2 * ry * ry * x) - (2 * rx * rx * y) + (rx * rx);
-            }
+            m_y -= sum_my;
+            draw_symmetric(canvas, x, y);
         }
     }
 }

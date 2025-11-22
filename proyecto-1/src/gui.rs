@@ -36,6 +36,37 @@ impl TemplateApp {
             if ui.button("3. Circle").clicked() {
                 self.state.current = Shape::Circle;
             }
+            if ui.button("4. Triangle").clicked() {
+                self.state.current = Shape::Triangle;
+            }
+            if ui.button("5. Rectangle").clicked() {
+                self.state.current = Shape::Rectangle;
+            }
+            if ui.button("6. Bezier").clicked() {
+                self.state.current = Shape::Bezier;
+            }
+
+            ui.separator();
+
+            ui.heading("Color (RGB)");
+            ui.horizontal(|ui| {
+                ui.label("R:");
+                ui.add(egui::DragValue::new(&mut self.state.color[0])
+                    .speed(1.0)
+                    .clamp_range(0..=255));
+            });
+            ui.horizontal(|ui| {
+                ui.label("G:");
+                ui.add(egui::DragValue::new(&mut self.state.color[1])
+                    .speed(1.0)
+                    .clamp_range(0..=255));
+            });
+            ui.horizontal(|ui| {
+                ui.label("B:");
+                ui.add(egui::DragValue::new(&mut self.state.color[2])
+                    .speed(1.0)
+                    .clamp_range(0..=255));
+            });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.add(egui::github_link_file!(

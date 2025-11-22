@@ -5,12 +5,15 @@ use crate::{
         line::Line,
         ellipse::Ellipse,
         circle::Circle,
+        triangle::Triangle,
+        rectangle::Rectangle,
+        bezier::Bezier,
     },
 };
 
 pub struct State {
     pub current: Shape,
-    color: RGBA,
+    pub color: RGBA,
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
     objects: Vec<Box<dyn ShapeImpl>>,
 }
@@ -42,6 +45,24 @@ impl State {
             Shape::Circle => {
                 self.cur_shape = Some(Box::new(Circle::new(ShapeCore {
                     points: vec![start, start],
+                    color: self.color,
+                })));
+            }
+            Shape::Triangle => {
+                self.cur_shape = Some(Box::new(Triangle::new(ShapeCore {
+                    points: vec![start, start, start], // Initialize with 3 points for triangle
+                    color: self.color,
+                })));
+            }
+            Shape::Rectangle => {
+                self.cur_shape = Some(Box::new(Rectangle::new(ShapeCore {
+                    points: vec![start, start],
+                    color: self.color,
+                })));
+            }
+            Shape::Bezier => {
+                self.cur_shape = Some(Box::new(Bezier::new(ShapeCore {
+                    points: vec![start, start], // Initialize with 2 points for bezier (for now)
                     color: self.color,
                 })));
             }

@@ -102,7 +102,7 @@ fn main() -> Result<(), Error> {
                                 log_error("pixels.resize_surface", err);
                             }
                             if let Err(err) = pixels.resize_buffer(size.width, size.height) {
-                                log_error("pixels.resize_surface", err);
+                                log_error("pixels.resize_buffer", err);
                             }
                             framework.resize(size.width, size.height);
                             window.request_redraw();

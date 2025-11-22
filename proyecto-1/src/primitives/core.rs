@@ -7,6 +7,8 @@ pub enum Shape {
     Circle,
     Ellipse,
     Triangle,
+    Rectangle,
+    Bezier,
     Curve,
 }
 
