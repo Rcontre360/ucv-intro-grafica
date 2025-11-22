@@ -15,6 +15,7 @@ use crate::gui::Framework;
 use crate::state::State;
 
 mod gui;
+mod primitives;
 mod state;
 
 const WIDTH: u32 = 640;
@@ -58,16 +59,21 @@ fn main() -> Result<(), Error> {
                 return;
             }
 
-            if input.mouse_held(1) {
-                if let Some((x_logical, y_logical)) = input.cursor() {
-                    // Convert the logical mouse coordinates to the frame buffer coordinates (u32, u32).
-                    // This is the core coordinate conversion from winit to pixels' buffer.
-                    if let Some((x_frame, y_frame)) =
-                        logical_to_frame_coords(x_logical, y_logical, WIDTH, HEIGHT)
-                    {
-                        // Store the coordinate to be drawn later
-                        //state.draw_with_mouse(x_frame, y_frame);
-                    }
+            if input.mouse_pressed(0) {
+                if let Some((x, y)) = input.cursor() {
+                    state.start_current_shape((x.round() as u32, y.round() as u32));
+                }
+            }
+
+            if input.mouse_held(0) {
+                if let Some((x, y)) = input.cursor() {
+                    state.update_current_shape((x.round() as u32, y.round() as u32));
+                }
+            }
+
+            if input.mouse_released(0) {
+                if let Some((x, y)) = input.cursor() {
+                    state.end_current_shape((x.round() as u32, y.round() as u32));
                 }
             }
 
@@ -124,21 +130,5 @@ fn log_error<E: std::error::Error + 'static>(method_name: &str, err: E) {
     error!("{method_name}() failed: {err}");
     for source in err.sources().skip(1) {
         error!("  Caused by: {source}");
-    }
-}
-
-fn logical_to_frame_coords(
-    x_logical: f32,
-    y_logical: f32,
-    width: u32,
-    height: u32,
-) -> Option<(u32, u32)> {
-    let x_frame = x_logical.round() as u32;
-    let y_frame = y_logical.round() as u32;
-
-    if x_frame < width && y_frame < height {
-        Some((x_frame, y_frame))
-    } else {
-        None
     }
 }
