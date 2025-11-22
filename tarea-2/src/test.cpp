@@ -1,3 +1,5 @@
+#include <cstdio> // For C-style file I/O (fopen_s, fprintf, fclose)
+#include <string.h> // For strerror_s
 #include "EllipseRender.h"
 #include <unordered_set>
 #include <fstream>
@@ -12,7 +14,7 @@ class EllipseTest : public EllipseRender
         std::vector<Point> ellipse2;
 
         bool is_benchmark;
-        const int BENCHMARK_MAX_ELLIPSES = 1000000;
+        const int BENCHMARK_MAX_ELLIPSES = 10000;
         const int BENCHMARK_STEP = 5000;
 
     public:
@@ -61,8 +63,12 @@ class EllipseTest : public EllipseRender
             if (!std::filesystem::exists(dir))
                 std::filesystem::create_directory(dir);
 
-            std::ofstream file(file_path);
-            file << "num_ellipses,time,algorithm\n";
+            FILE* file = fopen(file_path.c_str(), "w");
+            if (file == nullptr) {
+                std::cerr << "Unable to open file: " << file_path << " Error: " << strerror(errno) << std::endl;
+                return;
+            }
+            fprintf(file, "num_ellipses,time,algorithm\n");
 
             for (int i = BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i += BENCHMARK_STEP) {
 
@@ -87,7 +93,7 @@ class EllipseTest : public EllipseRender
                 }
                 auto end_optimized = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> diff_optimized = end_optimized - start_optimized;
-                file << i << "," << diff_optimized.count() << "," << "optimized\n";
+                fprintf(file, "%i,%.10f,%s\n", i, diff_optimized.count(), "optimized");
 
                 // warm up with the vanilla algorithm (the original one)
                 use_optimized = false;
@@ -103,7 +109,7 @@ class EllipseTest : public EllipseRender
                 }
                 auto end_vanilla = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> diff_vanilla = end_vanilla - start_vanilla;
-                file << i << "," << diff_vanilla.count() << "," << "vanilla\n";
+                fprintf(file, "%i,%.10f,%s\n", i, diff_vanilla.count(), "vanilla");
 
 
                 // log every 100 steps
@@ -111,7 +117,7 @@ class EllipseTest : public EllipseRender
                     printf("\033[0;34mbenchmarked %i ellipses\033[0m\n", i);
             }
 
-            file.close();
+            fclose(file);
             printf("\tBENCHMARK FINISHED. Results saved to: %s\n", file_path.c_str());
         }
 
@@ -142,17 +148,27 @@ class EllipseTest : public EllipseRender
                 std::string test_dir_path = test_dir_ss.str();
                 std::filesystem::create_directory(test_dir_path);
 
-                std::ofstream file1(test_dir_path + "/draw_ellipse_1.txt");
+                std::string file1_path = test_dir_path + "/draw_ellipse_1.txt";
+                FILE* file1 = fopen(file1_path.c_str(), "w");
+                if (file1 == nullptr) {
+                    std::cerr << "Unable to open file: " << file1_path << " Error: " << strerror(errno) << std::endl;
+                    return; // Or handle error appropriately
+                }
                 for (const auto& point : ellipse1) {
-                    file1 << point.x << " " << point.y << "\n";
+                    fprintf(file1, "%i %i\n", point.x, point.y);
                 }
-                file1.close();
+                fclose(file1);
 
-                std::ofstream file2(test_dir_path + "/draw_ellipse_2.txt");
-                for (const auto& point : ellipse2) {
-                    file2 << point.x << " " << point.y << "\n";
+                std::string file2_path = test_dir_path + "/draw_ellipse_2.txt";
+                FILE* file2 = fopen(file2_path.c_str(), "w");
+                if (file2 == nullptr) {
+                    std::cerr << "Unable to open file: " << file2_path << " Error: " << strerror(errno) << std::endl;
+                    return; // Or handle error appropriately
                 }
-                file2.close();
+                for (const auto& point : ellipse2) {
+                    fprintf(file2, "%i %i\n", point.x, point.y);
+                }
+                fclose(file2);
 
                 success &= isSameEllipse(ellipse1, ellipse2);
 
