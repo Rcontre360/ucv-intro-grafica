@@ -1,6 +1,7 @@
 use crate::canvas::Canvas;
 use core::fmt;
 
+#[allow(dead_code)]
 pub enum Shape {
     Line,
     Circle,
@@ -15,6 +16,7 @@ pub type RGBA = [u8; 4];
 
 pub type ControlPoints = Vec<Point>;
 
+#[allow(dead_code)]
 pub trait ShapeImpl {
     fn new(core: ShapeCore) -> Self
     where

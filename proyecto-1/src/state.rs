@@ -3,11 +3,13 @@ use crate::{
     primitives::{
         core::{rgba, Point, Shape, ShapeCore, ShapeImpl, RGBA},
         line::Line,
+        ellipse::Ellipse,
+        circle::Circle,
     },
 };
 
 pub struct State {
-    current: Shape,
+    pub current: Shape,
     color: RGBA,
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
     objects: Vec<Box<dyn ShapeImpl>>,
@@ -27,6 +29,18 @@ impl State {
         match self.current {
             Shape::Line => {
                 self.cur_shape = Some(Box::new(Line::new(ShapeCore {
+                    points: vec![start, start],
+                    color: self.color,
+                })));
+            }
+            Shape::Ellipse => {
+                self.cur_shape = Some(Box::new(Ellipse::new(ShapeCore {
+                    points: vec![start, start],
+                    color: self.color,
+                })));
+            }
+            Shape::Circle => {
+                self.cur_shape = Some(Box::new(Circle::new(ShapeCore {
                     points: vec![start, start],
                     color: self.color,
                 })));

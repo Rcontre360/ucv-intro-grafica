@@ -13,7 +13,7 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
 use crate::gui::Framework;
-use crate::state::State;
+
 
 mod canvas;
 mod gui;
@@ -52,7 +52,6 @@ fn main() -> Result<(), Error> {
 
         (pixels, framework)
     };
-    let mut state = State::new();
 
     let res = event_loop.run(|event, elwt| {
         if input.update(&event) {
@@ -63,19 +62,19 @@ fn main() -> Result<(), Error> {
 
             if input.mouse_pressed(0) {
                 if let Some((x, y)) = input.cursor() {
-                    state.start_current_shape((x.round() as i32, y.round() as i32));
+                    framework.get_state().start_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
             if input.mouse_held(0) {
                 if let Some((x, y)) = input.cursor() {
-                    state.update_current_shape((x.round() as i32, y.round() as i32));
+                    framework.get_state().update_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
             if input.mouse_released(0) {
                 if let Some((x, y)) = input.cursor() {
-                    state.end_current_shape((x.round() as i32, y.round() as i32));
+                    framework.get_state().end_current_shape((x.round() as i32, y.round() as i32));
                 }
             }
 
@@ -84,44 +83,44 @@ fn main() -> Result<(), Error> {
                 framework.scale_factor(scale_factor);
             }
 
-            state.update();
+            framework.get_state().update();
             window.request_redraw();
         }
 
         match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                ..
-            } => {
-                if size.width > 0 && size.height > 0 {
-                    if let Err(err) = pixels.resize_surface(size.width, size.height) {
-                        log_error("pixels.resize_surface", err);
+            Event::WindowEvent { event, .. } => {
+                framework.handle_event(&window, &event);
+                match event {
+                    WindowEvent::Resized(size) => {
+                        if size.width > 0 && size.height > 0 {
+                            if let Err(err) = pixels.resize_surface(size.width, size.height) {
+                                log_error("pixels.resize_surface", err);
+                            }
+                            framework.resize(size.width, size.height);
+                            window.request_redraw();
+                        }
                     }
-                    framework.resize(size.width, size.height);
-                    window.request_redraw();
-                }
-            }
-            Event::WindowEvent {
-                event: WindowEvent::RedrawRequested,
-                ..
-            } => {
-                let size = window.inner_size();
-                let mut canvas = Canvas::new(pixels.frame_mut(), size.width, size.height);
-                state.draw(&mut canvas);
+                    WindowEvent::RedrawRequested => {
+                        let size = window.inner_size();
+                        let mut canvas = Canvas::new(pixels.frame_mut(), size.width, size.height);
+                        framework.get_state().draw(&mut canvas);
 
-                // Prepare egui
-                framework.prepare(&window);
+                        // Prepare egui
+                        framework.prepare(&window);
 
-                let render_result = pixels.render_with(|encoder, render_target, context| {
-                    context.scaling_renderer.render(encoder, render_target);
-                    framework.render(encoder, render_target, context);
+                        let render_result = pixels.render_with(|encoder, render_target, context| {
+                            context.scaling_renderer.render(encoder, render_target);
+                            framework.render(encoder, render_target, context);
 
-                    Ok(())
-                });
+                            Ok(())
+                        });
 
-                if let Err(err) = render_result {
-                    log_error("pixels.render", err);
-                    elwt.exit();
+                        if let Err(err) = render_result {
+                            log_error("pixels.render", err);
+                            elwt.exit();
+                        }
+                    }
+                    _ => (),
                 }
             }
             _ => (),

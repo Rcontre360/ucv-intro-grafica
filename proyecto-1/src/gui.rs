@@ -4,6 +4,49 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
+use crate::state::State;
+use crate::primitives::core::Shape;
+
+/// Example application state. A real application will need a lot more state than this.
+pub(crate) struct TemplateApp {
+    state: State,
+}
+
+impl TemplateApp {
+    /// Called once before the first frame.
+    pub fn new() -> Self {
+        Self {
+            state: State::new(),
+        }
+    }
+
+    /// Called each time the UI is updated.
+    pub fn update(&mut self, ctx: &egui::Context) {
+        egui::SidePanel::left("side_panel").show(ctx, |ui| {
+            ui.heading("Shapes");
+
+            ui.separator();
+
+            if ui.button("1. Line").clicked() {
+                self.state.current = Shape::Line;
+            }
+            if ui.button("2. Ellipse").clicked() {
+                self.state.current = Shape::Ellipse;
+            }
+            if ui.button("3. Circle").clicked() {
+                self.state.current = Shape::Circle;
+            }
+
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                ui.add(egui::github_link_file!(
+                    "https://github.com/emilk/egui/blob/master/",
+                    "Source code."
+                ));
+            });
+        });
+    }
+}
+
 /// Manages all state required for rendering egui over `Pixels`.
 pub(crate) struct Framework {
     // State for egui.
@@ -15,13 +58,7 @@ pub(crate) struct Framework {
     textures: TexturesDelta,
 
     // State for the GUI
-    gui: Gui,
-}
-
-/// Example application state. A real application will need a lot more state than this.
-struct Gui {
-    /// Only show the egui window when true.
-    window_open: bool,
+    gui: TemplateApp,
 }
 
 impl Framework {
@@ -49,7 +86,7 @@ impl Framework {
         };
         let renderer = Renderer::new(pixels.device(), pixels.render_texture_format(), None, 1);
         let textures = TexturesDelta::default();
-        let gui = Gui::new();
+        let gui = TemplateApp::new();
 
         Self {
             egui_ctx,
@@ -85,7 +122,7 @@ impl Framework {
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx);
+            self.gui.update(egui_ctx);
         });
 
         self.textures.append(output.textures_delta);
@@ -143,40 +180,10 @@ impl Framework {
             self.renderer.free_texture(id);
         }
     }
-}
 
-impl Gui {
-    /// Create a `Gui`.
-    fn new() -> Self {
-        Self { window_open: true }
-    }
-
-    /// Create the UI using egui.
-    fn ui(&mut self, ctx: &Context) {
-        //egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
-        //egui::menu::bar(ui, |ui| {
-        //ui.menu_button("File", |ui| {
-        //if ui.button("About...").clicked() {
-        //self.window_open = true;
-        //ui.close_menu();
-        //}
-        //})
-        //});
-        //});
-
-        //egui::Window::new("Hello, egui!")
-        //.open(&mut self.window_open)
-        //.show(ctx, |ui| {
-        //ui.label("This example demonstrates using egui with pixels.");
-        //ui.label("Made with 💖 in San Francisco!");
-
-        //ui.separator();
-
-        //ui.horizontal(|ui| {
-        //ui.spacing_mut().item_spacing.x /= 2.0;
-        //ui.label("Learn more about egui at");
-        //ui.hyperlink("https://docs.rs/egui");
-        //});
-        //});
+    pub(crate) fn get_state(&mut self) -> &mut State {
+        &mut self.gui.state
     }
 }
+
+
