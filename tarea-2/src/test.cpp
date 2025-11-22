@@ -5,21 +5,18 @@
 #include <chrono>
 #include <filesystem>
 
-using namespace std;
-namespace fs = filesystem;
-
 class EllipseTest : public EllipseRender
 {
     protected:
-        vector<Point> ellipse1;
-        vector<Point> ellipse2;
+        std::vector<Point> ellipse1;
+        std::vector<Point> ellipse2;
 
         bool is_benchmark;
         const int BENCHMARK_MAX_ELLIPSES = 1000000;
         const int BENCHMARK_STEP = 5000;
 
     public:
-        bool isSameEllipse(vector<Point> a, vector<Point> b){
+        bool isSameEllipse(std::vector<Point> a, std::vector<Point> b){
             // at least 1 point of difference is wrong
             for (auto pa:a){
                 bool found = false;
@@ -50,27 +47,27 @@ class EllipseTest : public EllipseRender
         // benchmark, was hard to setup because of caching issues and having to use random ellipses
         void benchmark(int h, int w) {
             printf("RUNNING BENCHMARK %ix%i\n",h,w);
-            
+
             height = h;
             width = w;
             is_benchmark = true;
 
-            const string dir = "./benchmark";
+            const std::string dir = "./benchmark";
 
-            stringstream filename_ss;
+            std::stringstream filename_ss;
             filename_ss << dir << "/" << h << "x" << w << ".csv";
-            const string file_path = filename_ss.str();
+            const std::string file_path = filename_ss.str();
 
-            if (!fs::exists(dir)) 
-                fs::create_directory(dir);
+            if (!std::filesystem::exists(dir))
+                std::filesystem::create_directory(dir);
 
-            ofstream file(file_path);
+            std::ofstream file(file_path);
             file << "num_ellipses,time,algorithm\n";
 
             for (int i = BENCHMARK_STEP; i <= BENCHMARK_MAX_ELLIPSES; i += BENCHMARK_STEP) {
-                
+
                 // we generate random ellipses
-                vector<Ellipse> ellipses_for_test;
+                std::vector<Ellipse> ellipses_for_test;
                 ellipses_for_test.reserve(i);
                 for (int j = 0; j < i; j++) {
                     ellipses_for_test.push_back(generateRandomEllipse());
@@ -84,12 +81,12 @@ class EllipseTest : public EllipseRender
 
                 // we run the actual benchmark
                 use_optimized = true;
-                auto start_optimized = chrono::high_resolution_clock::now();
+                auto start_optimized = std::chrono::high_resolution_clock::now();
                 for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
-                auto end_optimized = chrono::high_resolution_clock::now();
-                chrono::duration<double> diff_optimized = end_optimized - start_optimized;
+                auto end_optimized = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> diff_optimized = end_optimized - start_optimized;
                 file << i << "," << diff_optimized.count() << "," << "optimized\n";
 
                 // warm up with the vanilla algorithm (the original one)
@@ -100,12 +97,12 @@ class EllipseTest : public EllipseRender
 
                 // run benchmarks for the original algo
                 use_optimized = false;
-                auto start_vanilla = chrono::high_resolution_clock::now();
+                auto start_vanilla = std::chrono::high_resolution_clock::now();
                 for (const auto& e : ellipses_for_test) {
                     drawEllipse(e);
                 }
-                auto end_vanilla = chrono::high_resolution_clock::now();
-                chrono::duration<double> diff_vanilla = end_vanilla - start_vanilla;
+                auto end_vanilla = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> diff_vanilla = end_vanilla - start_vanilla;
                 file << i << "," << diff_vanilla.count() << "," << "vanilla\n";
 
 
@@ -126,10 +123,10 @@ class EllipseTest : public EllipseRender
             height = h;
             width = w;
 
-            stringstream dir_ss;
+            std::stringstream dir_ss;
             dir_ss << "./comparison/" << h << "x" << w;
-            string dir_path = dir_ss.str();
-            fs::create_directories(dir_path);
+            std::string dir_path = dir_ss.str();
+            std::filesystem::create_directories(dir_path);
 
             for (int i=0; i < 10000; i++){ //10k tests
                 Ellipse e = generateRandomEllipse();
@@ -140,18 +137,18 @@ class EllipseTest : public EllipseRender
                 use_optimized = true;
                 drawEllipse(e);
 
-                stringstream test_dir_ss;
+                std::stringstream test_dir_ss;
                 test_dir_ss << dir_path << "/test_" << i;
-                string test_dir_path = test_dir_ss.str();
-                fs::create_directory(test_dir_path);
+                std::string test_dir_path = test_dir_ss.str();
+                std::filesystem::create_directory(test_dir_path);
 
-                ofstream file1(test_dir_path + "/draw_ellipse_1.txt");
+                std::ofstream file1(test_dir_path + "/draw_ellipse_1.txt");
                 for (const auto& point : ellipse1) {
                     file1 << point.x << " " << point.y << "\n";
                 }
                 file1.close();
 
-                ofstream file2(test_dir_path + "/draw_ellipse_2.txt");
+                std::ofstream file2(test_dir_path + "/draw_ellipse_2.txt");
                 for (const auto& point : ellipse2) {
                     file2 << point.x << " " << point.y << "\n";
                 }
@@ -182,14 +179,14 @@ int main() {
     test->comparisonTest(200,200);
     test->comparisonTest(500,500);
     //// 8k screen
-    test->comparisonTest(4000,4000);
+    //test->comparisonTest(4000,4000);
 
-    cout << "\nComparison tests finished. Press Enter to start benchmarks..." << endl;
-    cin.get();
+    std::cout << "\nComparison tests finished. Press Enter to start benchmarks..." << std::endl;
+    std::cin.get();
 
-    test->benchmark(1000,1000);
-    test->benchmark(4000,4000);
-    test->benchmark(8000,8000);
+    test->benchmark(500,500);
+    //test->benchmark(4000,4000);
+    //test->benchmark(8000,8000);
 
     return 0;
 }
