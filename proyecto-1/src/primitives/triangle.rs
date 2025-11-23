@@ -49,4 +49,8 @@ impl ShapeImpl for Triangle {
             }).draw(canvas);
         }
     }
+
+    fn hit_test(&self, _point: Point) -> bool {
+        false
+    }
 }

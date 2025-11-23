@@ -27,6 +27,8 @@ pub trait ShapeImpl {
     fn get_core(&self) -> ShapeCore;
 
     fn draw<'a>(&self, buffer: &mut Canvas<'a>);
+
+    fn hit_test(&self, point: Point) -> bool;
 }
 
 #[derive(Clone)]

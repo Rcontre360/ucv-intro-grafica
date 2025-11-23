@@ -74,4 +74,34 @@ impl ShapeImpl for Line {
             }
         }
     }
+
+    fn hit_test(&self, point: Point) -> bool {
+        let p1 = self.core.points[0];
+        let p2 = self.core.points[1];
+        let p = point;
+
+        let dx = (p2.0 - p1.0) as f32;
+        let dy = (p2.1 - p1.1) as f32;
+
+        if dx == 0.0 && dy == 0.0 {
+            let dist = ((p.0 - p1.0).pow(2) + (p.1 - p1.1).pow(2)) as f32;
+            return dist.sqrt() < 5.0;
+        }
+
+        let t = ((p.0 - p1.0) as f32 * dx + (p.1 - p1.1) as f32 * dy) / (dx * dx + dy * dy);
+
+        let closest_point = if t < 0.0 {
+            p1
+        } else if t > 1.0 {
+            p2
+        } else {
+            (
+                p1.0 + (t * dx) as i32,
+                p1.1 + (t * dy) as i32,
+            )
+        };
+
+        let dist = ((p.0 - closest_point.0).pow(2) + (p.1 - closest_point.1).pow(2)) as f32;
+        dist.sqrt() < 5.0
+    }
 }

@@ -115,4 +115,15 @@ impl ShapeImpl for Ellipse {
             draw_symmetric(canvas, x, y);
         }
     }
+
+    fn hit_test(&self, point: Point) -> bool {
+        let (px, py) = point;
+        let (cx, cy) = self.center;
+        let (a, b) = (self.a as f32, self.b as f32);
+
+        let dx = (px - cx) as f32;
+        let dy = (py - cy) as f32;
+
+        (dx * dx) / (a * a) + (dy * dy) / (b * b) <= 1.0
+    }
 }

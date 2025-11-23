@@ -28,4 +28,8 @@ impl ShapeImpl for Bezier {
         // TODO: Implement Bezier curve drawing
         // For now, do nothing.
     }
+
+    fn hit_test(&self, _point: Point) -> bool {
+        false
+    }
 }

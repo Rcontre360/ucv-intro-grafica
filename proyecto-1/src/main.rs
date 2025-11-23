@@ -61,9 +61,10 @@ fn main() -> Result<(), Error> {
 
             if input.mouse_pressed(0) {
                 if let Some((x, y)) = input.cursor() {
-                    framework
-                        .get_state()
-                        .start_current_shape((x.round() as i32, y.round() as i32));
+                    let _x = x.round() as i32;
+                    let _y = y.round() as i32;
+                    framework.get_state().handle_selection((_x, _y));
+                    framework.get_state().start_current_shape((_x, _y));
                 }
             }
 
@@ -88,7 +89,6 @@ fn main() -> Result<(), Error> {
                 framework.scale_factor(scale_factor);
             }
 
-            framework.get_state().update();
             window.request_redraw();
         }
 
