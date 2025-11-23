@@ -4,12 +4,10 @@ use core::fmt;
 #[allow(dead_code)]
 pub enum Shape {
     Line,
-    Circle,
     Ellipse,
     Triangle,
     Rectangle,
     Bezier,
-    Curve,
 }
 
 pub type Point = (i32, i32);

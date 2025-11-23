@@ -4,8 +4,8 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
-use crate::state::State;
 use crate::primitives::core::Shape;
+use crate::state::State;
 
 /// Example application state. A real application will need a lot more state than this.
 pub(crate) struct TemplateApp {
@@ -33,16 +33,13 @@ impl TemplateApp {
             if ui.button("2. Ellipse").clicked() {
                 self.state.current = Shape::Ellipse;
             }
-            if ui.button("3. Circle").clicked() {
-                self.state.current = Shape::Circle;
-            }
-            if ui.button("4. Triangle").clicked() {
+            if ui.button("3. Triangle").clicked() {
                 self.state.current = Shape::Triangle;
             }
-            if ui.button("5. Rectangle").clicked() {
+            if ui.button("4. Rectangle").clicked() {
                 self.state.current = Shape::Rectangle;
             }
-            if ui.button("6. Bezier").clicked() {
+            if ui.button("5. Bezier").clicked() {
                 self.state.current = Shape::Bezier;
             }
 
@@ -51,21 +48,27 @@ impl TemplateApp {
             ui.heading("Color (RGB)");
             ui.horizontal(|ui| {
                 ui.label("R:");
-                ui.add(egui::DragValue::new(&mut self.state.color[0])
-                    .speed(1.0)
-                    .clamp_range(0..=255));
+                ui.add(
+                    egui::DragValue::new(&mut self.state.color[0])
+                        .speed(1.0)
+                        .clamp_range(0..=255),
+                );
             });
             ui.horizontal(|ui| {
                 ui.label("G:");
-                ui.add(egui::DragValue::new(&mut self.state.color[1])
-                    .speed(1.0)
-                    .clamp_range(0..=255));
+                ui.add(
+                    egui::DragValue::new(&mut self.state.color[1])
+                        .speed(1.0)
+                        .clamp_range(0..=255),
+                );
             });
             ui.horizontal(|ui| {
                 ui.label("B:");
-                ui.add(egui::DragValue::new(&mut self.state.color[2])
-                    .speed(1.0)
-                    .clamp_range(0..=255));
+                ui.add(
+                    egui::DragValue::new(&mut self.state.color[2])
+                        .speed(1.0)
+                        .clamp_range(0..=255),
+                );
             });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -216,5 +219,3 @@ impl Framework {
         &mut self.gui.state
     }
 }
-
-

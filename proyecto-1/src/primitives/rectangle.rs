@@ -1,6 +1,7 @@
-use crate::canvas::Canvas;
+use std::cmp::{max, min};
+
 use super::core::{Point, ShapeCore, ShapeImpl};
-use super::line::Line; // To draw lines for the rectangle
+use crate::canvas::Canvas; // To draw lines for the rectangle
 
 pub struct Rectangle {
     core: ShapeCore,
@@ -23,33 +24,20 @@ impl ShapeImpl for Rectangle {
         let p1 = self.core.points[0];
         let p2 = self.core.points[1];
 
-        let top_left = (p1.0.min(p2.0), p1.1.min(p2.1));
-        let bottom_right = (p1.0.max(p2.0), p1.1.max(p2.1));
+        let min_x = min(p1.0, p2.0);
+        let max_x = max(p1.0, p2.0);
 
-        let p_tl = top_left;
-        let p_tr = (bottom_right.0, top_left.1);
-        let p_bl = (top_left.0, bottom_right.1);
-        let p_br = bottom_right;
+        let min_y = min(p1.1, p2.1);
+        let max_y = max(p1.1, p2.1);
 
-        // Draw four lines to form the rectangle
-        Line::new(ShapeCore {
-            points: vec![p_tl, p_tr],
-            color: self.core.color,
-        }).draw(canvas);
+        for x in min_x..max_x {
+            canvas.set_pixel(x, max_y, self.core.color);
+            canvas.set_pixel(x, min_y, self.core.color);
+        }
 
-        Line::new(ShapeCore {
-            points: vec![p_tr, p_br],
-            color: self.core.color,
-        }).draw(canvas);
-
-        Line::new(ShapeCore {
-            points: vec![p_br, p_bl],
-            color: self.core.color,
-        }).draw(canvas);
-
-        Line::new(ShapeCore {
-            points: vec![p_bl, p_tl],
-            color: self.core.color,
-        }).draw(canvas);
+        for y in min_y..max_y {
+            canvas.set_pixel(min_x, y, self.core.color);
+            canvas.set_pixel(max_x, y, self.core.color);
+        }
     }
 }

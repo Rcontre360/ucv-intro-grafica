@@ -1,7 +1,13 @@
 pub mod core;
-pub mod line;
-pub mod ellipse;
-pub mod circle;
-pub mod triangle;
-pub mod rectangle;
-pub mod bezier;
+
+mod bezier;
+mod ellipse;
+mod line;
+mod rectangle;
+mod triangle;
+
+pub use bezier::Bezier;
+pub use ellipse::Ellipse;
+pub use line::Line;
+pub use rectangle::Rectangle;
+pub use triangle::Triangle;

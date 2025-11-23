@@ -1,14 +1,7 @@
 use crate::{
     canvas::Canvas,
-    primitives::{
-        core::{rgba, Point, Shape, ShapeCore, ShapeImpl, RGBA},
-        line::Line,
-        ellipse::Ellipse,
-        circle::Circle,
-        triangle::Triangle,
-        rectangle::Rectangle,
-        bezier::Bezier,
-    },
+    primitives,
+    primitives::core::{rgba, Point, Shape, ShapeCore, ShapeImpl, RGBA},
 };
 
 pub struct State {
@@ -29,45 +22,13 @@ impl State {
     }
 
     pub fn start_current_shape(&mut self, start: Point) {
-        match self.current {
-            Shape::Line => {
-                self.cur_shape = Some(Box::new(Line::new(ShapeCore {
-                    points: vec![start, start],
-                    color: self.color,
-                })));
-            }
-            Shape::Ellipse => {
-                self.cur_shape = Some(Box::new(Ellipse::new(ShapeCore {
-                    points: vec![start, start],
-                    color: self.color,
-                })));
-            }
-            Shape::Circle => {
-                self.cur_shape = Some(Box::new(Circle::new(ShapeCore {
-                    points: vec![start, start],
-                    color: self.color,
-                })));
-            }
-            Shape::Triangle => {
-                self.cur_shape = Some(Box::new(Triangle::new(ShapeCore {
-                    points: vec![start, start, start], // Initialize with 3 points for triangle
-                    color: self.color,
-                })));
-            }
-            Shape::Rectangle => {
-                self.cur_shape = Some(Box::new(Rectangle::new(ShapeCore {
-                    points: vec![start, start],
-                    color: self.color,
-                })));
-            }
-            Shape::Bezier => {
-                self.cur_shape = Some(Box::new(Bezier::new(ShapeCore {
-                    points: vec![start, start], // Initialize with 2 points for bezier (for now)
-                    color: self.color,
-                })));
-            }
-            _ => {}
-        }
+        self.cur_shape = match self.current {
+            Shape::Line => box_new_shape::<primitives::Line>(start, self.color),
+            Shape::Ellipse => box_new_shape::<primitives::Ellipse>(start, self.color),
+            Shape::Triangle => box_new_shape::<primitives::Triangle>(start, self.color),
+            Shape::Rectangle => box_new_shape::<primitives::Rectangle>(start, self.color),
+            Shape::Bezier => box_new_shape::<primitives::Bezier>(start, self.color),
+        };
     }
 
     pub fn update_current_shape(&mut self, end: Point) {
@@ -97,4 +58,13 @@ impl State {
             cur.draw(canvas);
         }
     }
+}
+
+fn box_new_shape<T>(start: Point, color: RGBA) -> Option<Box<dyn ShapeImpl>>
+where
+    T: ShapeImpl + Sized + 'static,
+{
+    let points = vec![start, start];
+    let core = ShapeCore { points, color };
+    Some(Box::new(T::new(core)))
 }
