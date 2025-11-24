@@ -68,6 +68,22 @@ fn main() -> Result<(), Error> {
                 }
             }
 
+            if input.mouse_pressed(1) {
+                if let Some((x, y)) = input.cursor() {
+                    framework
+                        .get_state()
+                        .add_control_point((x.round() as i32, y.round() as i32));
+                }
+            }
+
+            if input.mouse_released(1) {
+                if let Some((x, y)) = input.cursor() {
+                    framework
+                        .get_state()
+                        .end_control_point((x.round() as i32, y.round() as i32));
+                }
+            }
+
             if input.mouse_held(0) {
                 if let Some((x, y)) = input.cursor() {
                     framework

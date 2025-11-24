@@ -1,4 +1,5 @@
 use crate::canvas::Canvas;
+use crate::primitives::bezier::Bezier;
 use core::fmt;
 
 #[allow(dead_code)]
@@ -29,6 +30,10 @@ pub trait ShapeImpl {
     fn draw<'a>(&self, buffer: &mut Canvas<'a>);
 
     fn hit_test(&self, point: Point) -> bool;
+
+    fn as_bezier_mut(&mut self) -> Option<&mut Bezier> {
+        None
+    }
 }
 
 #[derive(Clone)]

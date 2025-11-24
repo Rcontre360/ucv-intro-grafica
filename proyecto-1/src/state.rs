@@ -43,7 +43,7 @@ impl State {
             Shape::Ellipse => box_new_shape::<primitives::Ellipse>(start, self.color),
             Shape::Triangle => None, // Not implemented
             Shape::Rectangle => box_new_shape::<primitives::Rectangle>(start, self.color),
-            Shape::Bezier => None, // Not implemented
+            Shape::Bezier => box_new_shape::<primitives::Bezier>(start, self.color),
         };
     }
 
@@ -60,6 +60,28 @@ impl State {
             self.objects.push(cur);
         }
     }
+
+    pub fn add_control_point(&mut self, point: Point) {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get_mut(selected_index) {
+                if let Some(bezier) = object.as_mut().as_bezier_mut() {
+                    bezier.add_control_point(point);
+                }
+            }
+        }
+    }
+
+    pub fn end_control_point(&mut self, point: Point) {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get_mut(selected_index) {
+                if let Some(bezier) = object.as_mut().as_bezier_mut() {
+                    bezier.end_control_point(point);
+                }
+            }
+        }
+    }
+
+    pub fn update(&mut self) {}
 
     pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         canvas.clear();
