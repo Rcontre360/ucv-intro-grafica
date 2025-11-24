@@ -1,4 +1,4 @@
-use super::core::{Point, ShapeCore, ShapeImpl};
+use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas;
 
 pub struct Ellipse {
@@ -21,11 +21,24 @@ impl ShapeImpl for Ellipse {
         }
     }
 
-    fn update(&mut self, end: Point) {
-        let (x0, y0) = self.core.points[0];
-        let (x1, y1) = end;
+    fn update(&mut self, op: &UpdateOp) {
+        match op {
+            UpdateOp::Move { delta } => {
+                for p in self.core.points.iter_mut() {
+                    p.0 += delta.0;
+                    p.1 += delta.1;
+                }
+            }
+            UpdateOp::ControlPoint { index, point } => {
+                if *index < self.core.points.len() {
+                    self.core.points[*index] = *point;
+                }
+            }
+            _ => {}
+        }
 
-        self.core.points[1] = end;
+        let (x0, y0) = self.core.points[0];
+        let (x1, y1) = self.core.points[1];
 
         self.center = ((x0 + x1) / 2, (y0 + y1) / 2);
         self.a = ((x1 - x0) / 2).abs() as i32;

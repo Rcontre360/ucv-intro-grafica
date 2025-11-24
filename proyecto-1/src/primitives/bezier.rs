@@ -1,4 +1,4 @@
-use super::core::{Point, ShapeCore, ShapeImpl};
+use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas;
 
 const CURVE_DETAIL: f32 = 0.0001;
@@ -16,8 +16,23 @@ impl ShapeImpl for Bezier {
         }
     }
 
-    fn update(&mut self, end: Point) {
-        self.core.points[1] = end;
+    fn update(&mut self, op: &UpdateOp) {
+        match op {
+            UpdateOp::Move { delta } => {
+                for p in self.core.points.iter_mut() {
+                    p.0 += delta.0;
+                    p.1 += delta.1;
+                }
+            }
+            UpdateOp::ControlPoint { index, point } => {
+                if *index < self.core.points.len() {
+                    self.core.points[*index] = *point;
+                }
+            }
+            UpdateOp::Subdivide => {
+                self.subdivide();
+            }
+        }
     }
 
     fn get_core(&self) -> ShapeCore {
@@ -85,5 +100,34 @@ impl Bezier {
         }
 
         pts_cpy[0]
+    }
+
+    pub fn subdivide(&mut self) {
+        let n = self.core.points.len();
+        if n < 2 {
+            return;
+        }
+
+        let t = 0.5;
+        let mut new_points = Vec::with_capacity(n + 1);
+        let mut last_points = self.core.points.clone();
+
+        new_points.push(self.core.points[0]);
+
+        for i in 1..n {
+            let mut next_points = Vec::with_capacity(n - i);
+            for j in 0..n - i {
+                let p1 = last_points[j];
+                let p2 = last_points[j + 1];
+                let x = (1.0 - t) * p1.0 as f32 + t * p2.0 as f32;
+                let y = (1.0 - t) * p1.1 as f32 + t * p2.1 as f32;
+                next_points.push((x.round() as i32, y.round() as i32));
+            }
+            new_points.push(next_points[0]);
+            last_points = next_points;
+        }
+
+        new_points.push(self.core.points[n - 1]);
+        self.core.points = new_points;
     }
 }

@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 
-use super::core::{Point, ShapeCore, ShapeImpl};
+use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 
 pub struct Line {
     core: ShapeCore,
@@ -11,8 +11,21 @@ impl ShapeImpl for Line {
         Line { core }
     }
 
-    fn update(&mut self, end: Point) {
-        self.core.points[1] = end;
+    fn update(&mut self, op: &UpdateOp) {
+        match op {
+            UpdateOp::Move { delta } => {
+                for p in self.core.points.iter_mut() {
+                    p.0 += delta.0;
+                    p.1 += delta.1;
+                }
+            }
+            UpdateOp::ControlPoint { index, point } => {
+                if *index < self.core.points.len() {
+                    self.core.points[*index] = *point;
+                }
+            }
+            _ => {}
+        }
     }
 
     fn get_core(&self) -> ShapeCore {

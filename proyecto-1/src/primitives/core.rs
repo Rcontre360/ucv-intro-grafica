@@ -11,6 +11,12 @@ pub enum Shape {
     Bezier,
 }
 
+pub enum UpdateOp {
+    Move { delta: (i32, i32) },
+    ControlPoint { index: usize, point: Point },
+    Subdivide,
+}
+
 pub type Point = (i32, i32);
 
 pub type RGBA = [u8; 4];
@@ -23,7 +29,7 @@ pub trait ShapeImpl {
     where
         Self: Sized;
 
-    fn update(&mut self, end: Point);
+    fn update(&mut self, op: &UpdateOp);
 
     fn get_core(&self) -> ShapeCore;
 

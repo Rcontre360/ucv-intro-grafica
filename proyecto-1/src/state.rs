@@ -1,7 +1,7 @@
 use crate::{
     canvas::Canvas,
     primitives,
-    primitives::core::{Point, RGBA, Shape, ShapeCore, ShapeImpl, rgba},
+    primitives::core::{rgba, Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
 };
 
 pub struct State {
@@ -49,7 +49,11 @@ impl State {
 
     pub fn update_current_shape(&mut self, end: Point) {
         if let Some(mut cur) = self.cur_shape.take() {
-            cur.as_mut().update(end);
+            let op = UpdateOp::ControlPoint {
+                index: 1,
+                point: end,
+            };
+            cur.as_mut().update(&op);
             self.cur_shape = Some(cur);
         }
     }
@@ -81,6 +85,15 @@ impl State {
         }
     }
 
+    pub fn subdivide_selected(&mut self) {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get_mut(selected_index) {
+                let op = UpdateOp::Subdivide;
+                object.as_mut().update(&op);
+            }
+        }
+    }
+
     pub fn update(&mut self) {}
 
     pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
@@ -88,12 +101,17 @@ impl State {
 
         for (i, shape) in self.objects.iter().enumerate() {
             shape.draw(canvas);
+
             if self.selected == Some(i) {
                 let core = shape.get_core();
+
+                // drawing control points
                 for p in core.points {
-                    for x in (p.0 - 3)..(p.0 + 3) {
-                        for y in (p.1 - 3)..(p.1 + 3) {
-                            canvas.set_pixel(x, y, rgba(255, 0, 0, 255));
+                    for x in (p.0 - 4)..(p.0 + 4) {
+                        for y in (p.1 - 4)..(p.1 + 4) {
+                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
+                                canvas.set_pixel(x, y, rgba(255, 0, 0, 255));
+                            }
                         }
                     }
                 }

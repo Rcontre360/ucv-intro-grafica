@@ -1,5 +1,5 @@
 use crate::canvas::Canvas;
-use super::core::{Point, ShapeCore, ShapeImpl};
+use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 use super::line::Line; // To draw lines for the triangle
 
 pub struct Triangle {
@@ -11,14 +11,20 @@ impl ShapeImpl for Triangle {
         Triangle { core }
     }
 
-    fn update(&mut self, end: Point) {
-        // For a triangle, the first point is the start, the second is the current mouse position,
-        // and the third point will be updated as the mouse moves.
-        // We need to ensure we have at least 3 points for a triangle.
-        if self.core.points.len() < 3 {
-            self.core.points.push(end);
-        } else {
-            self.core.points[2] = end;
+    fn update(&mut self, op: &UpdateOp) {
+        match op {
+            UpdateOp::Move { delta } => {
+                for p in self.core.points.iter_mut() {
+                    p.0 += delta.0;
+                    p.1 += delta.1;
+                }
+            }
+            UpdateOp::ControlPoint { index, point } => {
+                if *index < self.core.points.len() {
+                    self.core.points[*index] = *point;
+                }
+            }
+            _ => {}
         }
     }
 

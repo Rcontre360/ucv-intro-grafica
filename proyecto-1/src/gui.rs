@@ -4,7 +4,7 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
-use crate::primitives::core::Shape;
+use crate::primitives::core::{Shape, ShapeImpl};
 use crate::state::State;
 
 /// Example application state. A real application will need a lot more state than this.
@@ -44,6 +44,12 @@ impl TemplateApp {
             }
 
             ui.separator();
+
+            if self.state.selected.is_some() {
+                if ui.button("Subdiv").clicked() {
+                    self.state.subdivide_selected();
+                }
+            }
 
             ui.heading("Color (RGB)");
             ui.horizontal(|ui| {

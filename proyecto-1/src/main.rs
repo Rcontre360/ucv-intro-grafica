@@ -59,6 +59,10 @@ fn main() -> Result<(), Error> {
                 return;
             }
 
+            if input.key_pressed(KeyCode::Enter) {
+                framework.get_state().subdivide_selected();
+            }
+
             if input.mouse_pressed(0) {
                 if let Some((x, y)) = input.cursor() {
                     let _x = x.round() as i32;
