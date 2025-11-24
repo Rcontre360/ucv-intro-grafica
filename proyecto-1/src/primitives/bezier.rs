@@ -1,7 +1,7 @@
 use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas;
 
-const CURVE_DETAIL: f32 = 0.0001;
+const CURVE_DETAIL: f32 = 0.00001;
 
 pub struct Bezier {
     core: ShapeCore,
@@ -29,8 +29,8 @@ impl ShapeImpl for Bezier {
                     self.core.points[*index] = *point;
                 }
             }
-            UpdateOp::Subdivide => {
-                self.subdivide();
+            UpdateOp::DegreeElevate => {
+                self.degree_elevate();
             }
         }
     }
@@ -68,23 +68,9 @@ impl ShapeImpl for Bezier {
 
         point.0 >= min_x && point.0 <= max_x && point.1 >= min_y && point.1 <= max_y
     }
-
-    fn as_bezier_mut(&mut self) -> Option<&mut Bezier> {
-        Some(self)
-    }
 }
 
 impl Bezier {
-    pub fn add_control_point(&mut self, point: Point) {
-        self.core.points.push(point);
-    }
-
-    pub fn end_control_point(&mut self, point: Point) {
-        if let Some(last) = self.core.points.last_mut() {
-            *last = point;
-        }
-    }
-
     fn de_casteljau(&self, t: f32) -> Point {
         let mut pts_cpy = self.core.points.clone();
 
@@ -102,32 +88,27 @@ impl Bezier {
         pts_cpy[0]
     }
 
-    pub fn subdivide(&mut self) {
-        let n = self.core.points.len();
-        if n < 2 {
-            return;
-        }
-
-        let t = 0.5;
-        let mut new_points = Vec::with_capacity(n + 1);
-        let mut last_points = self.core.points.clone();
+    pub fn degree_elevate(&mut self) {
+        let n = self.core.points.len() as f32;
+        let mut new_points: Vec<Point> = Vec::with_capacity(n as usize + 1);
 
         new_points.push(self.core.points[0]);
 
-        for i in 1..n {
-            let mut next_points = Vec::with_capacity(n - i);
-            for j in 0..n - i {
-                let p1 = last_points[j];
-                let p2 = last_points[j + 1];
-                let x = (1.0 - t) * p1.0 as f32 + t * p2.0 as f32;
-                let y = (1.0 - t) * p1.1 as f32 + t * p2.1 as f32;
-                next_points.push((x.round() as i32, y.round() as i32));
-            }
-            new_points.push(next_points[0]);
-            last_points = next_points;
+        for i in 1..(n as usize) {
+            let b_prev = self.core.points[i - 1];
+            let b = self.core.points[i];
+            let j = i as f32;
+
+            // j / n * b_j-1 + (1 - j/n) * b_j
+            // formula says its n+1 but we already added one before the loop
+            let x = j / n * (b_prev.0 as f32) + (1.0 - j / n) * (b.0 as f32);
+            let y = j / n * (b_prev.1 as f32) + (1.0 - j / n) * (b.1 as f32);
+
+            new_points.push((x.round() as i32, y.round() as i32));
         }
 
-        new_points.push(self.core.points[n - 1]);
+        new_points.push(*self.core.points.last().unwrap());
+
         self.core.points = new_points;
     }
 }

@@ -14,7 +14,7 @@ pub enum Shape {
 pub enum UpdateOp {
     Move { delta: (i32, i32) },
     ControlPoint { index: usize, point: Point },
-    Subdivide,
+    DegreeElevate,
 }
 
 pub type Point = (i32, i32);
@@ -36,10 +36,6 @@ pub trait ShapeImpl {
     fn draw<'a>(&self, buffer: &mut Canvas<'a>);
 
     fn hit_test(&self, point: Point) -> bool;
-
-    fn as_bezier_mut(&mut self) -> Option<&mut Bezier> {
-        None
-    }
 }
 
 #[derive(Clone)]

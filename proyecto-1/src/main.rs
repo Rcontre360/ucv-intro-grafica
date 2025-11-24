@@ -64,43 +64,45 @@ fn main() -> Result<(), Error> {
             }
 
             if input.mouse_pressed(0) {
-                if let Some((x, y)) = input.cursor() {
-                    let _x = x.round() as i32;
-                    let _y = y.round() as i32;
-                    framework.get_state().handle_selection((_x, _y));
-                    framework.get_state().start_current_shape((_x, _y));
-                }
-            }
-
-            if input.mouse_pressed(1) {
-                if let Some((x, y)) = input.cursor() {
-                    framework
-                        .get_state()
-                        .add_control_point((x.round() as i32, y.round() as i32));
-                }
-            }
-
-            if input.mouse_released(1) {
-                if let Some((x, y)) = input.cursor() {
-                    framework
-                        .get_state()
-                        .end_control_point((x.round() as i32, y.round() as i32));
+                if !framework.wants_pointer_input() {
+                    if let Some((x, y)) = input.cursor() {
+                        let _x = x.round() as i32;
+                        let _y = y.round() as i32;
+                        if let Some(control_point_index) =
+                            framework.get_state().hit_test_control_points((_x, _y))
+                        {
+                            framework.get_state().dragging = Some(control_point_index);
+                        } else {
+                            framework.get_state().handle_selection((_x, _y));
+                            framework.get_state().start_current_shape((_x, _y));
+                        }
+                    }
                 }
             }
 
             if input.mouse_held(0) {
                 if let Some((x, y)) = input.cursor() {
-                    framework
-                        .get_state()
-                        .update_current_shape((x.round() as i32, y.round() as i32));
+                    let _x = x.round() as i32;
+                    let _y = y.round() as i32;
+                    if framework.get_state().dragging.is_some() {
+                        framework.get_state().update_dragged_control_point((_x, _y));
+                    } else {
+                        framework
+                            .get_state()
+                            .update_current_shape((x.round() as i32, y.round() as i32));
+                    }
                 }
             }
 
             if input.mouse_released(0) {
                 if let Some((x, y)) = input.cursor() {
-                    framework
-                        .get_state()
-                        .end_current_shape((x.round() as i32, y.round() as i32));
+                    if framework.get_state().dragging.is_some() {
+                        framework.get_state().dragging = None;
+                    } else {
+                        framework
+                            .get_state()
+                            .end_current_shape((x.round() as i32, y.round() as i32));
+                    }
                 }
             }
 

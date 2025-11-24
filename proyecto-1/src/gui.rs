@@ -46,7 +46,7 @@ impl TemplateApp {
             ui.separator();
 
             if self.state.selected.is_some() {
-                if ui.button("Subdiv").clicked() {
+                if ui.button("Degree++").clicked() {
                     self.state.subdivide_selected();
                 }
             }
@@ -223,5 +223,9 @@ impl Framework {
 
     pub(crate) fn get_state(&mut self) -> &mut State {
         &mut self.gui.state
+    }
+
+    pub(crate) fn wants_pointer_input(&self) -> bool {
+        self.egui_ctx.wants_pointer_input()
     }
 }

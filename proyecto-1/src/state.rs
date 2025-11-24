@@ -10,6 +10,7 @@ pub struct State {
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
     objects: Vec<Box<dyn ShapeImpl>>,
     pub selected: Option<usize>,
+    pub dragging: Option<usize>,
 }
 
 impl State {
@@ -20,6 +21,7 @@ impl State {
             cur_shape: None,
             objects: vec![],
             selected: None,
+            dragging: None,
         }
     }
 
@@ -31,6 +33,19 @@ impl State {
             }
         }
         self.selected = None;
+    }
+
+    pub fn hit_test_control_points(&self, pt: Point) -> Option<usize> {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get(selected_index) {
+                for (i, p) in object.get_core().points.iter().enumerate() {
+                    if (pt.0 - p.0).pow(2) + (pt.1 - p.1).pow(2) <= 5i32.pow(2) {
+                        return Some(i);
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn start_current_shape(&mut self, start: Point) {
@@ -65,31 +80,25 @@ impl State {
         }
     }
 
-    pub fn add_control_point(&mut self, point: Point) {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get_mut(selected_index) {
-                if let Some(bezier) = object.as_mut().as_bezier_mut() {
-                    bezier.add_control_point(point);
-                }
-            }
-        }
-    }
-
-    pub fn end_control_point(&mut self, point: Point) {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get_mut(selected_index) {
-                if let Some(bezier) = object.as_mut().as_bezier_mut() {
-                    bezier.end_control_point(point);
-                }
-            }
-        }
-    }
-
     pub fn subdivide_selected(&mut self) {
         if let Some(selected_index) = self.selected {
             if let Some(object) = self.objects.get_mut(selected_index) {
-                let op = UpdateOp::Subdivide;
+                let op = UpdateOp::DegreeElevate;
                 object.as_mut().update(&op);
+            }
+        }
+    }
+
+    pub fn update_dragged_control_point(&mut self, point: Point) {
+        if let Some(dragging_index) = self.dragging {
+            if let Some(selected_index) = self.selected {
+                if let Some(object) = self.objects.get_mut(selected_index) {
+                    let op = UpdateOp::ControlPoint {
+                        index: dragging_index,
+                        point,
+                    };
+                    object.as_mut().update(&op);
+                }
             }
         }
     }
@@ -107,6 +116,14 @@ impl State {
 
                 // drawing control points
                 for p in core.points {
+                    for x in (p.0 - 5)..(p.0 + 5) {
+                        for y in (p.1 - 5)..(p.1 + 5) {
+                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
+                                canvas.set_pixel(x, y, rgba(255, 255, 255, 255));
+                            }
+                        }
+                    }
+
                     for x in (p.0 - 4)..(p.0 + 4) {
                         for y in (p.1 - 4)..(p.1 + 4) {
                             if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
