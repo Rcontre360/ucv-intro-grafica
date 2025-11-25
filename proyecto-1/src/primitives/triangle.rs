@@ -1,6 +1,6 @@
-use crate::canvas::Canvas;
 use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
-use super::line::Line; // To draw lines for the triangle
+use super::line::Line;
+use crate::canvas::Canvas; // To draw lines for the triangle
 
 pub struct Triangle {
     core: ShapeCore,
@@ -32,29 +32,7 @@ impl ShapeImpl for Triangle {
         self.core.clone()
     }
 
-    fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        if self.core.points.len() >= 3 {
-            let p1 = self.core.points[0];
-            let p2 = self.core.points[1];
-            let p3 = self.core.points[2];
-
-            // Draw three lines to form the triangle
-            Line::new(ShapeCore {
-                points: vec![p1, p2],
-                color: self.core.color,
-            }).draw(canvas);
-
-            Line::new(ShapeCore {
-                points: vec![p2, p3],
-                color: self.core.color,
-            }).draw(canvas);
-
-            Line::new(ShapeCore {
-                points: vec![p3, p1],
-                color: self.core.color,
-            }).draw(canvas);
-        }
-    }
+    fn draw<'a>(&self, canvas: &mut Canvas<'a>) {}
 
     fn hit_test(&self, _point: Point) -> bool {
         false

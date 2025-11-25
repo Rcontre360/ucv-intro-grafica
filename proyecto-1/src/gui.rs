@@ -1,6 +1,6 @@
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu::{Renderer, ScreenDescriptor};
-use pixels::{wgpu, PixelsContext};
+use pixels::{PixelsContext, wgpu};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
@@ -51,30 +51,19 @@ impl TemplateApp {
                 }
             }
 
-            ui.heading("Color (RGB)");
+            ui.heading("Color (RGBA)");
+
             ui.horizontal(|ui| {
-                ui.label("R:");
-                ui.add(
-                    egui::DragValue::new(&mut self.state.color[0])
-                        .speed(1.0)
-                        .clamp_range(0..=255),
-                );
+                ui.label("Color 1:");
+                ui.color_edit_button_srgba_unmultiplied(&mut self.state.color);
             });
             ui.horizontal(|ui| {
-                ui.label("G:");
-                ui.add(
-                    egui::DragValue::new(&mut self.state.color[1])
-                        .speed(1.0)
-                        .clamp_range(0..=255),
-                );
+                ui.label("Color 2:");
+                ui.color_edit_button_srgba_unmultiplied(&mut self.state.fill_color);
             });
             ui.horizontal(|ui| {
-                ui.label("B:");
-                ui.add(
-                    egui::DragValue::new(&mut self.state.color[2])
-                        .speed(1.0)
-                        .clamp_range(0..=255),
-                );
+                ui.label("Color 3:");
+                ui.color_edit_button_srgba_unmultiplied(&mut self.state.points_color);
             });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {

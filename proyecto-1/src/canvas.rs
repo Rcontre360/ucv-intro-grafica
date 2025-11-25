@@ -1,4 +1,4 @@
-use crate::primitives::core::{rgba, RGBA};
+use crate::primitives::core::{mix_colors, rgba, RGBA};
 
 // A lifetime it's about how long a reference to data is valid.
 // I made Canvas generic over a lifetime to tell the compiler that
@@ -26,8 +26,12 @@ impl<'a> Canvas<'a> {
 
         let index = (y as u32 * self.width + x as u32) as usize * 4;
 
-        // to represent data for a single pixel we need 4 spaces (rgba)
-        if index + 4 <= self.buffer.len() {
+        if color[3] < 255 {
+            let prev_color = &self.buffer[index..index + 4];
+            let new_color = mix_colors(color, prev_color.try_into().unwrap());
+
+            self.buffer[index..index + 4].copy_from_slice(&new_color);
+        } else {
             self.buffer[index..index + 4].copy_from_slice(&color);
         }
     }
