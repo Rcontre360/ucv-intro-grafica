@@ -1,5 +1,4 @@
 use crate::canvas::Canvas;
-use crate::primitives::bezier::Bezier;
 use core::fmt;
 
 #[allow(dead_code)]
@@ -42,6 +41,7 @@ pub trait ShapeImpl {
 pub struct ShapeCore {
     pub points: ControlPoints,
     pub color: RGBA,
+    pub fill_color: RGBA,
 }
 
 impl fmt::Display for ShapeCore {
@@ -58,4 +58,17 @@ impl fmt::Display for ShapeCore {
 
 pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> RGBA {
     [r, g, b, a]
+}
+
+pub fn is_transparent(color: RGBA) -> bool {
+    color[3] == 0
+}
+
+pub fn mix_colors(new: RGBA, old: RGBA) -> RGBA {
+    let alpha = new[3] as f32 / 255.0;
+    let new_r = (new[0] as f32 * alpha + old[0] as f32 * (1.0 - alpha)) as u8;
+    let new_g = (new[1] as f32 * alpha + old[1] as f32 * (1.0 - alpha)) as u8;
+    let new_b = (new[2] as f32 * alpha + old[2] as f32 * (1.0 - alpha)) as u8;
+
+    [new_r, new_g, new_b, 255]
 }

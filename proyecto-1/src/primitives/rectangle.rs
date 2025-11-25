@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
+use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp, is_transparent};
 use crate::canvas::Canvas; // To draw lines for the rectangle
 
 pub struct Rectangle {
@@ -51,6 +51,14 @@ impl ShapeImpl for Rectangle {
         for y in min_y..max_y {
             canvas.set_pixel(min_x, y, self.core.color);
             canvas.set_pixel(max_x, y, self.core.color);
+        }
+
+        if !is_transparent(self.core.fill_color) {
+            for x in (min_x + 1)..(max_x - 1) {
+                for y in (min_y + 1)..(max_y - 1) {
+                    canvas.set_pixel(x, y, self.core.fill_color);
+                }
+            }
         }
     }
 
