@@ -9,6 +9,7 @@ use crate::{
 // we define our own events to not depend on these libraries.
 pub enum MouseAction {
     Click,
+    Move,
     PressDrag,
     Release,
 }
@@ -87,29 +88,54 @@ impl State {
         // if none of the above are true then we are drawing something
         match self.current {
             Shape::Triangle => {} // Not implemented
-            Shape::Bezier => {}
-
-            _ => match event {
-                EventType::Mouse(action, button) => {
-                    // left mouse button events only
-                    if button == 1 {
-                        return;
-                    }
-
-                    match action {
-                        MouseAction::Click => {
-                            self.start_current_shape(point);
-                        }
-                        MouseAction::PressDrag => {
-                            self.update_current_shape(point);
-                        }
-                        MouseAction::Release => {
-                            self.end_current_shape(point);
+            Shape::Bezier => match event {
+                EventType::Mouse(action, button) => match action {
+                    MouseAction::Click => {
+                        // left button == 0
+                        if button == 0 {
+                            // we add control points with each click
+                            if self.cur_shape.is_some() {
+                                self.shape_add_control_point(point);
+                            } else {
+                                self.shape_start(point);
+                            }
+                        } else if self.cur_shape.is_some() {
+                            self.shape_end(point);
                         }
                     }
-                }
+                    MouseAction::Move => {
+                        self.shape_update_last_point(point);
+                    }
+                    _ => {}
+                },
                 _ => {}
             },
+
+            _ => match event {
+                EventType::Mouse(action, 0) => match action {
+                    MouseAction::Click => {
+                        self.shape_start(point);
+                    }
+                    MouseAction::PressDrag => {
+                        self.shape_update_last_point(point);
+                    }
+                    MouseAction::Release => {
+                        self.shape_end(point);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            },
+        }
+    }
+
+    // the gui also needs this to be public
+    pub fn subdivide_selected(&mut self) {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get_mut(selected_index) {
+                let op = UpdateOp::DegreeElevate;
+                object.as_mut().update(&op);
+            }
         }
     }
 
@@ -137,7 +163,7 @@ impl State {
         None
     }
 
-    fn start_current_shape(&mut self, start: Point) {
+    fn shape_start(&mut self, start: Point) {
         self.cur_shape = match self.current {
             Shape::Line => box_new_shape::<primitives::Line>(start, (self.color, self.fill_color)),
             Shape::Ellipse => {
@@ -153,30 +179,29 @@ impl State {
         };
     }
 
-    fn update_current_shape(&mut self, end: Point) {
-        if let Some(mut cur) = self.cur_shape.take() {
+    fn shape_add_control_point(&mut self, nxt: Point) {
+        if let Some(cur) = self.cur_shape.as_mut() {
+            let op = UpdateOp::AddControlPoint { point: nxt };
+            cur.as_mut().update(&op);
+        }
+    }
+
+    fn shape_update_last_point(&mut self, nxt: Point) {
+        if let Some(cur) = self.cur_shape.as_mut() {
+            let last_point = cur.get_core().points.len() - 1;
             let op = UpdateOp::ControlPoint {
-                index: 1,
-                point: end,
+                index: last_point,
+                point: nxt,
             };
             cur.as_mut().update(&op);
-            self.cur_shape = Some(cur);
         }
     }
 
-    fn end_current_shape(&mut self, end: Point) {
+    fn shape_end(&mut self, end: Point) {
+        // "take" function already does self.cur_shape = None
         if let Some(cur) = self.cur_shape.take() {
-            self.update_current_shape(end);
+            self.shape_update_last_point(end);
             self.objects.push(cur);
-        }
-    }
-
-    fn subdivide_selected(&mut self) {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get_mut(selected_index) {
-                let op = UpdateOp::DegreeElevate;
-                object.as_mut().update(&op);
-            }
         }
     }
 

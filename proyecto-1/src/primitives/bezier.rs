@@ -29,6 +29,9 @@ impl ShapeImpl for Bezier {
                     self.core.points[*index] = *point;
                 }
             }
+            UpdateOp::AddControlPoint { point } => {
+                self.core.points.push(*point);
+            }
             UpdateOp::DegreeElevate => {
                 self.degree_elevate();
             }
