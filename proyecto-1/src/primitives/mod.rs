@@ -10,3 +10,4 @@ pub use bezier::Bezier;
 pub use ellipse::Ellipse;
 pub use line::Line;
 pub use rectangle::Rectangle;
+pub use triangle::Triangle;

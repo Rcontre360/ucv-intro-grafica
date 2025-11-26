@@ -87,7 +87,28 @@ impl State {
 
         // if none of the above are true then we are drawing something
         match self.current {
-            Shape::Triangle => {} // Not implemented
+            Shape::Triangle => match event {
+                EventType::Mouse(action, 0) => match action {
+                    MouseAction::Click => {
+                        if self.cur_shape.is_some() {
+                            self.shape_end(point);
+                        } else {
+                            self.shape_start(point);
+                        }
+                    }
+                    MouseAction::PressDrag => {
+                        self.shape_update_last_point(point);
+                    }
+                    MouseAction::Release => {
+                        self.shape_add_control_point(point);
+                    }
+                    MouseAction::Move => {
+                        self.shape_update_last_point(point);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }, // Not implemented
             Shape::Bezier => match event {
                 EventType::Mouse(action, button) => match action {
                     MouseAction::Click => {
@@ -169,7 +190,9 @@ impl State {
             Shape::Ellipse => {
                 box_new_shape::<primitives::Ellipse>(start, (self.color, self.fill_color))
             }
-            Shape::Triangle => None, // Not implemented
+            Shape::Triangle => {
+                box_new_shape::<primitives::Triangle>(start, (self.color, self.fill_color))
+            }
             Shape::Rectangle => {
                 box_new_shape::<primitives::Rectangle>(start, (self.color, self.fill_color))
             }

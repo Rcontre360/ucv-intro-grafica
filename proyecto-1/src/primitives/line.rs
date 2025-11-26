@@ -34,58 +34,7 @@ impl ShapeImpl for Line {
 
     //TODO fix drawing error saw in first homework
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        let points = &self.core.points;
-        let a = points[0];
-        let b = points[1];
-
-        let mut dx = (b.0 - a.0) as i32;
-        let mut dy = (b.1 - a.1) as i32;
-        let mut d = dx - 2 * dy;
-        let x_inc = if dx < 0 { -1 as i32 } else { 1 };
-        let y_inc = if dy < 0 { -1 as i32 } else { 1 };
-
-        if dx < 0 {
-            dx *= -1;
-        }
-        if dy < 0 {
-            dy *= -1;
-        }
-
-        let run_on_x = dx >= dy;
-        let inc_e = -2 * (if run_on_x { dy } else { dx });
-        let inc_ne = 2 * (dx - dy) * (if run_on_x { 1 } else { -1 });
-
-        let mut x = a.0 as i32;
-        let mut y = a.1 as i32;
-        canvas.set_pixel(x, y, self.core.color);
-
-        if run_on_x {
-            while x > b.0 || x < b.0 {
-                if d <= 0 {
-                    d += inc_ne;
-                    y += y_inc;
-                } else {
-                    d += inc_e;
-                }
-
-                // we increase x or y depending on the case (dx >= dy)
-                x += x_inc;
-                canvas.set_pixel(x, y, self.core.color);
-            }
-        } else {
-            while x > b.0 || x < b.0 {
-                if d <= 0 {
-                    d += inc_ne;
-                    x += x_inc;
-                } else {
-                    d += inc_e;
-                }
-
-                // we increase x or y depending on the case (dx >= dy)
-                y += y_inc;
-                canvas.set_pixel(x, y, self.core.color);
-            }
-        }
+        draw_line(&self.core, canvas);
     }
 
     fn hit_test(&self, point: Point) -> bool {
@@ -108,13 +57,66 @@ impl ShapeImpl for Line {
         } else if t > 1.0 {
             p2
         } else {
-            (
-                p1.0 + (t * dx) as i32,
-                p1.1 + (t * dy) as i32,
-            )
+            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32)
         };
 
         let dist = ((p.0 - closest_point.0).pow(2) + (p.1 - closest_point.1).pow(2)) as f32;
         dist.sqrt() < 5.0
+    }
+}
+
+// exposed for usage on triangles
+pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
+    let points = &core.points;
+    let a = points[0];
+    let b = points[1];
+
+    let mut dx = (b.0 - a.0) as i32;
+    let mut dy = (b.1 - a.1) as i32;
+    let mut d = dx - 2 * dy;
+    let x_inc = if dx < 0 { -1 as i32 } else { 1 };
+    let y_inc = if dy < 0 { -1 as i32 } else { 1 };
+
+    if dx < 0 {
+        dx *= -1;
+    }
+    if dy < 0 {
+        dy *= -1;
+    }
+
+    let run_on_x = dx >= dy;
+    let inc_e = -2 * (if run_on_x { dy } else { dx });
+    let inc_ne = 2 * (dx - dy) * (if run_on_x { 1 } else { -1 });
+
+    let mut x = a.0 as i32;
+    let mut y = a.1 as i32;
+    canvas.set_pixel(x, y, core.color);
+
+    if run_on_x {
+        while x > b.0 || x < b.0 {
+            if d <= 0 {
+                d += inc_ne;
+                y += y_inc;
+            } else {
+                d += inc_e;
+            }
+
+            // we increase x or y depending on the case (dx >= dy)
+            x += x_inc;
+            canvas.set_pixel(x, y, core.color);
+        }
+    } else {
+        while x > b.0 || x < b.0 {
+            if d <= 0 {
+                d += inc_ne;
+                x += x_inc;
+            } else {
+                d += inc_e;
+            }
+
+            // we increase x or y depending on the case (dx >= dy)
+            y += y_inc;
+            canvas.set_pixel(x, y, core.color);
+        }
     }
 }
