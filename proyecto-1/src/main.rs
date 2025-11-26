@@ -13,6 +13,7 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
 use crate::gui::Framework;
+use crate::state::{EventType, MouseAction};
 
 mod canvas;
 mod gui;
@@ -54,56 +55,39 @@ fn main() -> Result<(), Error> {
 
     let res = event_loop.run(|event, elwt| {
         if input.update(&event) {
+            let state = framework.get_state();
+
             if input.key_pressed(KeyCode::Escape) || input.close_requested() {
                 elwt.exit();
                 return;
             }
 
             if input.key_pressed(KeyCode::Enter) {
-                framework.get_state().subdivide_selected();
+                state.update(EventType::Keyboard(KeyCode::Enter), (0, 0));
             }
 
             if input.mouse_pressed(0) {
-                if !framework.wants_pointer_input() {
-                    if let Some((x, y)) = input.cursor() {
-                        let _x = x.round() as i32;
-                        let _y = y.round() as i32;
-                        if let Some(control_point_index) =
-                            framework.get_state().hit_test_control_points((_x, _y))
-                        {
-                            framework.get_state().dragging = Some(control_point_index);
-                        } else {
-                            framework.get_state().handle_selection((_x, _y));
-                            framework.get_state().start_current_shape((_x, _y));
-                        }
-                    }
-                }
+                let (x, y) = input.cursor().unwrap();
+                state.update(
+                    EventType::Mouse(MouseAction::Click, 0),
+                    (x.round() as i32, y.round() as i32),
+                );
             }
 
             if input.mouse_held(0) {
-                if let Some((x, y)) = input.cursor() {
-                    let _x = x.round() as i32;
-                    let _y = y.round() as i32;
-                    if framework.get_state().dragging.is_some() {
-                        framework.get_state().update_dragged_control_point((_x, _y));
-                    } else {
-                        framework
-                            .get_state()
-                            .update_current_shape((x.round() as i32, y.round() as i32));
-                    }
-                }
+                let (x, y) = input.cursor().unwrap();
+                state.update(
+                    EventType::Mouse(MouseAction::PressDrag, 0),
+                    (x.round() as i32, y.round() as i32),
+                );
             }
 
             if input.mouse_released(0) {
-                if let Some((x, y)) = input.cursor() {
-                    if framework.get_state().dragging.is_some() {
-                        framework.get_state().dragging = None;
-                    } else {
-                        framework
-                            .get_state()
-                            .end_current_shape((x.round() as i32, y.round() as i32));
-                    }
-                }
+                let (x, y) = input.cursor().unwrap();
+                state.update(
+                    EventType::Mouse(MouseAction::Release, 0),
+                    (x.round() as i32, y.round() as i32),
+                );
             }
 
             // Update the scale factor

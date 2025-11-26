@@ -1,8 +1,22 @@
+use winit::keyboard::KeyCode;
+
 use crate::{
     canvas::Canvas,
     primitives,
-    primitives::core::{Point, RGBA, Shape, ShapeCore, ShapeImpl, UpdateOp, rgba},
+    primitives::core::{rgba, Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
 };
+
+// we define our own events to not depend on these libraries.
+pub enum MouseAction {
+    Click,
+    PressDrag,
+    Release,
+}
+
+pub enum EventType {
+    Mouse(MouseAction, u8),
+    Keyboard(KeyCode),
+}
 
 pub struct State {
     pub current: Shape,
@@ -31,34 +45,99 @@ impl State {
         }
     }
 
-    pub fn handle_selection(&mut self, pt: Point) {
-        for (i, object) in self.objects.iter().enumerate() {
-            if object.hit_test(pt) {
-                self.selected = Some(i);
-                return;
+    pub fn update(&mut self, event: EventType, point: Point) {
+        //handle subdivide with enter
+        if let EventType::Keyboard(KeyCode::Enter) = event {
+            self.subdivide_selected();
+        }
+
+        //checking if event is a normal figure selection
+        if let EventType::Mouse(MouseAction::Click, 0) = event {
+            if !self.is_building_bezier() {
+                // if we have a selected figure and we're hitting its control points
+                if let Some(fig) = self.selected {
+                    if let Some(point_idx) = self.is_control_point_select(fig, point) {
+                        self.dragging = Some(point_idx);
+                        return;
+                    }
+                }
+
+                // if we are selecting a figure
+                if let Some(fig) = self.is_figure_selection(point) {
+                    self.selected = Some(fig);
+                    return;
+                }
             }
         }
-        self.selected = None;
+
+        // if we are dragging and control point is selected
+        if let EventType::Mouse(MouseAction::PressDrag, 0) = event {
+            if self.dragging.is_some() {
+                self.update_selected_control_point(point);
+            }
+        }
+
+        if let EventType::Mouse(MouseAction::Release, 0) = event {
+            // we stopped moving control point
+            if self.dragging.is_some() {
+                self.dragging = None;
+            }
+        }
+
+        // if none of the above are true then we are drawing something
+        match self.current {
+            Shape::Triangle => {} // Not implemented
+            Shape::Bezier => {}
+
+            _ => match event {
+                EventType::Mouse(action, button) => {
+                    // left mouse button events only
+                    if button == 1 {
+                        return;
+                    }
+
+                    match action {
+                        MouseAction::Click => {
+                            self.start_current_shape(point);
+                        }
+                        MouseAction::PressDrag => {
+                            self.update_current_shape(point);
+                        }
+                        MouseAction::Release => {
+                            self.end_current_shape(point);
+                        }
+                    }
+                }
+                _ => {}
+            },
+        }
     }
 
-    pub fn hit_test_control_points(&self, pt: Point) -> Option<usize> {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get(selected_index) {
-                for (i, p) in object.get_core().points.iter().enumerate() {
-                    if (pt.0 - p.0).pow(2) + (pt.1 - p.1).pow(2) <= 5i32.pow(2) {
-                        return Some(i);
-                    }
+    fn is_figure_selection(&self, pt: Point) -> Option<usize> {
+        for (i, object) in self.objects.iter().enumerate() {
+            if object.hit_test(pt) {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    fn is_building_bezier(&self) -> bool {
+        false
+    }
+
+    fn is_control_point_select(&self, fig: usize, target: Point) -> Option<usize> {
+        if let Some(object) = self.objects.get(fig) {
+            for (i, p) in object.get_core().points.iter().enumerate() {
+                if (target.0 - p.0).pow(2) + (target.1 - p.1).pow(2) <= 5i32.pow(2) {
+                    return Some(i);
                 }
             }
         }
         None
     }
 
-    pub fn start_current_shape(&mut self, start: Point) {
-        if self.selected.is_some() {
-            return;
-        }
-
+    fn start_current_shape(&mut self, start: Point) {
         self.cur_shape = match self.current {
             Shape::Line => box_new_shape::<primitives::Line>(start, (self.color, self.fill_color)),
             Shape::Ellipse => {
@@ -74,7 +153,7 @@ impl State {
         };
     }
 
-    pub fn update_current_shape(&mut self, end: Point) {
+    fn update_current_shape(&mut self, end: Point) {
         if let Some(mut cur) = self.cur_shape.take() {
             let op = UpdateOp::ControlPoint {
                 index: 1,
@@ -85,14 +164,14 @@ impl State {
         }
     }
 
-    pub fn end_current_shape(&mut self, end: Point) {
+    fn end_current_shape(&mut self, end: Point) {
         if let Some(cur) = self.cur_shape.take() {
             self.update_current_shape(end);
             self.objects.push(cur);
         }
     }
 
-    pub fn subdivide_selected(&mut self) {
+    fn subdivide_selected(&mut self) {
         if let Some(selected_index) = self.selected {
             if let Some(object) = self.objects.get_mut(selected_index) {
                 let op = UpdateOp::DegreeElevate;
@@ -101,16 +180,14 @@ impl State {
         }
     }
 
-    pub fn update_dragged_control_point(&mut self, point: Point) {
-        if let Some(dragging_index) = self.dragging {
-            if let Some(selected_index) = self.selected {
-                if let Some(object) = self.objects.get_mut(selected_index) {
-                    let op = UpdateOp::ControlPoint {
-                        index: dragging_index,
-                        point,
-                    };
-                    object.as_mut().update(&op);
-                }
+    fn update_selected_control_point(&mut self, point: Point) {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get_mut(selected_index) {
+                let op = UpdateOp::ControlPoint {
+                    index: self.dragging.unwrap(),
+                    point,
+                };
+                object.as_mut().update(&op);
             }
         }
     }
