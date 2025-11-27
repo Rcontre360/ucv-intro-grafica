@@ -39,6 +39,10 @@ impl ShapeImpl for Triangle {
         if self.core.points.len() <= 2 {
             draw_line(&self.core, canvas);
         } else {
+            if !is_transparent(self.core.fill_color) {
+                self.fill_triangle(canvas);
+            }
+
             let core = &self.core;
             let ab = core.points[0..2].to_vec();
             let bc = core.points[1..3].to_vec();
@@ -47,10 +51,6 @@ impl ShapeImpl for Triangle {
             draw_line(&self.core_from_points(ab), canvas);
             draw_line(&self.core_from_points(bc), canvas);
             draw_line(&self.core_from_points(ca), canvas);
-
-            if !is_transparent(self.core.fill_color) {
-                self.fill_triangle(canvas);
-            }
         }
     }
 
@@ -88,30 +88,30 @@ impl Triangle {
     }
 
     fn fill_top_triangle<'a>(&self, canvas: &mut Canvas<'a>, p1: Point, p2: Point, p3: Point) {
-        let inv_slope1 = (p2.0 - p1.0) as f32 / (p2.1 - p1.1) as f32;
-        let inv_slope2 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
+        let m_1 = (p2.0 - p1.0) as f32 / (p2.1 - p1.1) as f32;
+        let m_2 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
 
         let mut cur_x1 = p1.0 as f32;
         let mut cur_x2 = p1.0 as f32;
 
         for y in p1.1..p2.1 {
             self.draw_horizontal(canvas, cur_x1.round() as i32, cur_x2.round() as i32, y);
-            cur_x1 += inv_slope1;
-            cur_x2 += inv_slope2;
+            cur_x1 += m_1;
+            cur_x2 += m_2;
         }
     }
 
     fn fill_bottom_triangle<'a>(&self, canvas: &mut Canvas<'a>, p1: Point, p2: Point, p3: Point) {
-        let inv_slope1 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
-        let inv_slope2 = (p3.0 - p2.0) as f32 / (p3.1 - p2.1) as f32;
+        let m_1 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
+        let m_2 = (p3.0 - p2.0) as f32 / (p3.1 - p2.1) as f32;
 
         let mut cur_x1 = p3.0 as f32;
         let mut cur_x2 = p3.0 as f32;
 
         for y in (p1.1..p3.1).rev() {
             self.draw_horizontal(canvas, cur_x1.round() as i32, cur_x2.round() as i32, y);
-            cur_x1 -= inv_slope1;
-            cur_x2 -= inv_slope2;
+            cur_x1 -= m_1;
+            cur_x2 -= m_2;
         }
     }
 
