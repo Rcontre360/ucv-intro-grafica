@@ -10,12 +10,12 @@ pub struct Ellipse {
 
 impl ShapeImpl for Ellipse {
     fn new(core: ShapeCore) -> Ellipse {
-        let (x0, y0) = core.points[0];
-        let (x1, y1) = core.points[1];
+        let Point(x0, y0) = core.points[0];
+        let Point(x1, y1) = core.points[1];
 
         Ellipse {
             core,
-            center: ((x0 + x1) / 2, (y0 + y1) / 2),
+            center: ((x0 + x1) / 2, (y0 + y1) / 2).into(),
             a: ((x1 - x0) / 2).abs() as i32,
             b: ((y1 - y0) / 2).abs() as i32,
         }
@@ -28,10 +28,10 @@ impl ShapeImpl for Ellipse {
     fn update(&mut self, op: &UpdateOp) {
         self.update_basic(op);
 
-        let (x0, y0) = self.core.points[0];
-        let (x1, y1) = self.core.points[1];
+        let Point(x0, y0) = self.core.points[0];
+        let Point(x1, y1) = self.core.points[1];
 
-        self.center = ((x0 + x1) / 2, (y0 + y1) / 2);
+        self.center = ((x0 + x1) / 2, (y0 + y1) / 2).into();
         self.a = ((x1 - x0) / 2).abs() as i32;
         self.b = ((y1 - y0) / 2).abs() as i32;
     }
@@ -105,8 +105,8 @@ impl ShapeImpl for Ellipse {
     }
 
     fn hit_test(&self, point: Point) -> bool {
-        let (px, py) = point;
-        let (cx, cy) = self.center;
+        let Point(px, py) = point;
+        let Point(cx, cy) = self.center;
         let (a, b) = (self.a as f32, self.b as f32);
 
         let dx = (px - cx) as f32;
@@ -132,7 +132,7 @@ impl Ellipse {
 
     pub fn draw_symmetric(&self, canvas: &mut Canvas, x: i64, y: i64) {
         let (_x, _y) = (x as i32, y as i32);
-        let (cx, cy) = self.center;
+        let Point(cx, cy) = self.center;
         canvas.set_pixel(cx + _x, cy + _y, self.core.color);
         canvas.set_pixel(cx - _x, cy + _y, self.core.color);
         canvas.set_pixel(cx + _x, cy - _y, self.core.color);

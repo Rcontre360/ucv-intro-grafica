@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use super::core::{is_transparent, Point, ShapeCore, ShapeImpl, UpdateOp};
+use super::core::{is_transparent, Point, ShapeCore, ShapeImpl};
 use crate::canvas::Canvas; // To draw lines for the rectangle
 
 pub struct Rectangle {

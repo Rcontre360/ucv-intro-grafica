@@ -1,7 +1,7 @@
 use crate::canvas::Canvas;
 use core::fmt;
 
-#[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub enum Shape {
     Line,
     Ellipse,
@@ -19,7 +19,20 @@ pub enum UpdateOp {
     DegreeElevate,
 }
 
-pub type Point = (i32, i32);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Point(pub i32, pub i32);
+
+impl From<(i32, i32)> for Point {
+    fn from(coords: (i32, i32)) -> Self {
+        Point(coords.0, coords.1)
+    }
+}
+
+impl From<(f32, f32)> for Point {
+    fn from(coords: (f32, f32)) -> Self {
+        Point(coords.0.round() as i32, coords.1.round() as i32)
+    }
+}
 
 pub type RGBA = [u8; 4];
 
@@ -84,7 +97,7 @@ impl fmt::Display for ShapeCore {
         let points_str: Vec<String> = self
             .points
             .iter()
-            .map(|(x, y)| format!("({}, {})", x, y))
+            .map(|Point(x, y)| format!("({}, {})", x, y))
             .collect();
 
         write!(f, "ShapeCore ([{}])", points_str.join(", "))

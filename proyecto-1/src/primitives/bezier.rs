@@ -101,7 +101,7 @@ impl Bezier {
                 let x = (1.0 - t) * p1.0 as f32 + t * p2.0 as f32;
                 let y = (1.0 - t) * p1.1 as f32 + t * p2.1 as f32;
 
-                pts_cpy[i] = (x.round() as i32, y.round() as i32);
+                pts_cpy[i] = (x.round() as i32, y.round() as i32).into();
             }
         }
 
@@ -124,7 +124,7 @@ impl Bezier {
             let x = j / n * (b_prev.0 as f32) + (1.0 - j / n) * (b.0 as f32);
             let y = j / n * (b_prev.1 as f32) + (1.0 - j / n) * (b.1 as f32);
 
-            new_points.push((x.round() as i32, y.round() as i32));
+            new_points.push((x, y).into());
         }
 
         new_points.push(*self.core.points.last().unwrap());

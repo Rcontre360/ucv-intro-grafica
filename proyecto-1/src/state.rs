@@ -7,16 +7,28 @@ use crate::{
 };
 
 // we define our own events to not depend on these libraries.
-pub enum MouseAction {
+#[derive(Copy, Clone)]
+pub enum MouseEvent {
     Click,
     Move,
     PressDrag,
     Release,
 }
 
+#[derive(Copy, Clone)]
+pub enum GUIEvent {
+    ShapeType(Shape),
+    BorderColor(RGBA),
+    FillColor(RGBA),
+    PointsColor(RGBA),
+    Subdivide,
+}
+
+#[derive(Copy, Clone)]
 pub enum EventType {
-    Mouse(MouseAction, u8),
+    Mouse(MouseEvent, u8, Point),
     Keyboard(KeyCode),
+    GUI(GUIEvent),
 }
 
 pub struct State {
@@ -27,9 +39,9 @@ pub struct State {
     pub selected: Option<usize>,
     pub dragging: Option<usize>,
 
-    pub color: RGBA,
-    pub fill_color: RGBA,
-    pub points_color: RGBA,
+    color: RGBA,
+    fill_color: RGBA,
+    points_color: RGBA,
 }
 
 impl State {
@@ -46,14 +58,30 @@ impl State {
         }
     }
 
-    pub fn update(&mut self, event: EventType, point: Point) {
+    pub fn get_colors(&self) -> (RGBA, RGBA, RGBA) {
+        (self.color, self.fill_color, self.points_color)
+    }
+
+    pub fn gui_update(&mut self, e: GUIEvent) {
+        self.update(EventType::GUI(e));
+    }
+
+    pub fn mouse_update(&mut self, e: MouseEvent, btn: u8, point: Point) {
+        self.update(EventType::Mouse(e, btn, point));
+    }
+
+    pub fn keyboard_update(&mut self, key: KeyCode) {
+        self.update(EventType::Keyboard(key));
+    }
+
+    pub fn update(&mut self, event: EventType) {
         //handle subdivide with enter
         if let EventType::Keyboard(KeyCode::Enter) = event {
-            self.subdivide_selected();
+            self.handle_bezier_subdivide();
         }
 
         //checking if event is a normal figure selection
-        if let EventType::Mouse(MouseAction::Click, 0) = event {
+        if let EventType::Mouse(MouseEvent::Click, 0, point) = event {
             if !self.is_building_bezier() {
                 // if we have a selected figure and we're hitting its control points
                 if let Some(fig) = self.selected {
@@ -72,13 +100,13 @@ impl State {
         }
 
         // if we are dragging and control point is selected
-        if let EventType::Mouse(MouseAction::PressDrag, 0) = event {
+        if let EventType::Mouse(MouseEvent::PressDrag, 0, point) = event {
             if self.dragging.is_some() {
                 self.update_selected_control_point(point);
             }
         }
 
-        if let EventType::Mouse(MouseAction::Release, 0) = event {
+        if let EventType::Mouse(MouseEvent::Release, 0, _) = event {
             // we stopped moving control point
             if self.dragging.is_some() {
                 self.dragging = None;
@@ -86,23 +114,50 @@ impl State {
         }
 
         // if none of the above are true then we are drawing something
+        self.handle_figure_draw(event);
+        self.handle_gui_event(event);
+    }
+
+    fn handle_bezier_subdivide(&mut self) {
+        if let Some(selected_index) = self.selected {
+            if let Some(object) = self.objects.get_mut(selected_index) {
+                let op = UpdateOp::DegreeElevate;
+                object.as_mut().update(&op);
+            }
+        }
+    }
+
+    fn handle_gui_event(&mut self, event: EventType) {
+        match event {
+            EventType::GUI(gui_ev) => match gui_ev {
+                GUIEvent::ShapeType(shape) => self.current = shape,
+                GUIEvent::BorderColor(c) => self.color = c,
+                GUIEvent::FillColor(c) => self.fill_color = c,
+                GUIEvent::PointsColor(c) => self.points_color = c,
+                GUIEvent::Subdivide => self.handle_bezier_subdivide(),
+            },
+            _ => {}
+        };
+    }
+
+    fn handle_figure_draw(&mut self, event: EventType) {
         match self.current {
             Shape::Triangle => match event {
-                EventType::Mouse(action, 0) => match action {
-                    MouseAction::Click => {
+                EventType::Mouse(action, 0, point) => match action {
+                    MouseEvent::Click => {
                         if self.cur_shape.is_some() {
                             self.shape_end(point);
                         } else {
                             self.shape_start(point);
                         }
                     }
-                    MouseAction::PressDrag => {
+                    MouseEvent::PressDrag => {
                         self.shape_update_last_point(point);
                     }
-                    MouseAction::Release => {
+                    MouseEvent::Release => {
                         self.shape_add_control_point(point);
                     }
-                    MouseAction::Move => {
+                    MouseEvent::Move => {
                         self.shape_update_last_point(point);
                     }
                     _ => {}
@@ -110,8 +165,8 @@ impl State {
                 _ => {}
             }, // Not implemented
             Shape::Bezier => match event {
-                EventType::Mouse(action, button) => match action {
-                    MouseAction::Click => {
+                EventType::Mouse(action, button, point) => match action {
+                    MouseEvent::Click => {
                         // left button == 0
                         if button == 0 {
                             // we add control points with each click
@@ -124,7 +179,7 @@ impl State {
                             self.shape_end(point);
                         }
                     }
-                    MouseAction::Move => {
+                    MouseEvent::Move => {
                         self.shape_update_last_point(point);
                     }
                     _ => {}
@@ -133,30 +188,20 @@ impl State {
             },
 
             _ => match event {
-                EventType::Mouse(action, 0) => match action {
-                    MouseAction::Click => {
+                EventType::Mouse(action, 0, point) => match action {
+                    MouseEvent::Click => {
                         self.shape_start(point);
                     }
-                    MouseAction::PressDrag => {
+                    MouseEvent::PressDrag => {
                         self.shape_update_last_point(point);
                     }
-                    MouseAction::Release => {
+                    MouseEvent::Release => {
                         self.shape_end(point);
                     }
                     _ => {}
                 },
                 _ => {}
             },
-        }
-    }
-
-    // the gui also needs this to be public
-    pub fn subdivide_selected(&mut self) {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get_mut(selected_index) {
-                let op = UpdateOp::DegreeElevate;
-                object.as_mut().update(&op);
-            }
         }
     }
 

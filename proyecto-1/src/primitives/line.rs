@@ -44,7 +44,7 @@ impl ShapeImpl for Line {
         } else if t > 1.0 {
             p2
         } else {
-            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32)
+            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32).into()
         };
 
         let dist = ((p.0 - closest_point.0).pow(2) + (p.1 - closest_point.1).pow(2)) as f32;

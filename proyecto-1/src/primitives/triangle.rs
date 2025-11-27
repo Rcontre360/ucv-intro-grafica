@@ -66,7 +66,8 @@ impl Triangle {
         let p4 = (
             (p1.0 + ((p2.1 - p1.1) as f32 / (p3.1 - p1.1) as f32 * (p3.0 - p1.0) as f32) as i32),
             p2.1,
-        );
+        )
+            .into();
         self.fill_top_triangle(canvas, p1, p2, p4);
         self.fill_bottom_triangle(canvas, p2, p4, p3);
     }

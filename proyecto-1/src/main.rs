@@ -13,7 +13,7 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
 use crate::gui::Framework;
-use crate::state::{EventType, MouseAction};
+use crate::state::{EventType, MouseEvent};
 
 mod canvas;
 mod gui;
@@ -64,49 +64,34 @@ fn main() -> Result<(), Error> {
             }
 
             if input.key_pressed(KeyCode::Enter) {
-                state.update(EventType::Keyboard(KeyCode::Enter), (0, 0));
+                state.keyboard_update(KeyCode::Enter);
             }
 
             // mouse events on GUI dont matter
             if !is_gui {
                 //mouse is moved on the ui
                 if let Some((x, y)) = input.cursor() {
-                    state.update(
-                        EventType::Mouse(MouseAction::Move, 0),
-                        (x.round() as i32, y.round() as i32),
-                    );
+                    state.mouse_update(MouseEvent::Move, 0, (x, y).into());
                 }
 
                 if input.mouse_pressed(0) {
                     let (x, y) = input.cursor().unwrap();
-                    state.update(
-                        EventType::Mouse(MouseAction::Click, 0),
-                        (x.round() as i32, y.round() as i32),
-                    );
+                    state.mouse_update(MouseEvent::Click, 0, (x, y).into());
                 }
 
                 if input.mouse_pressed(1) {
                     let (x, y) = input.cursor().unwrap();
-                    state.update(
-                        EventType::Mouse(MouseAction::Click, 1),
-                        (x.round() as i32, y.round() as i32),
-                    );
+                    state.mouse_update(MouseEvent::Click, 1, (x, y).into());
                 }
 
                 if input.mouse_held(0) {
                     let (x, y) = input.cursor().unwrap();
-                    state.update(
-                        EventType::Mouse(MouseAction::PressDrag, 0),
-                        (x.round() as i32, y.round() as i32),
-                    );
+                    state.mouse_update(MouseEvent::PressDrag, 0, (x, y).into());
                 }
 
                 if input.mouse_released(0) {
                     let (x, y) = input.cursor().unwrap();
-                    state.update(
-                        EventType::Mouse(MouseAction::Release, 0),
-                        (x.round() as i32, y.round() as i32),
-                    );
+                    state.mouse_update(MouseEvent::Release, 0, (x, y).into());
                 }
             }
             // Update the scale factor
