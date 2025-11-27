@@ -15,30 +15,23 @@ impl ShapeImpl for Bezier {
         Bezier { core }
     }
 
+    fn get_core(&self) -> ShapeCore {
+        self.core.clone()
+    }
+
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
+    }
+
     fn update(&mut self, op: &UpdateOp) {
+        self.update_basic(op);
+
         match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            UpdateOp::AddControlPoint { point } => {
-                self.core.points.push(*point);
-            }
             UpdateOp::DegreeElevate => {
                 self.degree_elevate();
             }
+            _ => {}
         }
-    }
-
-    fn get_core(&self) -> ShapeCore {
-        self.core.clone()
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {

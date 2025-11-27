@@ -12,6 +12,8 @@ pub enum Shape {
 
 pub enum UpdateOp {
     Move { delta: (i32, i32) },
+    ChangeColor { color: RGBA },
+    ChangeFillColor { color: RGBA },
     ControlPoint { index: usize, point: Point },
     AddControlPoint { point: Point },
     DegreeElevate,
@@ -29,7 +31,39 @@ pub trait ShapeImpl {
     where
         Self: Sized;
 
-    fn update(&mut self, op: &UpdateOp);
+    //shared update method
+    fn update_basic(&mut self, op: &UpdateOp) {
+        let core = self.get_core_mut();
+        match op {
+            UpdateOp::ChangeColor { color } => {
+                core.color = *color;
+            }
+            UpdateOp::ChangeFillColor { color } => {
+                core.fill_color = *color;
+            }
+            UpdateOp::Move { delta } => {
+                for p in core.points.iter_mut() {
+                    p.0 += delta.0;
+                    p.1 += delta.1;
+                }
+            }
+            UpdateOp::ControlPoint { index, point } => {
+                if *index < core.points.len() {
+                    core.points[*index] = *point;
+                }
+            }
+            UpdateOp::AddControlPoint { point } => {
+                core.points.push(*point);
+            }
+            _ => {}
+        }
+    }
+
+    fn update(&mut self, op: &UpdateOp) {
+        self.update_basic(op);
+    }
+
+    fn get_core_mut(&mut self) -> &mut ShapeCore;
 
     fn get_core(&self) -> ShapeCore;
 

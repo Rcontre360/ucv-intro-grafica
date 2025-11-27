@@ -21,21 +21,12 @@ impl ShapeImpl for Ellipse {
         }
     }
 
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
+    }
+
     fn update(&mut self, op: &UpdateOp) {
-        match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            _ => {}
-        }
+        self.update_basic(op);
 
         let (x0, y0) = self.core.points[0];
         let (x1, y1) = self.core.points[1];

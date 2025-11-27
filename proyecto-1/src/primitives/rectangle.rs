@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp, is_transparent};
+use super::core::{is_transparent, Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas; // To draw lines for the rectangle
 
 pub struct Rectangle {
@@ -12,21 +12,8 @@ impl ShapeImpl for Rectangle {
         Rectangle { core }
     }
 
-    fn update(&mut self, op: &UpdateOp) {
-        match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            _ => {}
-        }
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
     }
 
     fn get_core(&self) -> ShapeCore {
