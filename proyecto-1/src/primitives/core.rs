@@ -13,6 +13,7 @@ pub enum Shape {
 pub enum UpdateOp {
     Move { delta: (i32, i32) },
     ControlPoint { index: usize, point: Point },
+    AddControlPoint { point: Point },
     DegreeElevate,
 }
 

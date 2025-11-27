@@ -1,19 +1,18 @@
-use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
+use super::{
+    core::{Point, ShapeCore, ShapeImpl, UpdateOp},
+    line::draw_line,
+};
 use crate::canvas::Canvas;
 
-const CURVE_DETAIL: f32 = 0.00001;
+const DETAIL_FACTOR: f32 = 0.2;
 
 pub struct Bezier {
     core: ShapeCore,
-    detail: f32,
 }
 
 impl ShapeImpl for Bezier {
     fn new(core: ShapeCore) -> Bezier {
-        Bezier {
-            core,
-            detail: CURVE_DETAIL,
-        }
+        Bezier { core }
     }
 
     fn update(&mut self, op: &UpdateOp) {
@@ -29,6 +28,9 @@ impl ShapeImpl for Bezier {
                     self.core.points[*index] = *point;
                 }
             }
+            UpdateOp::AddControlPoint { point } => {
+                self.core.points.push(*point);
+            }
             UpdateOp::DegreeElevate => {
                 self.degree_elevate();
             }
@@ -41,11 +43,22 @@ impl ShapeImpl for Bezier {
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         let mut t = 0.0;
+        let detail = self.get_detail();
+        let mut prev_pts: Option<Point> = None;
 
         while t <= 1.0 {
             let p = self.de_casteljau(t);
-            canvas.set_pixel(p.0, p.1, self.core.color);
-            t += self.detail;
+            if let Some(prev) = prev_pts {
+                let core = ShapeCore {
+                    points: vec![prev, p],
+                    color: self.core.color,
+                    fill_color: self.core.fill_color,
+                };
+                draw_line(&core, canvas);
+            }
+            prev_pts = Some(p);
+            //canvas.set_pixel(p.0, p.1, self.core.color);
+            t += detail;
         }
     }
 
@@ -71,6 +84,20 @@ impl ShapeImpl for Bezier {
 }
 
 impl Bezier {
+    fn get_detail(&self) -> f32 {
+        let mut distance = 0.0;
+        let pts = &self.core.points;
+        for i in 0..pts.len() - 1 {
+            let dx = pts[i + 1].0 - pts[i].0;
+            let dy = pts[i + 1].1 - pts[i].1;
+            // euclidean distance
+            distance += ((dx * dx + dy * dy) as f32).sqrt();
+        }
+
+        let dist = distance * DETAIL_FACTOR / 10.0;
+        1.0 / dist
+    }
+
     fn de_casteljau(&self, t: f32) -> Point {
         let mut pts_cpy = self.core.points.clone();
 

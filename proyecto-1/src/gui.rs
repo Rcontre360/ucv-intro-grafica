@@ -1,6 +1,6 @@
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu::{Renderer, ScreenDescriptor};
-use pixels::{PixelsContext, wgpu};
+use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
@@ -215,6 +215,6 @@ impl Framework {
     }
 
     pub(crate) fn wants_pointer_input(&self) -> bool {
-        self.egui_ctx.wants_pointer_input()
+        self.egui_ctx.wants_pointer_input() || self.egui_ctx.is_pointer_over_area()
     }
 }
