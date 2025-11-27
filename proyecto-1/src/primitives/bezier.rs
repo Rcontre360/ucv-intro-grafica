@@ -1,19 +1,13 @@
 use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas;
 
-const CURVE_DETAIL: f32 = 0.00001;
-
 pub struct Bezier {
     core: ShapeCore,
-    detail: f32,
 }
 
 impl ShapeImpl for Bezier {
     fn new(core: ShapeCore) -> Bezier {
-        Bezier {
-            core,
-            detail: CURVE_DETAIL,
-        }
+        Bezier { core }
     }
 
     fn update(&mut self, op: &UpdateOp) {
@@ -44,11 +38,12 @@ impl ShapeImpl for Bezier {
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         let mut t = 0.0;
+        let detail = self.get_detail();
 
         while t <= 1.0 {
             let p = self.de_casteljau(t);
             canvas.set_pixel(p.0, p.1, self.core.color);
-            t += self.detail;
+            t += detail;
         }
     }
 
@@ -74,6 +69,20 @@ impl ShapeImpl for Bezier {
 }
 
 impl Bezier {
+    fn get_detail(&self) -> f32 {
+        let mut distance = 0.0;
+        let pts = &self.core.points;
+        for i in 0..pts.len() - 1 {
+            let dx = pts[i + 1].0 - pts[i].0;
+            let dy = pts[i + 1].1 - pts[i].1;
+            // euclidean distance
+            distance += ((dx * dx + dy * dy) as f32).sqrt();
+        }
+
+        let dist = distance / 10.0;
+        1.0 / dist
+    }
+
     fn de_casteljau(&self, t: f32) -> Point {
         let mut pts_cpy = self.core.points.clone();
 
