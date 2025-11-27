@@ -73,7 +73,6 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
 
     let mut dx = (b.0 - a.0) as i32;
     let mut dy = (b.1 - a.1) as i32;
-    let mut d = dx - 2 * dy;
     let x_inc = if dx < 0 { -1 as i32 } else { 1 };
     let y_inc = if dy < 0 { -1 as i32 } else { 1 };
 
@@ -88,6 +87,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
     let inc_e = -2 * (if run_on_x { dy } else { dx });
     let inc_ne = 2 * (dx - dy) * (if run_on_x { 1 } else { -1 });
 
+    let mut d = (dx - 2 * dy) * if run_on_x { 1 } else { -1 };
     let mut x = a.0 as i32;
     let mut y = a.1 as i32;
     canvas.set_pixel(x, y, core.color);
@@ -101,12 +101,11 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
                 d += inc_e;
             }
 
-            // we increase x or y depending on the case (dx >= dy)
             x += x_inc;
             canvas.set_pixel(x, y, core.color);
         }
     } else {
-        while x > b.0 || x < b.0 {
+        while y > b.1 || y < b.1 {
             if d <= 0 {
                 d += inc_ne;
                 x += x_inc;
@@ -114,7 +113,6 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
                 d += inc_e;
             }
 
-            // we increase x or y depending on the case (dx >= dy)
             y += y_inc;
             canvas.set_pixel(x, y, core.color);
         }
