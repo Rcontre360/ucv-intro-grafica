@@ -47,9 +47,9 @@ pub struct State {
 impl State {
     pub fn new() -> Self {
         Self {
-            current: Shape::Line,
+            current: Shape::Triangle,
             color: rgba(255, 255, 255, 255),
-            fill_color: rgba(0, 0, 0, 0),
+            fill_color: rgba(100, 50, 10, 150),
             points_color: rgba(0, 0, 255, 255),
             cur_shape: None,
             objects: vec![],
@@ -116,6 +116,41 @@ impl State {
         // if none of the above are true then we are drawing something
         self.handle_figure_draw(event);
         self.handle_gui_event(event);
+    }
+
+    pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
+        canvas.clear();
+
+        for (i, shape) in self.objects.iter().enumerate() {
+            shape.draw(canvas);
+
+            if self.selected == Some(i) {
+                let core = shape.get_core();
+
+                // drawing control points
+                for p in core.points {
+                    for x in (p.0 - 5)..(p.0 + 5) {
+                        for y in (p.1 - 5)..(p.1 + 5) {
+                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
+                                canvas.set_pixel(x, y, rgba(255, 255, 255, 255));
+                            }
+                        }
+                    }
+
+                    for x in (p.0 - 4)..(p.0 + 4) {
+                        for y in (p.1 - 4)..(p.1 + 4) {
+                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
+                                canvas.set_pixel(x, y, rgba(255, 0, 0, 255));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(cur) = self.cur_shape.as_ref() {
+            cur.draw(canvas);
+        }
     }
 
     fn handle_bezier_subdivide(&mut self) {
@@ -282,41 +317,6 @@ impl State {
                 };
                 object.as_mut().update(&op);
             }
-        }
-    }
-
-    pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        canvas.clear();
-
-        for (i, shape) in self.objects.iter().enumerate() {
-            shape.draw(canvas);
-
-            if self.selected == Some(i) {
-                let core = shape.get_core();
-
-                // drawing control points
-                for p in core.points {
-                    for x in (p.0 - 5)..(p.0 + 5) {
-                        for y in (p.1 - 5)..(p.1 + 5) {
-                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
-                                canvas.set_pixel(x, y, rgba(255, 255, 255, 255));
-                            }
-                        }
-                    }
-
-                    for x in (p.0 - 4)..(p.0 + 4) {
-                        for y in (p.1 - 4)..(p.1 + 4) {
-                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
-                                canvas.set_pixel(x, y, rgba(255, 0, 0, 255));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(cur) = self.cur_shape.as_ref() {
-            cur.draw(canvas);
         }
     }
 }
