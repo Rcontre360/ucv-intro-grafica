@@ -1,5 +1,10 @@
-use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
+use super::{
+    core::{Point, ShapeCore, ShapeImpl, UpdateOp},
+    line::draw_line,
+};
 use crate::canvas::Canvas;
+
+const DETAIL_FACTOR: f32 = 0.2;
 
 pub struct Bezier {
     core: ShapeCore,
@@ -39,10 +44,20 @@ impl ShapeImpl for Bezier {
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         let mut t = 0.0;
         let detail = self.get_detail();
+        let mut prev_pts: Option<Point> = None;
 
         while t <= 1.0 {
             let p = self.de_casteljau(t);
-            canvas.set_pixel(p.0, p.1, self.core.color);
+            if let Some(prev) = prev_pts {
+                let core = ShapeCore {
+                    points: vec![prev, p],
+                    color: self.core.color,
+                    fill_color: self.core.fill_color,
+                };
+                draw_line(&core, canvas);
+            }
+            prev_pts = Some(p);
+            //canvas.set_pixel(p.0, p.1, self.core.color);
             t += detail;
         }
     }
@@ -79,7 +94,7 @@ impl Bezier {
             distance += ((dx * dx + dy * dy) as f32).sqrt();
         }
 
-        let dist = distance / 10.0;
+        let dist = distance * DETAIL_FACTOR / 10.0;
         1.0 / dist
     }
 
