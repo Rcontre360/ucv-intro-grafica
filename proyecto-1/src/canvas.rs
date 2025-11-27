@@ -28,6 +28,9 @@ impl<'a> Canvas<'a> {
 
         if color[3] < 255 {
             let prev_color = &self.buffer[index..index + 4];
+            if prev_color[3] > 0 {
+                println!("ALREADY DRAW");
+            }
             let new_color = mix_colors(color, prev_color.try_into().unwrap());
 
             self.buffer[index..index + 4].copy_from_slice(&new_color);
