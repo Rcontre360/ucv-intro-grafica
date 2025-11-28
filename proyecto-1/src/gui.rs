@@ -43,6 +43,10 @@ impl TemplateApp {
                 self.state.gui_update(GUIEvent::ShapeType(Shape::Bezier));
             }
 
+            if ui.button("Clear").clicked() {
+                self.state.gui_update(GUIEvent::Clear);
+            }
+
             ui.separator();
 
             if self.state.selected.is_some() {
@@ -66,11 +70,15 @@ impl TemplateApp {
             ui.heading("Color (RGBA)");
 
             let colors = self.state.get_colors();
-            let (mut c, mut fill_c, mut pnt_c) =
-                (colors.0.into(), colors.1.into(), colors.2.into());
+            let (mut c, mut fill_c, mut pnt_c, mut back_c) = (
+                colors.0.into(),
+                colors.1.into(),
+                colors.2.into(),
+                colors.3.into(),
+            );
 
             ui.horizontal(|ui| {
-                ui.label("Color 1:");
+                ui.label("Border color");
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut c);
 
                 if response.changed() {
@@ -79,7 +87,7 @@ impl TemplateApp {
             });
 
             ui.horizontal(|ui| {
-                ui.label("Color 2:");
+                ui.label("Fill color");
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut fill_c);
 
                 if response.changed() {
@@ -88,11 +96,20 @@ impl TemplateApp {
             });
 
             ui.horizontal(|ui| {
-                ui.label("Color 3:");
+                ui.label("Points color");
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut pnt_c);
 
                 if response.changed() {
                     self.state.gui_update(GUIEvent::PointsColor(pnt_c.into()));
+                }
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Background color");
+                let response = ui.color_edit_button_srgba_unmultiplied(&mut back_c);
+
+                if response.changed() {
+                    self.state.gui_update(GUIEvent::PointsColor(back_c.into()));
                 }
             });
 

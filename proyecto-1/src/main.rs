@@ -68,6 +68,14 @@ fn main() -> Result<(), Error> {
                 state.keyboard_update(KeyCode::Enter);
             }
 
+            if input.key_pressed(KeyCode::Delete) {
+                state.keyboard_update(KeyCode::Delete);
+            }
+
+            if input.key_pressed(KeyCode::Backspace) {
+                state.keyboard_update(KeyCode::Backspace);
+            }
+
             // mouse events on GUI dont matter
             if !is_gui {
                 //mouse is moved on the ui

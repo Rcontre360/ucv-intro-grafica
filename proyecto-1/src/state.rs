@@ -24,6 +24,7 @@ pub enum GUIEvent {
     Subdivide,
     ToFront(bool),
     ToBack(bool),
+    Clear,
 }
 
 #[derive(Copy, Clone)]
@@ -71,23 +72,32 @@ pub struct State {
     color: RGBA,
     fill_color: RGBA,
     points_color: RGBA,
+    background_color: RGBA,
 }
 
 impl State {
     pub fn new() -> Self {
         Self {
             current: Shape::Triangle,
+
             color: RGBA::new(255, 255, 255, 255),
             fill_color: RGBA::new(100, 50, 10, 150),
             points_color: RGBA::new(0, 0, 255, 255),
-            cur_shape: None,
+            background_color: RGBA::default(),
+
             objects: vec![],
+            cur_shape: None,
             selected: None,
         }
     }
 
-    pub fn get_colors(&self) -> (RGBA, RGBA, RGBA) {
-        (self.color, self.fill_color, self.points_color)
+    pub fn get_colors(&self) -> (RGBA, RGBA, RGBA, RGBA) {
+        (
+            self.color,
+            self.fill_color,
+            self.points_color,
+            self.background_color,
+        )
     }
 
     pub fn gui_update(&mut self, e: GUIEvent) {
@@ -103,11 +113,6 @@ impl State {
     }
 
     pub fn update(&mut self, event: EventType) {
-        //handle subdivide with enter
-        if let EventType::Keyboard(KeyCode::Enter) = event {
-            self.handle_bezier_subdivide();
-        }
-
         //checking if event is a normal figure selection
         if let EventType::Mouse(MouseEvent::Click, 0, point) = event {
             if !self.is_building_bezier() {
@@ -157,8 +162,21 @@ impl State {
         }
 
         // if none of the above are true then we are drawing something
+        self.handle_keyboard_event(event);
         self.handle_figure_draw(event);
         self.handle_gui_event(event);
+    }
+
+    fn handle_keyboard_event(&mut self, event: EventType) {
+        match event {
+            EventType::Keyboard(keycode) => match keycode {
+                KeyCode::Enter => self.handle_bezier_subdivide(),
+                KeyCode::Delete => self.handle_delete_figure(),
+                KeyCode::Backspace => self.handle_delete_figure(),
+                _ => {}
+            },
+            _ => {}
+        }
     }
 
     fn handle_gui_event(&mut self, event: EventType) {
@@ -185,6 +203,11 @@ impl State {
                         let target_index = if all { 0 } else { i.index.saturating_sub(1) };
                         self.reorder_selected(target_index);
                     }
+                }
+                GUIEvent::Clear => {
+                    self.objects.clear();
+                    self.selected = None;
+                    self.cur_shape = None;
                 }
             },
             _ => {}
@@ -271,6 +294,12 @@ impl State {
 
         if let Some(cur) = self.cur_shape.as_ref() {
             cur.draw(canvas);
+        }
+    }
+
+    fn handle_delete_figure(&mut self) {
+        if let Some(selected) = self.selected.take() {
+            self.objects.remove(selected.index);
         }
     }
 
