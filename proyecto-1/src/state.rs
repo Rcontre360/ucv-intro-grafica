@@ -33,14 +33,41 @@ pub enum EventType {
     GUI(GUIEvent),
 }
 
+pub struct ShapeSelected {
+    pub index: usize,
+    pub control_point_selected: Option<usize>,
+    pub coord_clicked: Option<Point>,
+}
+
+impl ShapeSelected {
+    pub fn new(index: usize) -> Self {
+        ShapeSelected {
+            index,
+            control_point_selected: None,
+            coord_clicked: None,
+        }
+    }
+
+    pub fn new_with_point(index: usize, click: Point) -> Self {
+        ShapeSelected {
+            index,
+            control_point_selected: None,
+            coord_clicked: Some(click),
+        }
+    }
+
+    pub fn set_control_point(&mut self, ptn: usize) {
+        self.control_point_selected = Some(ptn);
+    }
+}
+
 pub struct State {
     pub current: Shape,
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
 
-    objects: Vec<Box<dyn ShapeImpl>>,
-    pub selected: Option<usize>,
-    pub dragging: Option<usize>,
+    pub selected: Option<ShapeSelected>,
 
+    objects: Vec<Box<dyn ShapeImpl>>,
     color: RGBA,
     fill_color: RGBA,
     points_color: RGBA,
@@ -56,7 +83,6 @@ impl State {
             cur_shape: None,
             objects: vec![],
             selected: None,
-            dragging: None,
         }
     }
 
@@ -87,76 +113,52 @@ impl State {
             if !self.is_building_bezier() {
                 // if we have a selected figure and we're hitting its control points
                 // also if we are dragging that figure
-                if let Some(fig) = self.selected {
-                    if let Some(point_idx) = self.is_control_point_select(fig, point) {
-                        self.dragging = Some(point_idx);
+                if let Some(fig) = self.selected.as_ref() {
+                    if let Some(point_idx) = self.is_control_point_select(fig.index, point) {
+                        // this needs to be done here and not on the "fig" variable because
+                        // above we are borrowing an inmutable reference and we can read as we want
+                        // from it but not mutate it. Here we mutate so we need to "borrow" again
+                        self.selected.as_mut().unwrap().set_control_point(point_idx);
                         return;
                     }
                 }
 
                 // if we are selecting a figure
                 if let Some(fig) = self.is_figure_selection(point) {
-                    self.selected = Some(fig);
+                    self.selected = Some(ShapeSelected::new_with_point(fig, point));
                     return;
+                } else {
+                    self.selected = None;
                 }
             }
         }
 
         // if we are dragging and control point is selected
         if let EventType::Mouse(MouseEvent::PressDrag, 0, point) = event {
-            if self.dragging.is_some() {
-                self.update_selected_control_point(point);
+            if let Some(selected) = self.selected.as_mut() {
+                let orig = selected.coord_clicked;
+                if selected.control_point_selected.is_some() {
+                    self.update_selected_control_point(point);
+                    return;
+                }
+
+                if orig.is_some() {
+                    self.handle_move_selected_shape(orig.unwrap(), point);
+                }
             }
         }
 
         if let EventType::Mouse(MouseEvent::Release, 0, _) = event {
             // we stopped moving control point
-            if self.dragging.is_some() {
-                self.dragging = None;
+            if let Some(selected) = self.selected.as_mut() {
+                selected.control_point_selected = None;
+                selected.coord_clicked = None;
             }
         }
 
         // if none of the above are true then we are drawing something
         self.handle_figure_draw(event);
         self.handle_gui_event(event);
-    }
-
-    pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        canvas.clear();
-
-        // objects are drawn in order, so the last one is on top (front).
-        for (i, shape) in self.objects.iter().enumerate() {
-            shape.draw(canvas);
-
-            if self.selected == Some(i) {
-                let core = shape.get_core();
-
-                draw_control_points(core.points, self.points_color, canvas);
-            }
-        }
-
-        if let Some(cur) = self.cur_shape.as_ref() {
-            cur.draw(canvas);
-        }
-    }
-
-    fn handle_bezier_subdivide(&mut self) {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get_mut(selected_index) {
-                let op = UpdateOp::DegreeElevate;
-                object.as_mut().update(&op);
-            }
-        }
-    }
-
-    fn reorder_selected(&mut self, new_index: usize) {
-        if let Some(current_index) = self.selected {
-            if current_index != new_index && new_index < self.objects.len() {
-                let object = self.objects.remove(current_index);
-                self.objects.insert(new_index, object);
-                self.selected = Some(new_index);
-            }
-        }
     }
 
     fn handle_gui_event(&mut self, event: EventType) {
@@ -168,15 +170,19 @@ impl State {
                 GUIEvent::PointsColor(c) => self.points_color = c,
                 GUIEvent::Subdivide => self.handle_bezier_subdivide(),
                 GUIEvent::ToFront(all) => {
-                    if let Some(i) = self.selected {
+                    if let Some(i) = self.selected.as_ref() {
                         let len = self.objects.len();
-                        let target_index = if all { len - 1 } else { (i + 1).min(len - 1) };
+                        let target_index = if all {
+                            len - 1
+                        } else {
+                            (i.index + 1).min(len - 1)
+                        };
                         self.reorder_selected(target_index);
                     }
                 }
                 GUIEvent::ToBack(all) => {
-                    if let Some(i) = self.selected {
-                        let target_index = if all { 0 } else { i.saturating_sub(1) };
+                    if let Some(i) = self.selected.as_ref() {
+                        let target_index = if all { 0 } else { i.index.saturating_sub(1) };
                         self.reorder_selected(target_index);
                     }
                 }
@@ -250,6 +256,56 @@ impl State {
         }
     }
 
+    pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
+        canvas.clear();
+
+        // objects are drawn in order, so the last one is on top (front).
+        for shape in self.objects.iter() {
+            shape.draw(canvas);
+        }
+
+        if let Some(selected) = self.selected.as_ref() {
+            let shape = self.objects.get(selected.index).unwrap();
+            let core = shape.get_core();
+
+            draw_control_points(core.points, self.points_color, canvas);
+        }
+
+        if let Some(cur) = self.cur_shape.as_ref() {
+            cur.draw(canvas);
+        }
+    }
+
+    fn handle_bezier_subdivide(&mut self) {
+        if let Some(selected) = self.selected.as_ref() {
+            if let Some(object) = self.objects.get_mut(selected.index) {
+                let op = UpdateOp::DegreeElevate;
+                object.as_mut().update(&op);
+            }
+        }
+    }
+
+    fn reorder_selected(&mut self, new_index: usize) {
+        if let Some(selected) = self.selected.as_ref() {
+            if selected.index != new_index && new_index < self.objects.len() {
+                let object = self.objects.remove(selected.index);
+                self.objects.insert(new_index, object);
+                self.selected = Some(ShapeSelected::new(new_index));
+            }
+        }
+    }
+
+    fn handle_move_selected_shape(&mut self, origin: Point, end: Point) {
+        if let Some(selected) = self.selected.as_mut() {
+            if let Some(shape) = self.objects.get_mut(selected.index) {
+                let delta = end - origin;
+                let op = UpdateOp::Move { delta };
+                shape.as_mut().update(&op);
+                selected.coord_clicked = Some(end);
+            }
+        }
+    }
+
     fn is_figure_selection(&self, pt: Point) -> Option<usize> {
         // Iterate backwards to select the topmost (last drawn) figure first
         for (i, object) in self.objects.iter().enumerate().rev() {
@@ -316,20 +372,16 @@ impl State {
     fn shape_end(&mut self, end: Point) {
         // "take" function already does self.cur_shape = None
         if let Some(cur) = self.cur_shape.take() {
-            // Update the last point before finalizing the shape
             self.shape_update_last_point(end);
-            // Add to the objects vector, putting it on top of the Z-order
             self.objects.push(cur);
-            // Select the newly added object
-            self.selected = Some(self.objects.len() - 1);
         }
     }
 
     fn update_selected_control_point(&mut self, point: Point) {
-        if let Some(selected_index) = self.selected {
-            if let Some(object) = self.objects.get_mut(selected_index) {
+        if let Some(selected) = self.selected.as_ref() {
+            if let Some(object) = self.objects.get_mut(selected.index) {
                 let op = UpdateOp::ControlPoint {
-                    index: self.dragging.unwrap(),
+                    index: selected.control_point_selected.unwrap(),
                     point,
                 };
                 object.as_mut().update(&op);
