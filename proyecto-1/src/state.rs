@@ -22,6 +22,8 @@ pub enum GUIEvent {
     FillColor(RGBA),
     PointsColor(RGBA),
     Subdivide,
+    ToFront(bool),
+    ToBack(bool),
 }
 
 #[derive(Copy, Clone)]
@@ -84,6 +86,7 @@ impl State {
         if let EventType::Mouse(MouseEvent::Click, 0, point) = event {
             if !self.is_building_bezier() {
                 // if we have a selected figure and we're hitting its control points
+                // also if we are dragging that figure
                 if let Some(fig) = self.selected {
                     if let Some(point_idx) = self.is_control_point_select(fig, point) {
                         self.dragging = Some(point_idx);
@@ -121,30 +124,14 @@ impl State {
     pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         canvas.clear();
 
+        // objects are drawn in order, so the last one is on top (front).
         for (i, shape) in self.objects.iter().enumerate() {
             shape.draw(canvas);
 
             if self.selected == Some(i) {
                 let core = shape.get_core();
 
-                // drawing control points
-                for p in core.points {
-                    for x in (p.0 - 5)..(p.0 + 5) {
-                        for y in (p.1 - 5)..(p.1 + 5) {
-                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
-                                canvas.set_pixel(x, y, rgba(255, 255, 255, 255));
-                            }
-                        }
-                    }
-
-                    for x in (p.0 - 4)..(p.0 + 4) {
-                        for y in (p.1 - 4)..(p.1 + 4) {
-                            if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
-                                canvas.set_pixel(x, y, rgba(255, 0, 0, 255));
-                            }
-                        }
-                    }
-                }
+                draw_control_points(core.points, self.points_color, canvas);
             }
         }
 
@@ -162,6 +149,16 @@ impl State {
         }
     }
 
+    fn reorder_selected(&mut self, new_index: usize) {
+        if let Some(current_index) = self.selected {
+            if current_index != new_index && new_index < self.objects.len() {
+                let object = self.objects.remove(current_index);
+                self.objects.insert(new_index, object);
+                self.selected = Some(new_index);
+            }
+        }
+    }
+
     fn handle_gui_event(&mut self, event: EventType) {
         match event {
             EventType::GUI(gui_ev) => match gui_ev {
@@ -170,6 +167,19 @@ impl State {
                 GUIEvent::FillColor(c) => self.fill_color = c,
                 GUIEvent::PointsColor(c) => self.points_color = c,
                 GUIEvent::Subdivide => self.handle_bezier_subdivide(),
+                GUIEvent::ToFront(all) => {
+                    if let Some(i) = self.selected {
+                        let len = self.objects.len();
+                        let target_index = if all { len - 1 } else { (i + 1).min(len - 1) };
+                        self.reorder_selected(target_index);
+                    }
+                }
+                GUIEvent::ToBack(all) => {
+                    if let Some(i) = self.selected {
+                        let target_index = if all { 0 } else { i.saturating_sub(1) };
+                        self.reorder_selected(target_index);
+                    }
+                }
             },
             _ => {}
         };
@@ -241,7 +251,8 @@ impl State {
     }
 
     fn is_figure_selection(&self, pt: Point) -> Option<usize> {
-        for (i, object) in self.objects.iter().enumerate() {
+        // Iterate backwards to select the topmost (last drawn) figure first
+        for (i, object) in self.objects.iter().enumerate().rev() {
             if object.hit_test(pt) {
                 return Some(i);
             }
@@ -250,6 +261,8 @@ impl State {
     }
 
     fn is_building_bezier(&self) -> bool {
+        // This function should probably check if self.current is Shape::Bezier AND self.cur_shape is Some
+        // However, based on the original code, I will keep it returning false to match the provided logic.
         false
     }
 
@@ -303,8 +316,12 @@ impl State {
     fn shape_end(&mut self, end: Point) {
         // "take" function already does self.cur_shape = None
         if let Some(cur) = self.cur_shape.take() {
+            // Update the last point before finalizing the shape
             self.shape_update_last_point(end);
+            // Add to the objects vector, putting it on top of the Z-order
             self.objects.push(cur);
+            // Select the newly added object
+            self.selected = Some(self.objects.len() - 1);
         }
     }
 
@@ -332,4 +349,25 @@ where
         fill_color: colors.1,
     };
     Some(Box::new(T::new(core)))
+}
+
+fn draw_control_points(points: Vec<Point>, color: RGBA, canvas: &mut Canvas) {
+    // drawing control points
+    for p in points {
+        for x in (p.0 - 5)..(p.0 + 5) {
+            for y in (p.1 - 5)..(p.1 + 5) {
+                if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
+                    canvas.set_pixel(x, y, rgba(255, 255, 255, 255));
+                }
+            }
+        }
+
+        for x in (p.0 - 4)..(p.0 + 4) {
+            for y in (p.1 - 4)..(p.1 + 4) {
+                if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
+                    canvas.set_pixel(x, y, color);
+                }
+            }
+        }
+    }
 }

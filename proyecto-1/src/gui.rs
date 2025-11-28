@@ -49,6 +49,18 @@ impl TemplateApp {
                 if ui.button("Degree++").clicked() {
                     self.state.gui_update(GUIEvent::Subdivide);
                 }
+                if ui.button("Front +1").clicked() {
+                    self.state.gui_update(GUIEvent::ToFront(false));
+                }
+                if ui.button("Back -1").clicked() {
+                    self.state.gui_update(GUIEvent::ToBack(false));
+                }
+                if ui.button("To Front").clicked() {
+                    self.state.gui_update(GUIEvent::ToFront(true));
+                }
+                if ui.button("To Back").clicked() {
+                    self.state.gui_update(GUIEvent::ToBack(true));
+                }
             }
 
             ui.heading("Color (RGBA)");
