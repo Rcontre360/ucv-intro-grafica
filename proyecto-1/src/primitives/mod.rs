@@ -1,5 +1,3 @@
-pub mod core;
-
 mod bezier;
 mod ellipse;
 mod line;

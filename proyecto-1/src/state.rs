@@ -2,8 +2,8 @@ use winit::keyboard::KeyCode;
 
 use crate::{
     canvas::Canvas,
+    core::{Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
     primitives,
-    primitives::core::{rgba, Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
 };
 
 // we define our own events to not depend on these libraries.
@@ -77,9 +77,9 @@ impl State {
     pub fn new() -> Self {
         Self {
             current: Shape::Triangle,
-            color: rgba(255, 255, 255, 255),
-            fill_color: rgba(100, 50, 10, 150),
-            points_color: rgba(0, 0, 255, 255),
+            color: RGBA::new(255, 255, 255, 255),
+            fill_color: RGBA::new(100, 50, 10, 150),
+            points_color: RGBA::new(0, 0, 255, 255),
             cur_shape: None,
             objects: vec![],
             selected: None,
@@ -266,9 +266,7 @@ impl State {
 
         if let Some(selected) = self.selected.as_ref() {
             let shape = self.objects.get(selected.index).unwrap();
-            let core = shape.get_core();
-
-            draw_control_points(core.points, self.points_color, canvas);
+            shape.draw_selection(self.points_color, canvas);
         }
 
         if let Some(cur) = self.cur_shape.as_ref() {
@@ -409,7 +407,7 @@ fn draw_control_points(points: Vec<Point>, color: RGBA, canvas: &mut Canvas) {
         for x in (p.0 - 5)..(p.0 + 5) {
             for y in (p.1 - 5)..(p.1 + 5) {
                 if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
-                    canvas.set_pixel(x, y, rgba(255, 255, 255, 255));
+                    canvas.set_pixel(x, y, RGBA::new(255, 255, 255, 255));
                 }
             }
         }

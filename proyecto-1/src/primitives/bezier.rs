@@ -1,8 +1,6 @@
-use super::{
-    core::{Point, ShapeCore, ShapeImpl, UpdateOp},
-    line::draw_line,
-};
+use super::line::draw_line;
 use crate::canvas::Canvas;
+use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
 
 const DETAIL_FACTOR: f32 = 0.2;
 
@@ -53,6 +51,15 @@ impl ShapeImpl for Bezier {
             //canvas.set_pixel(p.0, p.1, self.core.color);
             t += detail;
         }
+    }
+
+    fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        //let points = self.core.points;
+        //self.draw_selection_basic(color, canvas);
+
+        //for i in 1..points.len() {
+        ////draw_line(points[i - 1], points[i]);
+        //}
     }
 
     fn hit_test(&self, point: Point) -> bool {

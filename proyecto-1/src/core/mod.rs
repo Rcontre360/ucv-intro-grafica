@@ -1,6 +1,11 @@
 use crate::canvas::Canvas;
 use core::fmt;
-use std::ops::{Add, Sub};
+
+mod point;
+mod rgba;
+
+pub use point::Point;
+pub use rgba::RGBA;
 
 #[derive(Copy, Clone)]
 pub enum Shape {
@@ -19,39 +24,6 @@ pub enum UpdateOp {
     AddControlPoint { point: Point },
     DegreeElevate,
 }
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Point(pub i32, pub i32);
-
-impl From<(i32, i32)> for Point {
-    fn from(coords: (i32, i32)) -> Self {
-        Point(coords.0, coords.1)
-    }
-}
-
-impl From<(f32, f32)> for Point {
-    fn from(coords: (f32, f32)) -> Self {
-        Point(coords.0.round() as i32, coords.1.round() as i32)
-    }
-}
-
-impl Add for Point {
-    type Output = Point;
-
-    fn add(self, other: Point) -> Point {
-        Point(self.0 + other.0, self.1 + other.1)
-    }
-}
-
-impl Sub for Point {
-    type Output = Point;
-
-    fn sub(self, other: Point) -> Point {
-        Point(self.0 - other.0, self.1 - other.1)
-    }
-}
-
-pub type RGBA = [u8; 4];
 
 pub type ControlPoints = Vec<Point>;
 
@@ -97,7 +69,32 @@ pub trait ShapeImpl {
 
     fn get_core(&self) -> ShapeCore;
 
-    fn draw<'a>(&self, buffer: &mut Canvas<'a>);
+    fn draw<'a>(&self, canvas: &mut Canvas<'a>);
+
+    fn draw_selection_basic<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        let points = self.get_core().points;
+        for p in points {
+            for x in (p.0 - 5)..(p.0 + 5) {
+                for y in (p.1 - 5)..(p.1 + 5) {
+                    if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
+                        canvas.set_pixel(x, y, RGBA::new(255, 255, 255, 255));
+                    }
+                }
+            }
+
+            for x in (p.0 - 4)..(p.0 + 4) {
+                for y in (p.1 - 4)..(p.1 + 4) {
+                    if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
+                        canvas.set_pixel(x, y, color);
+                    }
+                }
+            }
+        }
+    }
+
+    fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        self.draw_selection_basic(color, canvas);
+    }
 
     fn hit_test(&self, point: Point) -> bool;
 }
@@ -119,21 +116,4 @@ impl fmt::Display for ShapeCore {
 
         write!(f, "ShapeCore ([{}])", points_str.join(", "))
     }
-}
-
-pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> RGBA {
-    [r, g, b, a]
-}
-
-pub fn is_transparent(color: RGBA) -> bool {
-    color[3] == 0
-}
-
-pub fn mix_colors(new: RGBA, old: RGBA) -> RGBA {
-    let alpha = new[3] as f32 / 255.0;
-    let new_r = (new[0] as f32 * alpha + old[0] as f32 * (1.0 - alpha)) as u8;
-    let new_g = (new[1] as f32 * alpha + old[1] as f32 * (1.0 - alpha)) as u8;
-    let new_b = (new[2] as f32 * alpha + old[2] as f32 * (1.0 - alpha)) as u8;
-
-    [new_r, new_g, new_b, 255]
 }

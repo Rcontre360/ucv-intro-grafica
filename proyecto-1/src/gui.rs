@@ -4,8 +4,8 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
-use crate::primitives::core::Shape;
-use crate::state::{EventType, GUIEvent, State};
+use crate::core::Shape;
+use crate::state::{GUIEvent, State};
 
 /// Example application state. A real application will need a lot more state than this.
 pub(crate) struct TemplateApp {
@@ -65,14 +65,16 @@ impl TemplateApp {
 
             ui.heading("Color (RGBA)");
 
-            let (mut c, mut fill_c, mut pnt_c) = self.state.get_colors();
+            let colors = self.state.get_colors();
+            let (mut c, mut fill_c, mut pnt_c) =
+                (colors.0.into(), colors.1.into(), colors.2.into());
 
             ui.horizontal(|ui| {
                 ui.label("Color 1:");
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::BorderColor(c));
+                    self.state.gui_update(GUIEvent::BorderColor(c.into()));
                 }
             });
 
@@ -81,7 +83,7 @@ impl TemplateApp {
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut fill_c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::FillColor(fill_c));
+                    self.state.gui_update(GUIEvent::FillColor(fill_c.into()));
                 }
             });
 
@@ -90,7 +92,7 @@ impl TemplateApp {
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut pnt_c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::PointsColor(pnt_c));
+                    self.state.gui_update(GUIEvent::PointsColor(pnt_c.into()));
                 }
             });
 

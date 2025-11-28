@@ -1,5 +1,5 @@
-use super::core::{is_transparent, Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas;
+use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 
 pub struct Ellipse {
     core: ShapeCore,
@@ -52,7 +52,7 @@ impl ShapeImpl for Ellipse {
         let sum_mx: i64 = 8 * b * b;
         let sum_my: i64 = 8 * a * a;
         let const_d1: i64 = (4 * b * b) + (4 * a * a);
-        let draw_fill = !is_transparent(self.core.fill_color);
+        let draw_fill = !self.core.fill_color.is_transparent();
 
         self.draw_symmetric(canvas, x, y);
         if draw_fill {

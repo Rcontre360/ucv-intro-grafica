@@ -13,9 +13,10 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
 use crate::gui::Framework;
-use crate::state::{EventType, MouseEvent};
+use crate::state::MouseEvent;
 
 mod canvas;
+mod core;
 mod gui;
 mod primitives;
 mod state;

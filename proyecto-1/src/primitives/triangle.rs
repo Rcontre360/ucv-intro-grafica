@@ -1,6 +1,6 @@
-use super::core::{is_transparent, Point, ShapeCore, ShapeImpl};
 use super::line::draw_line;
-use crate::canvas::Canvas; // To draw lines for the triangle
+use crate::canvas::Canvas;
+use crate::core::{Point, ShapeCore, ShapeImpl}; // To draw lines for the triangle
 
 pub struct Triangle {
     core: ShapeCore,
@@ -23,7 +23,7 @@ impl ShapeImpl for Triangle {
         if self.core.points.len() <= 2 {
             draw_line(&self.core, canvas);
         } else {
-            if !is_transparent(self.core.fill_color) {
+            if !self.core.fill_color.is_transparent() {
                 self.fill_triangle(canvas);
             }
 

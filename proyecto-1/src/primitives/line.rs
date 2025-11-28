@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 
-use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
+use crate::core::{Point, ShapeCore, ShapeImpl};
 
 pub struct Line {
     core: ShapeCore,
