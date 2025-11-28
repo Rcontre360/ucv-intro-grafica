@@ -89,6 +89,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
             }
 
             x += x_inc;
+
             canvas.set_pixel(x, y, core.color);
         }
     } else {
@@ -101,6 +102,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
             }
 
             y += y_inc;
+
             canvas.set_pixel(x, y, core.color);
         }
     }

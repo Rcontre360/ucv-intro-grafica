@@ -106,6 +106,16 @@ pub struct ShapeCore {
     pub fill_color: RGBA,
 }
 
+impl ShapeCore {
+    pub fn new(points: Vec<Point>, color: RGBA) -> Self {
+        ShapeCore {
+            points,
+            color,
+            fill_color: RGBA::default(),
+        }
+    }
+}
+
 impl fmt::Display for ShapeCore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let points_str: Vec<String> = self

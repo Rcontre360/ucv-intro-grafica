@@ -54,12 +54,13 @@ impl ShapeImpl for Bezier {
     }
 
     fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
-        //let points = self.core.points;
-        //self.draw_selection_basic(color, canvas);
+        let points = &self.core.points;
+        self.draw_selection_basic(color, canvas);
 
-        //for i in 1..points.len() {
-        ////draw_line(points[i - 1], points[i]);
-        //}
+        for i in 1..points.len() {
+            let lin = ShapeCore::new(vec![points[i - 1], points[i]], self.core.color);
+            draw_line(&lin, canvas);
+        }
     }
 
     fn hit_test(&self, point: Point) -> bool {

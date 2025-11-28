@@ -13,6 +13,12 @@ impl RGBA {
     }
 }
 
+impl Default for RGBA {
+    fn default() -> Self {
+        RGBA([0, 0, 0, 0])
+    }
+}
+
 impl From<[u8; 4]> for RGBA {
     fn from(rgba: [u8; 4]) -> Self {
         RGBA(rgba)

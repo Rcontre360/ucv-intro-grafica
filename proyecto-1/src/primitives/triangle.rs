@@ -38,8 +38,22 @@ impl ShapeImpl for Triangle {
         }
     }
 
-    fn hit_test(&self, _point: Point) -> bool {
-        false
+    fn hit_test(&self, p: Point) -> bool {
+        if self.core.points.len() < 3 {
+            return false;
+        }
+
+        let a = self.core.points[0];
+        let b = self.core.points[1];
+        let c = self.core.points[2];
+
+        let cp1 = self.edge_side_check(a, b, p);
+        let cp2 = self.edge_side_check(b, c, p);
+        let cp3 = self.edge_side_check(c, a, p);
+
+        let is_same_side = (cp1 >= 0 && cp2 >= 0 && cp3 >= 0) || (cp1 <= 0 && cp2 <= 0 && cp3 <= 0);
+
+        is_same_side
     }
 }
 
@@ -107,5 +121,22 @@ impl Triangle {
         for x in x1..x2 {
             canvas.set_pixel(x, y, self.core.fill_color);
         }
+    }
+
+    fn edge_side_check(&self, a: Point, b: Point, p: Point) -> i64 {
+        let ax = a.0 as i64;
+        let ay = a.1 as i64;
+        let bx = b.0 as i64;
+        let by = b.1 as i64;
+        let px = p.0 as i64;
+        let py = p.1 as i64;
+
+        let ab_x = bx - ax;
+        let ab_y = by - ay;
+
+        let ap_x = px - ax;
+        let ap_y = py - ay;
+
+        ab_x * ap_y - ab_y * ap_x
     }
 }
