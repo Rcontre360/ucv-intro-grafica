@@ -9,17 +9,19 @@ use winit::dpi::LogicalSize;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode;
+use winit::window::CursorIcon;
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
+use crate::app_state::MouseEvent;
 use crate::gui::Framework;
-use crate::state::MouseEvent;
 
+mod app_state;
 mod canvas;
 mod core;
+mod draw_state;
 mod gui;
 mod primitives;
-mod state;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
@@ -58,6 +60,7 @@ fn main() -> Result<(), Error> {
         if input.update(&event) {
             let is_gui = framework.wants_pointer_input();
             let state = framework.get_state();
+            let mut cursor_icon = CursorIcon::Default;
 
             if input.key_pressed(KeyCode::Escape) || input.close_requested() {
                 elwt.exit();
@@ -76,31 +79,39 @@ fn main() -> Result<(), Error> {
                 state.keyboard_update(KeyCode::Backspace);
             }
 
+            if input.key_pressed(KeyCode::ShiftLeft) {
+                state.keyboard_update(KeyCode::ShiftLeft);
+            }
+
+            if input.key_pressed(KeyCode::ShiftRight) {
+                state.keyboard_update(KeyCode::ShiftRight);
+            }
+
             // mouse events on GUI dont matter
             if !is_gui {
                 //mouse is moved on the ui
                 if let Some((x, y)) = input.cursor() {
-                    state.mouse_update(MouseEvent::Move, 0, (x, y).into());
+                    cursor_icon = state.mouse_update(MouseEvent::Move, 0, (x, y).into());
                 }
 
                 if input.mouse_pressed(0) {
                     let (x, y) = input.cursor().unwrap();
-                    state.mouse_update(MouseEvent::Click, 0, (x, y).into());
+                    cursor_icon = state.mouse_update(MouseEvent::Click, 0, (x, y).into());
                 }
 
                 if input.mouse_pressed(1) {
                     let (x, y) = input.cursor().unwrap();
-                    state.mouse_update(MouseEvent::Click, 1, (x, y).into());
+                    cursor_icon = state.mouse_update(MouseEvent::Click, 1, (x, y).into());
                 }
 
                 if input.mouse_held(0) {
                     let (x, y) = input.cursor().unwrap();
-                    state.mouse_update(MouseEvent::PressDrag, 0, (x, y).into());
+                    cursor_icon = state.mouse_update(MouseEvent::PressDrag, 0, (x, y).into());
                 }
 
                 if input.mouse_released(0) {
                     let (x, y) = input.cursor().unwrap();
-                    state.mouse_update(MouseEvent::Release, 0, (x, y).into());
+                    cursor_icon = state.mouse_update(MouseEvent::Release, 0, (x, y).into());
                 }
             }
             // Update the scale factor
@@ -108,6 +119,7 @@ fn main() -> Result<(), Error> {
                 framework.scale_factor(scale_factor);
             }
 
+            window.set_cursor_icon(cursor_icon);
             window.request_redraw();
         }
 
@@ -129,10 +141,9 @@ fn main() -> Result<(), Error> {
                     }
                     WindowEvent::RedrawRequested => {
                         let size = window.inner_size();
-                        let mut canvas = Canvas::new(pixels.frame_mut(), size.width, size.height);
-                        framework.get_state().draw(&mut canvas);
+                        let mut canvas = Canvas::new(pixels.frame_mut(), size.width);
 
-                        // Prepare egui
+                        framework.get_state().draw(&mut canvas);
                         framework.prepare(&window);
 
                         let render_result =

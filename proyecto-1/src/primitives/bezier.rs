@@ -2,15 +2,20 @@ use super::line::draw_line;
 use crate::canvas::Canvas;
 use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
 
-const DETAIL_FACTOR: f32 = 0.2;
+const DETAIL_FACTOR: f32 = 0.3;
 
 pub struct Bezier {
     core: ShapeCore,
+    // each bezier holds its own subdivide since its part of its drawing selection process
+    subdivide_t: f32,
 }
 
 impl ShapeImpl for Bezier {
     fn new(core: ShapeCore) -> Bezier {
-        Bezier { core }
+        Bezier {
+            core,
+            subdivide_t: 0.5,
+        }
     }
 
     fn get_core(&self) -> ShapeCore {
@@ -28,6 +33,9 @@ impl ShapeImpl for Bezier {
             UpdateOp::DegreeElevate => {
                 self.degree_elevate();
             }
+            UpdateOp::UpdateSubdivide(t) => {
+                self.subdivide_t = *t;
+            }
             _ => {}
         }
     }
@@ -44,8 +52,8 @@ impl ShapeImpl for Bezier {
                 core.points = vec![prev, p];
                 draw_line(&core, canvas);
             }
+
             prev_pts = Some(p);
-            //canvas.set_pixel(p.0, p.1, self.core.color);
             t += detail;
         }
     }
@@ -58,8 +66,12 @@ impl ShapeImpl for Bezier {
             let lin = ShapeCore::new(vec![points[i - 1], points[i]], self.core.color);
             draw_line(&lin, canvas);
         }
+
+        let p = self.de_casteljau(self.subdivide_t);
+        self.draw_control_point(p, color, canvas);
     }
 
+    // this hit tests is simple
     fn hit_test(&self, point: Point) -> bool {
         if self.core.points.is_empty() {
             return false;
@@ -79,41 +91,46 @@ impl ShapeImpl for Bezier {
 
         point.0 >= min_x && point.0 <= max_x && point.1 >= min_y && point.1 <= max_y
     }
+
+    fn subdivide(&self) -> Option<(ShapeCore, ShapeCore)> {
+        let mut pts_cpy = self.core.points.clone();
+        let n = pts_cpy.len();
+
+        let mut first = vec![self.core.points[0]];
+        let mut second = vec![self.core.points[n - 1]];
+
+        for r in 1..n {
+            for i in 0..(n - r) {
+                pts_cpy[i] = pts_cpy[i].interpolate(pts_cpy[i + 1], self.subdivide_t);
+            }
+
+            first.push(pts_cpy[0]);
+            second.push(pts_cpy[n - r - 1]);
+        }
+
+        second.reverse();
+
+        Some((
+            self.core.copy_with_points(first),
+            self.core.copy_with_points(second),
+        ))
+    }
 }
 
 impl Bezier {
-    fn get_detail(&self) -> f32 {
-        let mut distance = 0.0;
-        let pts = &self.core.points;
-        for i in 0..pts.len() - 1 {
-            let dx = pts[i + 1].0 - pts[i].0;
-            let dy = pts[i + 1].1 - pts[i].1;
-            // euclidean distance
-            distance += ((dx * dx + dy * dy) as f32).sqrt();
-        }
-
-        let dist = distance * DETAIL_FACTOR / 10.0;
-        1.0 / dist
-    }
-
     fn de_casteljau(&self, t: f32) -> Point {
         let mut pts_cpy = self.core.points.clone();
 
         for r in 1..pts_cpy.len() {
             for i in 0..(pts_cpy.len() - r) {
-                let p1 = pts_cpy[i];
-                let p2 = pts_cpy[i + 1];
-                let x = (1.0 - t) * p1.0 as f32 + t * p2.0 as f32;
-                let y = (1.0 - t) * p1.1 as f32 + t * p2.1 as f32;
-
-                pts_cpy[i] = (x.round() as i32, y.round() as i32).into();
+                pts_cpy[i] = pts_cpy[i].interpolate(pts_cpy[i + 1], t);
             }
         }
 
         pts_cpy[0]
     }
 
-    pub fn degree_elevate(&mut self) {
+    fn degree_elevate(&mut self) {
         let n = self.core.points.len() as f32;
         let mut new_points: Vec<Point> = Vec::with_capacity(n as usize + 1);
 
@@ -122,18 +139,23 @@ impl Bezier {
         for i in 1..(n as usize) {
             let b_prev = self.core.points[i - 1];
             let b = self.core.points[i];
-            let j = i as f32;
 
-            // j / n * b_j-1 + (1 - j/n) * b_j
-            // formula says its n+1 but we already added one before the loop
-            let x = j / n * (b_prev.0 as f32) + (1.0 - j / n) * (b.0 as f32);
-            let y = j / n * (b_prev.1 as f32) + (1.0 - j / n) * (b.1 as f32);
-
-            new_points.push((x, y).into());
+            new_points.push(b.interpolate(b_prev, i as f32 / n));
         }
 
-        new_points.push(*self.core.points.last().unwrap());
+        new_points.push(self.core.points.last().unwrap().clone());
 
         self.core.points = new_points;
+    }
+
+    fn get_detail(&self) -> f32 {
+        let mut distance = 0.0;
+        let pts = &self.core.points;
+        for i in 0..pts.len() - 1 {
+            distance += pts[i].distance(pts[i + 1]);
+        }
+
+        let dist = distance * DETAIL_FACTOR / 10.0;
+        1.0 / dist
     }
 }

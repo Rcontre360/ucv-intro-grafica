@@ -7,7 +7,7 @@ pub use point::Point;
 pub use rgba::RGBA;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Shape {
     Line,
     Ellipse,
@@ -16,12 +16,15 @@ pub enum Shape {
     Bezier,
 }
 
+#[derive(Clone, PartialEq)]
 pub enum UpdateOp {
     Move(Point),
     ChangeColor(RGBA),
     ChangeFillColor(RGBA),
     AddControlPoint(Point),
-    ControlPoint { index: usize, point: Point },
+    ControlPoint(usize, Point),
+    RewritePoints(Vec<Point>),
+    UpdateSubdivide(f32),
     DegreeElevate,
 }
 
@@ -50,7 +53,10 @@ pub trait ShapeImpl {
             UpdateOp::AddControlPoint(point) => {
                 core.points.push(*point);
             }
-            UpdateOp::ControlPoint { index, point } => {
+            UpdateOp::RewritePoints(points) => {
+                core.points = points.clone();
+            }
+            UpdateOp::ControlPoint(index, point) => {
                 if *index < core.points.len() {
                     core.points[*index] = *point;
                 }
@@ -62,19 +68,23 @@ pub trait ShapeImpl {
     fn draw_selection_basic<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
         let points = self.get_core().points;
         for p in points {
-            for x in (p.0 - 5)..(p.0 + 5) {
-                for y in (p.1 - 5)..(p.1 + 5) {
-                    if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
-                        canvas.set_pixel(x, y, RGBA::new(255, 255, 255, 255));
-                    }
+            self.draw_control_point(p, color, canvas);
+        }
+    }
+
+    fn draw_control_point<'a>(&self, p: Point, color: RGBA, canvas: &mut Canvas<'a>) {
+        for x in (p.0 - 5)..(p.0 + 5) {
+            for y in (p.1 - 5)..(p.1 + 5) {
+                if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
+                    canvas.set_pixel(x, y, RGBA::new(255, 255, 255, 255));
                 }
             }
+        }
 
-            for x in (p.0 - 4)..(p.0 + 4) {
-                for y in (p.1 - 4)..(p.1 + 4) {
-                    if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
-                        canvas.set_pixel(x, y, color);
-                    }
+        for x in (p.0 - 4)..(p.0 + 4) {
+            for y in (p.1 - 4)..(p.1 + 4) {
+                if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
+                    canvas.set_pixel(x, y, color);
                 }
             }
         }
@@ -86,6 +96,11 @@ pub trait ShapeImpl {
 
     fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
         self.draw_selection_basic(color, canvas);
+    }
+
+    // only bezier implements this
+    fn subdivide(&self) -> Option<(ShapeCore, ShapeCore)> {
+        None
     }
 
     fn get_core_mut(&mut self) -> &mut ShapeCore;
@@ -112,6 +127,13 @@ impl ShapeCore {
             color,
             fill_color: RGBA::default(),
             shape_type: Shape::Line,
+        }
+    }
+
+    pub fn copy_with_points(&self, points: Vec<Point>) -> ShapeCore {
+        ShapeCore {
+            points,
+            ..self.clone()
         }
     }
 }
