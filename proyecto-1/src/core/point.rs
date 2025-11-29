@@ -32,3 +32,19 @@ impl Sub for Point {
         Point(self.0 - other.0, self.1 - other.1)
     }
 }
+
+impl Point {
+    pub fn interpolate(&self, other: Point, t: f32) -> Point {
+        let x = (1.0 - t) * self.0 as f32 + t * other.0 as f32;
+        let y = (1.0 - t) * self.1 as f32 + t * other.1 as f32;
+
+        (x.round(), y.round()).into()
+    }
+
+    pub fn distance(&self, other: Point) -> f32 {
+        let dx = self.0 - other.0;
+        let dy = self.1 - other.1;
+        // euclidean distance
+        ((dx * dx + dy * dy) as f32).sqrt()
+    }
+}

@@ -43,7 +43,8 @@ impl TemplateApp {
                     .gui_update(GUIEvent::ShapeType(Shape::Rectangle));
             }
             if ui.button("5. Bezier").clicked() {
-                self.app_state.gui_update(GUIEvent::ShapeType(Shape::Bezier));
+                self.app_state
+                    .gui_update(GUIEvent::ShapeType(Shape::Bezier));
             }
 
             if ui.button("Clear").clicked() {
@@ -70,8 +71,19 @@ impl TemplateApp {
             ui.separator();
 
             if self.app_state.selected.is_some() {
-                if ui.button("Degree++").clicked() {
+                if ui.button("Degree Elevate").clicked() {
+                    self.app_state.gui_update(GUIEvent::DegreeElevate);
+                }
+                if ui.button("Subdivide").clicked() {
                     self.app_state.gui_update(GUIEvent::Subdivide);
+                }
+                let mut subdivision_t = self.app_state.ui_subdivision_t;
+                if ui
+                    .add(egui::Slider::new(&mut subdivision_t, 0.0..=1.0).text("Subdivision"))
+                    .changed()
+                {
+                    self.app_state
+                        .gui_update(GUIEvent::SubdivisionValue(subdivision_t));
                 }
                 if ui.button("Front +1").clicked() {
                     self.app_state.gui_update(GUIEvent::ToFront(false));

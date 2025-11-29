@@ -138,6 +138,20 @@ impl DrawState {
         }
     }
 
+    // we treat the subdivide differently since most operations are focused on a single shape
+    // this one modifies current one AND creates another shape
+    pub fn subdivide_shape(&mut self, shape_idx: usize) {
+        if let Some(shape) = self.objects.get_mut(shape_idx) {
+            let res = shape.subdivide();
+
+            // only those shapes that implement subdivide can reach this
+            if let Some((orig, new)) = res.as_ref() {
+                self.update_shape(shape_idx, UpdateOp::RewritePoints(orig.points.clone()));
+                self.add_shape(new_shape_from_core(new.clone()));
+            }
+        }
+    }
+
     // this is the only way to mutate a shape, and this allows us to record shape changes
     pub fn update_shape(&mut self, shape_idx: usize, op: UpdateOp) {
         if let Some(shape) = self.objects.get_mut(shape_idx) {

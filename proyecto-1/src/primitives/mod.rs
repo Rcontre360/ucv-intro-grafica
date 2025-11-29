@@ -1,6 +1,6 @@
 use crate::core::{Shape, ShapeCore, ShapeImpl};
 
-mod bezier;
+pub mod bezier;
 mod ellipse;
 mod line;
 mod rectangle;

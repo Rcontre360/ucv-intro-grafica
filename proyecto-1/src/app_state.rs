@@ -9,6 +9,7 @@ use crate::{
     canvas::Canvas,
     core::{Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
     draw_state::DrawState,
+    primitives::bezier::Bezier,
     primitives::new_shape_from_core,
 };
 
@@ -31,7 +32,9 @@ pub enum GUIEvent {
     ToBack(bool),
     Save,
     Load,
+    DegreeElevate,
     Subdivide,
+    SubdivisionValue(f32),
     Clear,
     Undo,
     Redo,
@@ -82,6 +85,7 @@ pub struct AppState {
     pub current: Shape,
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
     pub selected: Option<ShapeSelected>,
+    pub ui_subdivision_t: f32,
 
     draw_state: DrawState,
     color: RGBA,
@@ -101,6 +105,7 @@ impl AppState {
             cur_shape: None,
             selected: None,
             draw_state: DrawState::new(),
+            ui_subdivision_t: 0.5,
         }
     }
 
@@ -207,7 +212,7 @@ impl AppState {
 
     fn handle_keyboard_event(&mut self, event: KeyCode) {
         match event {
-            KeyCode::Enter => self.handle_bezier_subdivide(),
+            KeyCode::Enter => self.handle_degree_elevate(),
             KeyCode::Delete | KeyCode::Backspace => self.handle_delete_figure(),
             KeyCode::ShiftLeft | KeyCode::ShiftRight => self.handle_shift_drag(),
             _ => {}
@@ -218,7 +223,15 @@ impl AppState {
         match event {
             GUIEvent::ShapeType(shape) => self.current = shape,
             GUIEvent::PointsColor(c) => self.points_color = c,
-            GUIEvent::Subdivide => self.handle_bezier_subdivide(),
+            GUIEvent::DegreeElevate => self.handle_degree_elevate(),
+            GUIEvent::Subdivide => self.handle_subdivide(),
+            GUIEvent::SubdivisionValue(t) => {
+                if let Some(selected) = self.selected.as_ref() {
+                    self.draw_state
+                        .update_shape(selected.index, UpdateOp::UpdateSubdivide(t));
+                    self.ui_subdivision_t = t;
+                }
+            }
             GUIEvent::Save => self.save_state(),
             GUIEvent::Load => self.load_state(),
             GUIEvent::BorderColor(c) => {
@@ -344,19 +357,22 @@ impl AppState {
 
                 let new_pnt = Point(core.points[0].0 + min, core.points[0].1 + min);
 
-                let op = UpdateOp::ControlPoint {
-                    index: 1,
-                    point: new_pnt,
-                };
+                let op = UpdateOp::ControlPoint(1, new_pnt);
                 self.draw_state.update_shape(selected.index, op);
             }
         }
     }
 
-    fn handle_bezier_subdivide(&mut self) {
+    fn handle_degree_elevate(&mut self) {
         if let Some(selected) = self.selected.as_ref() {
             self.draw_state
                 .update_shape(selected.index, UpdateOp::DegreeElevate);
+        }
+    }
+
+    fn handle_subdivide(&mut self) {
+        if let Some(selected) = self.selected.take() {
+            self.draw_state.subdivide_shape(selected.index);
         }
     }
 
@@ -391,6 +407,7 @@ impl AppState {
         None
     }
 
+    //TODO finish this
     fn is_building_bezier(&self) -> bool {
         false
     }
@@ -425,20 +442,14 @@ impl AppState {
     fn shape_update_last_point(&mut self, nxt: Point) {
         if let Some(cur) = self.cur_shape.as_mut() {
             let last_point = cur.get_core().points.len() - 1;
-            cur.update(&UpdateOp::ControlPoint {
-                index: last_point,
-                point: nxt,
-            });
+            cur.update(&UpdateOp::ControlPoint(last_point, nxt));
         }
     }
 
     fn shape_end(&mut self, end: Point) {
         if let Some(mut cur) = self.cur_shape.take() {
             let last_point = cur.get_core().points.len() - 1;
-            cur.update(&UpdateOp::ControlPoint {
-                index: last_point,
-                point: end,
-            });
+            cur.update(&UpdateOp::ControlPoint(last_point, end));
             self.draw_state.add_shape(cur);
         }
     }
@@ -446,10 +457,7 @@ impl AppState {
     fn update_selected_control_point(&mut self, point: Point) {
         if let Some(selected) = self.selected.as_ref() {
             if let Some(pnt_idx) = selected.control_point_selected {
-                let op = UpdateOp::ControlPoint {
-                    index: pnt_idx,
-                    point,
-                };
+                let op = UpdateOp::ControlPoint(pnt_idx, point);
                 self.draw_state.update_shape(selected.index, op);
             }
         }
