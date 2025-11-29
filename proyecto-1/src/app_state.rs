@@ -3,12 +3,13 @@ use std::fs;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use winit::keyboard::KeyCode;
+use winit::window::CursorIcon;
 
 use crate::{
     canvas::Canvas,
     core::{Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
     draw_state::DrawState,
-    primitives::{self, new_shape_from_core},
+    primitives::new_shape_from_core,
 };
 
 // we define our own events to not depend on these libraries.
@@ -92,7 +93,7 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
-            current: Shape::Triangle,
+            current: Shape::Line,
             color: RGBA::new(255, 255, 255, 255),
             fill_color: RGBA::new(100, 50, 10, 150),
             points_color: RGBA::new(0, 0, 255, 255),
@@ -116,44 +117,50 @@ impl AppState {
         self.update(EventType::GUI(e));
     }
 
-    pub fn mouse_update(&mut self, e: MouseEvent, btn: u8, point: Point) {
-        self.update(EventType::Mouse(e, btn, point));
-    }
-
     pub fn keyboard_update(&mut self, key: KeyCode) {
         self.update(EventType::Keyboard(key));
     }
 
-    pub fn update(&mut self, event: EventType) {
+    pub fn mouse_update(&mut self, e: MouseEvent, btn: u8, point: Point) -> CursorIcon {
+        self.update(EventType::Mouse(e, btn, point))
+    }
+
+    pub fn update(&mut self, event: EventType) -> CursorIcon {
         //checking if event is a normal figure selection
         if let EventType::Mouse(MouseEvent::Click, 0, point) = event {
             if !self.is_building_bezier() {
                 if let Some(fig) = self.selected.as_ref() {
                     if let Some(point_idx) = self.is_control_point_select(fig.index, point) {
                         self.selected.as_mut().unwrap().set_control_point(point_idx);
-                        return;
+                        return CursorIcon::Grab;
                     }
                 }
 
                 if let Some(fig) = self.is_figure_selection(point) {
                     self.selected = Some(ShapeSelected::new_with_point(fig, point));
-                    return;
+                    return CursorIcon::Grab;
                 } else {
                     self.selected = None;
                 }
             }
         }
 
+        //match (self.is_building_bezier(),self.selected.as_ref(), event){
+        //(false, Some(fig), )
+
+        //}
+
         if let EventType::Mouse(MouseEvent::PressDrag, 0, point) = event {
             if let Some(selected) = self.selected.as_mut() {
                 let orig = selected.coord_clicked;
                 if selected.control_point_selected.is_some() {
                     self.update_selected_control_point(point);
-                    return;
+                    return CursorIcon::Grabbing;
                 }
 
                 if orig.is_some() {
                     self.handle_move_selected_shape(orig.unwrap(), point);
+                    return CursorIcon::Grabbing;
                 }
             }
         }
@@ -168,6 +175,32 @@ impl AppState {
         self.handle_keyboard_event(event);
         self.handle_figure_draw(event);
         self.handle_gui_event(event);
+
+        // returns cursor state
+        self.handle_mouse_change(event)
+    }
+
+    fn handle_mouse_change(&self, event: EventType) -> CursorIcon {
+        if let EventType::Mouse(MouseEvent::Move, 0, point) = event {
+            match (
+                self.is_building_bezier(),
+                self.is_figure_selection(point),
+                self.selected.as_ref(),
+            ) {
+                (false, Some(fig_index), Some(fig_selected)) => {
+                    if fig_index == fig_selected.index {
+                        return CursorIcon::Pointer;
+                    }
+
+                    if self.is_control_point_select(fig_index, point).is_some() {
+                        return CursorIcon::Grab;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        CursorIcon::Default
     }
 
     fn handle_keyboard_event(&mut self, event: EventType) {
@@ -358,13 +391,14 @@ impl AppState {
     }
 
     fn shape_start(&mut self, start: Point) {
-        self.cur_shape = Some(match self.current {
-            Shape::Line => self.box_init_shape::<primitives::Line>(start),
-            Shape::Ellipse => self.box_init_shape::<primitives::Ellipse>(start),
-            Shape::Triangle => self.box_init_shape::<primitives::Triangle>(start),
-            Shape::Rectangle => self.box_init_shape::<primitives::Rectangle>(start),
-            Shape::Bezier => self.box_init_shape::<primitives::Bezier>(start),
-        });
+        let points = vec![start, start];
+        let core = ShapeCore {
+            points,
+            color: self.color,
+            fill_color: self.fill_color,
+            shape_type: self.current,
+        };
+        self.cur_shape = Some(new_shape_from_core(core));
     }
 
     fn shape_add_control_point(&mut self, nxt: Point) {
@@ -392,20 +426,6 @@ impl AppState {
             });
             self.draw_state.add_shape(cur);
         }
-    }
-
-    fn box_init_shape<T>(&self, start: Point) -> Box<dyn ShapeImpl>
-    where
-        T: ShapeImpl + Sized + 'static,
-    {
-        let points = vec![start, start];
-        let core = ShapeCore {
-            points,
-            color: self.color,
-            fill_color: self.fill_color,
-            shape_type: self.current,
-        };
-        new_shape_from_core(core)
     }
 
     fn update_selected_control_point(&mut self, point: Point) {
@@ -442,15 +462,14 @@ impl AppState {
         }
     }
 
-    pub fn load_state(&mut self) {
+    fn load_state(&mut self) {
         if let Some(path) = FileDialog::new()
-            .set_title("Open Drawing State")
+            .set_title("Open draw")
             .add_filter("JSON Files", &["json"])
             .pick_file()
         {
             let state_str = fs::read_to_string(&path).unwrap();
             let loaded_state: SerializedState = serde_json::from_str(&state_str).unwrap();
-            // self.objects = vec![];
 
             for core in loaded_state.objects {
                 let boxed_shape = new_shape_from_core(core);
