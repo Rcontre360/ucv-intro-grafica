@@ -1,4 +1,4 @@
-use std::{fs, mem::discriminant, path::PathBuf};
+use std::{collections::VecDeque, fs, mem::discriminant, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +6,8 @@ use crate::{
     core::{ShapeCore, ShapeImpl, UpdateOp, RGBA},
     primitives::new_shape_from_core,
 };
+
+const HISTORY_SIZE_LIMIT: usize = 200;
 
 #[derive(Clone)]
 enum RecordType {
@@ -27,7 +29,8 @@ pub struct SerializedState {
 pub struct DrawState {
     objects: Vec<Box<dyn ShapeImpl>>,
     background_color: RGBA,
-    history: Vec<RecordType>,
+    // this data structure removes elements from the start of the queue in O(1)
+    history: VecDeque<RecordType>,
     history_idx: usize,
 }
 
@@ -35,7 +38,7 @@ impl DrawState {
     pub fn new() -> Self {
         Self {
             objects: vec![],
-            history: vec![],
+            history: VecDeque::new(),
             history_idx: 0,
             background_color: RGBA::default(),
         }
@@ -59,7 +62,7 @@ impl DrawState {
         // There's an issue since we update objects on real time.
         // so there are MANY instances of updates when we simply move an object or change its color
         // the solution is only storing one event with the initial and final state
-        let last_update = self.history.last();
+        let last_update = self.history.back();
 
         // this match structure runs when the last update and record match the values below
         match (last_update, record) {
@@ -88,8 +91,17 @@ impl DrawState {
             _ => {}
         }
 
-        self.history.push(record.clone());
+        self.history.push_back(record.clone());
         self.history_idx = self.history.len();
+
+        // we must limit the size of this history to not break the computer memory.
+        // It shoudlnt happen since the program doesnt use much, but still good practice
+        if self.history.len() > HISTORY_SIZE_LIMIT {
+            //remove the element and change the history index
+            if self.history.pop_front().is_some() {
+                self.history_idx -= 1;
+            }
+        }
     }
 
     pub fn undo(&mut self) {
@@ -231,6 +243,7 @@ impl DrawState {
         let state_str = fs::read_to_string(&file_path).unwrap();
         let loaded_state: SerializedState = serde_json::from_str(&state_str).unwrap();
 
+        // CHANGED: Use clear() for VecDeque
         self.history.clear();
         self.objects.clear();
         self.history_idx = 0;
