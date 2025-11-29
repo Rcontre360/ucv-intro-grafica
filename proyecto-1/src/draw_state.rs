@@ -28,6 +28,10 @@ impl DrawState {
         }
     }
 
+    pub fn get_object(&self, idx: usize) -> &Box<dyn ShapeImpl> {
+        &self.objects[idx]
+    }
+
     pub fn get_objects(&self) -> &Vec<Box<dyn ShapeImpl>> {
         &self.objects
     }
@@ -69,21 +73,23 @@ impl DrawState {
     pub fn undo(&mut self) {
         if self.history_idx > 0 {
             self.history_idx -= 1;
-            let record = self.history[self.history_idx].clone();
+            let record_opt = self.history.get(self.history_idx);
 
-            match record {
-                RecordType::IndexChange(src, dst) => {
-                    let shape = self.objects.remove(dst);
-                    self.objects.insert(src, shape);
-                }
-                RecordType::ShapeChange(idx, _, prev, _) => {
-                    self.objects[idx] = new_shape_from_core(prev);
-                }
-                RecordType::Deletion(_, prev) => {
-                    self.objects.push(new_shape_from_core(prev));
-                }
-                RecordType::Creation(_) => {
-                    self.objects.pop();
+            if let Some(record) = record_opt.cloned() {
+                match record {
+                    RecordType::IndexChange(src, dst) => {
+                        let shape = self.objects.remove(dst);
+                        self.objects.insert(src, shape);
+                    }
+                    RecordType::ShapeChange(idx, _, prev, _) => {
+                        self.objects[idx] = new_shape_from_core(prev);
+                    }
+                    RecordType::Deletion(_, prev) => {
+                        self.objects.push(new_shape_from_core(prev));
+                    }
+                    RecordType::Creation(_) => {
+                        self.objects.pop();
+                    }
                 }
             }
         }

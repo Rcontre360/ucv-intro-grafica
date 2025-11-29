@@ -1,4 +1,4 @@
-use std::fs;
+use std::{cmp::min, fs};
 
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use crate::{
 };
 
 // we define our own events to not depend on these libraries.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum MouseEvent {
     Click,
     Move,
@@ -122,62 +122,64 @@ impl AppState {
     }
 
     pub fn mouse_update(&mut self, e: MouseEvent, btn: u8, point: Point) -> CursorIcon {
-        self.update(EventType::Mouse(e, btn, point))
+        return self.update(EventType::Mouse(e, btn, point));
     }
 
     pub fn update(&mut self, event: EventType) -> CursorIcon {
-        //checking if event is a normal figure selection
-        if let EventType::Mouse(MouseEvent::Click, 0, point) = event {
-            if !self.is_building_bezier() {
-                if let Some(fig) = self.selected.as_ref() {
-                    if let Some(point_idx) = self.is_control_point_select(fig.index, point) {
-                        self.selected.as_mut().unwrap().set_control_point(point_idx);
-                        return CursorIcon::Grab;
+        match event {
+            EventType::GUI(gui_ev) => {
+                self.handle_gui_event(gui_ev);
+            }
+            EventType::Mouse(mouse_ev, btn, point) => {
+                if MouseEvent::Click == mouse_ev && btn == 0 {
+                    if !self.is_building_bezier() {
+                        if let Some(fig) = self.selected.as_ref() {
+                            if let Some(point_idx) = self.is_control_point_select(fig.index, point)
+                            {
+                                self.selected.as_mut().unwrap().set_control_point(point_idx);
+                                return CursorIcon::Grab;
+                            }
+                        }
+
+                        if let Some(fig) = self.is_figure_selection(point) {
+                            self.selected = Some(ShapeSelected::new_with_point(fig, point));
+                            return CursorIcon::Grab;
+                        } else {
+                            self.selected = None;
+                        }
                     }
                 }
 
-                if let Some(fig) = self.is_figure_selection(point) {
-                    self.selected = Some(ShapeSelected::new_with_point(fig, point));
-                    return CursorIcon::Grab;
-                } else {
-                    self.selected = None;
-                }
-            }
-        }
+                if MouseEvent::PressDrag == mouse_ev && btn == 0 {
+                    if let Some(selected) = self.selected.as_mut() {
+                        let orig = selected.coord_clicked;
+                        if selected.control_point_selected.is_some() {
+                            self.update_selected_control_point(point);
+                            return CursorIcon::Grabbing;
+                        }
 
-        //match (self.is_building_bezier(),self.selected.as_ref(), event){
-        //(false, Some(fig), )
-
-        //}
-
-        if let EventType::Mouse(MouseEvent::PressDrag, 0, point) = event {
-            if let Some(selected) = self.selected.as_mut() {
-                let orig = selected.coord_clicked;
-                if selected.control_point_selected.is_some() {
-                    self.update_selected_control_point(point);
-                    return CursorIcon::Grabbing;
+                        if orig.is_some() {
+                            self.handle_move_selected_shape(orig.unwrap(), point);
+                            return CursorIcon::Grabbing;
+                        }
+                    }
                 }
 
-                if orig.is_some() {
-                    self.handle_move_selected_shape(orig.unwrap(), point);
-                    return CursorIcon::Grabbing;
+                if MouseEvent::Release == mouse_ev && btn == 0 {
+                    if let Some(selected) = self.selected.as_mut() {
+                        selected.control_point_selected = None;
+                        selected.coord_clicked = None;
+                    }
                 }
+                self.handle_figure_draw(event);
+            }
+            EventType::Keyboard(key_ev) => {
+                self.handle_keyboard_event(key_ev);
             }
         }
-
-        if let EventType::Mouse(MouseEvent::Release, 0, _) = event {
-            if let Some(selected) = self.selected.as_mut() {
-                selected.control_point_selected = None;
-                selected.coord_clicked = None;
-            }
-        }
-
-        self.handle_keyboard_event(event);
-        self.handle_figure_draw(event);
-        self.handle_gui_event(event);
 
         // returns cursor state
-        self.handle_mouse_change(event)
+        return self.handle_mouse_change(event);
     }
 
     fn handle_mouse_change(&self, event: EventType) -> CursorIcon {
@@ -203,66 +205,60 @@ impl AppState {
         CursorIcon::Default
     }
 
-    fn handle_keyboard_event(&mut self, event: EventType) {
+    fn handle_keyboard_event(&mut self, event: KeyCode) {
         match event {
-            EventType::Keyboard(keycode) => match keycode {
-                KeyCode::Enter => self.handle_bezier_subdivide(),
-                KeyCode::Delete => self.handle_delete_figure(),
-                KeyCode::Backspace => self.handle_delete_figure(),
-                _ => {}
-            },
+            KeyCode::Enter => self.handle_bezier_subdivide(),
+            KeyCode::Delete | KeyCode::Backspace => self.handle_delete_figure(),
+            KeyCode::ShiftLeft | KeyCode::ShiftRight => self.handle_shift_drag(),
             _ => {}
         }
     }
 
-    fn handle_gui_event(&mut self, event: EventType) {
+    fn handle_gui_event(&mut self, event: GUIEvent) {
         match event {
-            EventType::GUI(gui_ev) => match gui_ev {
-                GUIEvent::ShapeType(shape) => self.current = shape,
-                GUIEvent::PointsColor(c) => self.points_color = c,
-                GUIEvent::Subdivide => self.handle_bezier_subdivide(),
-                GUIEvent::Save => self.save_state(),
-                GUIEvent::Load => self.load_state(),
-                GUIEvent::BorderColor(c) => {
-                    self.color = c;
-                    if let Some(selected) = self.selected.as_ref() {
-                        self.draw_state
-                            .update_shape(selected.index, UpdateOp::ChangeColor(c));
-                    }
+            GUIEvent::ShapeType(shape) => self.current = shape,
+            GUIEvent::PointsColor(c) => self.points_color = c,
+            GUIEvent::Subdivide => self.handle_bezier_subdivide(),
+            GUIEvent::Save => self.save_state(),
+            GUIEvent::Load => self.load_state(),
+            GUIEvent::BorderColor(c) => {
+                self.color = c;
+                if let Some(selected) = self.selected.as_ref() {
+                    self.draw_state
+                        .update_shape(selected.index, UpdateOp::ChangeColor(c));
                 }
-                GUIEvent::FillColor(c) => {
-                    self.fill_color = c;
-                    if let Some(selected) = self.selected.as_ref() {
-                        self.draw_state
-                            .update_shape(selected.index, UpdateOp::ChangeFillColor(c));
-                    }
+            }
+            GUIEvent::FillColor(c) => {
+                self.fill_color = c;
+                if let Some(selected) = self.selected.as_ref() {
+                    self.draw_state
+                        .update_shape(selected.index, UpdateOp::ChangeFillColor(c));
                 }
-                GUIEvent::ToFront(all) => {
-                    if let Some(i) = self.selected.as_ref() {
-                        let len = self.draw_state.get_objects().len();
-                        let target_index = if all {
-                            len - 1
-                        } else {
-                            (i.index + 1).min(len - 1)
-                        };
-                        self.reorder_selected(target_index);
-                    }
+            }
+            GUIEvent::ToFront(all) => {
+                if let Some(i) = self.selected.as_ref() {
+                    let len = self.draw_state.get_objects().len();
+                    let target_index = if all {
+                        len - 1
+                    } else {
+                        (i.index + 1).min(len - 1)
+                    };
+                    self.reorder_selected(target_index);
                 }
-                GUIEvent::ToBack(all) => {
-                    if let Some(i) = self.selected.as_ref() {
-                        let target_index = if all { 0 } else { i.index.saturating_sub(1) };
-                        self.reorder_selected(target_index);
-                    }
+            }
+            GUIEvent::ToBack(all) => {
+                if let Some(i) = self.selected.as_ref() {
+                    let target_index = if all { 0 } else { i.index.saturating_sub(1) };
+                    self.reorder_selected(target_index);
                 }
-                GUIEvent::Clear => {
-                    // self.objects.clear();
-                    self.selected = None;
-                    self.cur_shape = None;
-                }
-                GUIEvent::Undo => self.draw_state.undo(),
-                GUIEvent::Redo => self.draw_state.redo(),
-            },
-            _ => {}
+            }
+            GUIEvent::Clear => {
+                // self.objects.clear();
+                self.selected = None;
+                self.cur_shape = None;
+            }
+            GUIEvent::Undo => self.draw_state.undo(),
+            GUIEvent::Redo => self.draw_state.redo(),
         };
     }
 
@@ -321,9 +317,8 @@ impl AppState {
         }
 
         if let Some(selected) = self.selected.as_ref() {
-            if let Some(shape) = self.draw_state.get_objects().get(selected.index) {
-                shape.draw_selection(self.points_color, canvas);
-            }
+            let shape = self.draw_state.get_object(selected.index);
+            shape.draw_selection(self.points_color, canvas);
         }
 
         if let Some(cur) = self.cur_shape.as_ref() {
@@ -334,6 +329,27 @@ impl AppState {
     fn handle_delete_figure(&mut self) {
         if let Some(selected) = self.selected.take() {
             self.draw_state.delete_shape(selected.index);
+        }
+    }
+
+    fn handle_shift_drag(&mut self) {
+        if let Some(selected) = self.selected.as_ref() {
+            let obj = self.draw_state.get_object(selected.index);
+            let core = obj.get_core();
+
+            if let Shape::Rectangle | Shape::Ellipse = core.shape_type {
+                // delta.x != delta.y happens, its not square
+                let delta = core.points[1] - core.points[0];
+                let min = min(delta.0, delta.1);
+
+                let new_pnt = Point(core.points[0].0 + min, core.points[0].1 + min);
+
+                let op = UpdateOp::ControlPoint {
+                    index: 1,
+                    point: new_pnt,
+                };
+                self.draw_state.update_shape(selected.index, op);
+            }
         }
     }
 
@@ -380,11 +396,10 @@ impl AppState {
     }
 
     fn is_control_point_select(&self, fig: usize, target: Point) -> Option<usize> {
-        if let Some(object) = self.draw_state.get_objects().get(fig) {
-            for (i, p) in object.get_core().points.iter().enumerate() {
-                if (target.0 - p.0).pow(2) + (target.1 - p.1).pow(2) <= 5i32.pow(2) {
-                    return Some(i);
-                }
+        let object = self.draw_state.get_object(fig);
+        for (i, p) in object.get_core().points.iter().enumerate() {
+            if (target.0 - p.0).pow(2) + (target.1 - p.1).pow(2) <= 5i32.pow(2) {
+                return Some(i);
             }
         }
         None

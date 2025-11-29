@@ -79,6 +79,14 @@ fn main() -> Result<(), Error> {
                 state.keyboard_update(KeyCode::Backspace);
             }
 
+            if input.key_pressed(KeyCode::ShiftLeft) {
+                state.keyboard_update(KeyCode::ShiftLeft);
+            }
+
+            if input.key_pressed(KeyCode::ShiftRight) {
+                state.keyboard_update(KeyCode::ShiftRight);
+            }
+
             // mouse events on GUI dont matter
             if !is_gui {
                 //mouse is moved on the ui
