@@ -20,11 +20,11 @@ impl<'a> Canvas<'a> {
 
     // notice we will have left down corner as origin (0,0)
     pub fn set_pixel(&mut self, x: i32, y: i32, color: RGBA) {
-        if x >= self.width as i32 || x < 0 || y >= self.height as i32 || y < 0 {
+        let index = (y as u32 * self.width + x as u32) as usize * 4;
+
+        if index >= self.buffer.len() {
             return;
         }
-
-        let index = (y as u32 * self.width + x as u32) as usize * 4;
 
         if color[3] < 255 {
             let raw_prev = &self.buffer[index..index + 4];

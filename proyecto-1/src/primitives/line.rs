@@ -19,7 +19,6 @@ impl ShapeImpl for Line {
         self.core.clone()
     }
 
-    //TODO fix drawing error saw in first homework
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         draw_line(&self.core, canvas);
     }

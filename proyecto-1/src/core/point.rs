@@ -1,6 +1,8 @@
 use std::ops::{Add, Sub};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Point(pub i32, pub i32);
 
 impl From<(i32, i32)> for Point {

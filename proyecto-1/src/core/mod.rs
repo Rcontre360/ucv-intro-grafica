@@ -1,13 +1,13 @@
 use crate::canvas::Canvas;
-use core::fmt;
 
 mod point;
 mod rgba;
 
 pub use point::Point;
 pub use rgba::RGBA;
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Serialize, Deserialize)]
 pub enum Shape {
     Line,
     Ellipse,
@@ -17,15 +17,13 @@ pub enum Shape {
 }
 
 pub enum UpdateOp {
-    Move { delta: Point },
-    ChangeColor { color: RGBA },
-    ChangeFillColor { color: RGBA },
+    Move(Point),
+    ChangeColor(RGBA),
+    ChangeFillColor(RGBA),
+    AddControlPoint(Point),
     ControlPoint { index: usize, point: Point },
-    AddControlPoint { point: Point },
     DegreeElevate,
 }
-
-pub type ControlPoints = Vec<Point>;
 
 #[allow(dead_code)]
 pub trait ShapeImpl {
@@ -37,39 +35,29 @@ pub trait ShapeImpl {
     fn update_basic(&mut self, op: &UpdateOp) {
         let core = self.get_core_mut();
         match op {
-            UpdateOp::ChangeColor { color } => {
+            UpdateOp::ChangeColor(color) => {
                 core.color = *color;
             }
-            UpdateOp::ChangeFillColor { color } => {
+            UpdateOp::ChangeFillColor(color) => {
                 core.fill_color = *color;
             }
-            UpdateOp::Move { delta } => {
+            UpdateOp::Move(delta) => {
                 for p in core.points.iter_mut() {
                     p.0 += delta.0;
                     p.1 += delta.1;
                 }
+            }
+            UpdateOp::AddControlPoint(point) => {
+                core.points.push(*point);
             }
             UpdateOp::ControlPoint { index, point } => {
                 if *index < core.points.len() {
                     core.points[*index] = *point;
                 }
             }
-            UpdateOp::AddControlPoint { point } => {
-                core.points.push(*point);
-            }
             _ => {}
         }
     }
-
-    fn update(&mut self, op: &UpdateOp) {
-        self.update_basic(op);
-    }
-
-    fn get_core_mut(&mut self) -> &mut ShapeCore;
-
-    fn get_core(&self) -> ShapeCore;
-
-    fn draw<'a>(&self, canvas: &mut Canvas<'a>);
 
     fn draw_selection_basic<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
         let points = self.get_core().points;
@@ -92,18 +80,29 @@ pub trait ShapeImpl {
         }
     }
 
+    fn update(&mut self, op: &UpdateOp) {
+        self.update_basic(op);
+    }
+
     fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
         self.draw_selection_basic(color, canvas);
     }
 
+    fn get_core_mut(&mut self) -> &mut ShapeCore;
+
+    fn get_core(&self) -> ShapeCore;
+
+    fn draw<'a>(&self, canvas: &mut Canvas<'a>);
+
     fn hit_test(&self, point: Point) -> bool;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ShapeCore {
-    pub points: ControlPoints,
+    pub points: Vec<Point>,
     pub color: RGBA,
     pub fill_color: RGBA,
+    pub shape_type: Shape,
 }
 
 impl ShapeCore {
@@ -112,18 +111,7 @@ impl ShapeCore {
             points,
             color,
             fill_color: RGBA::default(),
+            shape_type: Shape::Line,
         }
-    }
-}
-
-impl fmt::Display for ShapeCore {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let points_str: Vec<String> = self
-            .points
-            .iter()
-            .map(|Point(x, y)| format!("({}, {})", x, y))
-            .collect();
-
-        write!(f, "ShapeCore ([{}])", points_str.join(", "))
     }
 }

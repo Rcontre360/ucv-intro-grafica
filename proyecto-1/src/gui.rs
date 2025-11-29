@@ -47,6 +47,14 @@ impl TemplateApp {
                 self.state.gui_update(GUIEvent::Clear);
             }
 
+            if ui.button("Save").clicked() {
+                self.state.gui_update(GUIEvent::Save);
+            }
+
+            if ui.button("Load From").clicked() {
+                self.state.gui_update(GUIEvent::Load);
+            }
+
             ui.separator();
 
             if self.state.selected.is_some() {

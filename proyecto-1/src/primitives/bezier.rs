@@ -40,11 +40,8 @@ impl ShapeImpl for Bezier {
         while t <= 1.0 {
             let p = self.de_casteljau(t);
             if let Some(prev) = prev_pts {
-                let core = ShapeCore {
-                    points: vec![prev, p],
-                    color: self.core.color,
-                    fill_color: self.core.fill_color,
-                };
+                let mut core = self.core.clone();
+                core.points = vec![prev, p];
                 draw_line(&core, canvas);
             }
             prev_pts = Some(p);

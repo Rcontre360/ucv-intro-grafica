@@ -1,3 +1,7 @@
+use std::fs;
+
+use rfd::FileDialog;
+use serde::{Deserialize, Serialize};
 use winit::keyboard::KeyCode;
 
 use crate::{
@@ -21,9 +25,11 @@ pub enum GUIEvent {
     BorderColor(RGBA),
     FillColor(RGBA),
     PointsColor(RGBA),
-    Subdivide,
     ToFront(bool),
     ToBack(bool),
+    Save,
+    Load,
+    Subdivide,
     Clear,
 }
 
@@ -60,6 +66,12 @@ impl ShapeSelected {
     pub fn set_control_point(&mut self, ptn: usize) {
         self.control_point_selected = Some(ptn);
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct SerializedState {
+    objects: Vec<ShapeCore>,
+    background_color: RGBA,
 }
 
 pub struct State {
@@ -183,10 +195,24 @@ impl State {
         match event {
             EventType::GUI(gui_ev) => match gui_ev {
                 GUIEvent::ShapeType(shape) => self.current = shape,
-                GUIEvent::BorderColor(c) => self.color = c,
-                GUIEvent::FillColor(c) => self.fill_color = c,
                 GUIEvent::PointsColor(c) => self.points_color = c,
                 GUIEvent::Subdivide => self.handle_bezier_subdivide(),
+                GUIEvent::Save => self.save_state(),
+                GUIEvent::Load => self.load_state(),
+                GUIEvent::BorderColor(c) => {
+                    self.color = c;
+                    let all = self.get_selected_shape();
+                    if let Some((shape, _)) = all {
+                        shape.update(&UpdateOp::ChangeColor(c));
+                    }
+                }
+                GUIEvent::FillColor(c) => {
+                    self.fill_color = c;
+                    let all = self.get_selected_shape();
+                    if let Some((shape, _)) = all {
+                        shape.update(&UpdateOp::ChangeFillColor(c));
+                    }
+                }
                 GUIEvent::ToFront(all) => {
                     if let Some(i) = self.selected.as_ref() {
                         let len = self.objects.len();
@@ -234,7 +260,6 @@ impl State {
                     MouseEvent::Move => {
                         self.shape_update_last_point(point);
                     }
-                    _ => {}
                 },
                 _ => {}
             }, // Not implemented
@@ -304,11 +329,10 @@ impl State {
     }
 
     fn handle_bezier_subdivide(&mut self) {
-        if let Some(selected) = self.selected.as_ref() {
-            if let Some(object) = self.objects.get_mut(selected.index) {
-                let op = UpdateOp::DegreeElevate;
-                object.as_mut().update(&op);
-            }
+        let all = self.get_selected_shape();
+        if let Some((object, _)) = all {
+            let op = UpdateOp::DegreeElevate;
+            object.as_mut().update(&op);
         }
     }
 
@@ -323,13 +347,12 @@ impl State {
     }
 
     fn handle_move_selected_shape(&mut self, origin: Point, end: Point) {
-        if let Some(selected) = self.selected.as_mut() {
-            if let Some(shape) = self.objects.get_mut(selected.index) {
-                let delta = end - origin;
-                let op = UpdateOp::Move { delta };
-                shape.as_mut().update(&op);
-                selected.coord_clicked = Some(end);
-            }
+        let all = self.get_selected_shape();
+        if let Some((shape, selected)) = all {
+            let delta = end - origin;
+            let op = UpdateOp::Move(delta);
+            shape.as_mut().update(&op);
+            selected.coord_clicked = Some(end);
         }
     }
 
@@ -361,26 +384,18 @@ impl State {
     }
 
     fn shape_start(&mut self, start: Point) {
-        self.cur_shape = match self.current {
-            Shape::Line => box_new_shape::<primitives::Line>(start, (self.color, self.fill_color)),
-            Shape::Ellipse => {
-                box_new_shape::<primitives::Ellipse>(start, (self.color, self.fill_color))
-            }
-            Shape::Triangle => {
-                box_new_shape::<primitives::Triangle>(start, (self.color, self.fill_color))
-            }
-            Shape::Rectangle => {
-                box_new_shape::<primitives::Rectangle>(start, (self.color, self.fill_color))
-            }
-            Shape::Bezier => {
-                box_new_shape::<primitives::Bezier>(start, (self.color, self.fill_color))
-            }
-        };
+        self.cur_shape = Some(match self.current {
+            Shape::Line => self.box_init_shape::<primitives::Line>(start),
+            Shape::Ellipse => self.box_init_shape::<primitives::Ellipse>(start),
+            Shape::Triangle => self.box_init_shape::<primitives::Triangle>(start),
+            Shape::Rectangle => self.box_init_shape::<primitives::Rectangle>(start),
+            Shape::Bezier => self.box_init_shape::<primitives::Bezier>(start),
+        });
     }
 
     fn shape_add_control_point(&mut self, nxt: Point) {
         if let Some(cur) = self.cur_shape.as_mut() {
-            let op = UpdateOp::AddControlPoint { point: nxt };
+            let op = UpdateOp::AddControlPoint(nxt);
             cur.as_mut().update(&op);
         }
     }
@@ -404,49 +419,99 @@ impl State {
         }
     }
 
+    fn box_new_shape<T>(&self, core: ShapeCore) -> Box<dyn ShapeImpl>
+    where
+        T: ShapeImpl + Sized + 'static,
+    {
+        Box::new(T::new(core))
+    }
+
+    fn box_init_shape<T>(&self, start: Point) -> Box<dyn ShapeImpl>
+    where
+        T: ShapeImpl + Sized + 'static,
+    {
+        let points = vec![start, start];
+        let core = ShapeCore {
+            points,
+            color: self.color,
+            fill_color: self.fill_color,
+            shape_type: self.current,
+        };
+        self.box_new_shape::<T>(core)
+    }
+
     fn update_selected_control_point(&mut self, point: Point) {
-        if let Some(selected) = self.selected.as_ref() {
-            if let Some(object) = self.objects.get_mut(selected.index) {
-                let op = UpdateOp::ControlPoint {
-                    index: selected.control_point_selected.unwrap(),
-                    point,
-                };
-                object.as_mut().update(&op);
-            }
+        let all = self.get_selected_shape();
+        if let Some((obj, select)) = all {
+            let op = UpdateOp::ControlPoint {
+                index: select.control_point_selected.unwrap(),
+                point,
+            };
+            obj.as_mut().update(&op);
         }
     }
-}
 
-fn box_new_shape<T>(start: Point, colors: (RGBA, RGBA)) -> Option<Box<dyn ShapeImpl>>
-where
-    T: ShapeImpl + Sized + 'static,
-{
-    let points = vec![start, start];
-    let core = ShapeCore {
-        points,
-        color: colors.0,
-        fill_color: colors.1,
-    };
-    Some(Box::new(T::new(core)))
-}
-
-fn draw_control_points(points: Vec<Point>, color: RGBA, canvas: &mut Canvas) {
-    // drawing control points
-    for p in points {
-        for x in (p.0 - 5)..(p.0 + 5) {
-            for y in (p.1 - 5)..(p.1 + 5) {
-                if (x - p.0).pow(2) + (y - p.1).pow(2) <= 5i32.pow(2) {
-                    canvas.set_pixel(x, y, RGBA::new(255, 255, 255, 255));
-                }
-            }
+    // serialize what we need using the SerializedState and save it
+    fn save_state(&self) {
+        let mut core_arr = vec![];
+        for shape in self.objects.iter() {
+            let core = shape.get_core();
+            core_arr.push(core);
         }
 
-        for x in (p.0 - 4)..(p.0 + 4) {
-            for y in (p.1 - 4)..(p.1 + 4) {
-                if (x - p.0).pow(2) + (y - p.1).pow(2) <= 4i32.pow(2) {
-                    canvas.set_pixel(x, y, color);
-                }
+        let saved_state = SerializedState {
+            objects: core_arr,
+            background_color: self.background_color,
+        };
+
+        let state_str = serde_json::to_string_pretty(&saved_state).unwrap();
+        let file_path = FileDialog::new()
+            .set_title("Save drawing")
+            .set_file_name("drawing.json")
+            .add_filter("JSON Files", &["json"]) // Suggest the .json extension
+            .save_file();
+
+        if let Some(path) = file_path {
+            println!("saving to: {:?}", path);
+            fs::write(path, state_str).unwrap();
+        } else {
+            println!("File save cancelled by the user.");
+        }
+    }
+
+    pub fn load_state(&mut self) {
+        let file_path = FileDialog::new()
+            .set_title("Open Drawing State")
+            .add_filter("JSON Files", &["json"])
+            .pick_file();
+
+        if let Some(path) = file_path {
+            let state_str = fs::read_to_string(&path).unwrap();
+            let loaded_state: SerializedState = serde_json::from_str(&state_str).unwrap();
+            self.objects = vec![];
+
+            for core in loaded_state.objects {
+                let boxed_shape = match core.shape_type {
+                    Shape::Line => self.box_new_shape::<primitives::Line>(core),
+                    Shape::Ellipse => self.box_new_shape::<primitives::Ellipse>(core),
+                    Shape::Triangle => self.box_new_shape::<primitives::Triangle>(core),
+                    Shape::Rectangle => self.box_new_shape::<primitives::Rectangle>(core),
+                    Shape::Bezier => self.box_new_shape::<primitives::Bezier>(core),
+                };
+                self.objects.push(boxed_shape);
+            }
+            self.background_color = loaded_state.background_color;
+
+            println!("Successfully loaded state from file.");
+        }
+    }
+
+    fn get_selected_shape(&mut self) -> Option<(&mut Box<dyn ShapeImpl>, &mut ShapeSelected)> {
+        if let Some(selected) = self.selected.as_mut() {
+            if let Some(object) = self.objects.get_mut(selected.index) {
+                return Some((object, selected));
             }
         }
+        None
     }
 }
