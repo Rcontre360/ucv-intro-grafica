@@ -1,8 +1,6 @@
-use super::{
-    core::{Point, ShapeCore, ShapeImpl, UpdateOp},
-    line::draw_line,
-};
+use super::line::draw_line;
 use crate::canvas::Canvas;
+use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
 
 const DETAIL_FACTOR: f32 = 0.2;
 
@@ -15,30 +13,23 @@ impl ShapeImpl for Bezier {
         Bezier { core }
     }
 
+    fn get_core(&self) -> ShapeCore {
+        self.core.clone()
+    }
+
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
+    }
+
     fn update(&mut self, op: &UpdateOp) {
+        self.update_basic(op);
+
         match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            UpdateOp::AddControlPoint { point } => {
-                self.core.points.push(*point);
-            }
             UpdateOp::DegreeElevate => {
                 self.degree_elevate();
             }
+            _ => {}
         }
-    }
-
-    fn get_core(&self) -> ShapeCore {
-        self.core.clone()
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
@@ -49,16 +40,23 @@ impl ShapeImpl for Bezier {
         while t <= 1.0 {
             let p = self.de_casteljau(t);
             if let Some(prev) = prev_pts {
-                let core = ShapeCore {
-                    points: vec![prev, p],
-                    color: self.core.color,
-                    fill_color: self.core.fill_color,
-                };
+                let mut core = self.core.clone();
+                core.points = vec![prev, p];
                 draw_line(&core, canvas);
             }
             prev_pts = Some(p);
             //canvas.set_pixel(p.0, p.1, self.core.color);
             t += detail;
+        }
+    }
+
+    fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        let points = &self.core.points;
+        self.draw_selection_basic(color, canvas);
+
+        for i in 1..points.len() {
+            let lin = ShapeCore::new(vec![points[i - 1], points[i]], self.core.color);
+            draw_line(&lin, canvas);
         }
     }
 
@@ -108,7 +106,7 @@ impl Bezier {
                 let x = (1.0 - t) * p1.0 as f32 + t * p2.0 as f32;
                 let y = (1.0 - t) * p1.1 as f32 + t * p2.1 as f32;
 
-                pts_cpy[i] = (x.round() as i32, y.round() as i32);
+                pts_cpy[i] = (x.round() as i32, y.round() as i32).into();
             }
         }
 
@@ -131,7 +129,7 @@ impl Bezier {
             let x = j / n * (b_prev.0 as f32) + (1.0 - j / n) * (b.0 as f32);
             let y = j / n * (b_prev.1 as f32) + (1.0 - j / n) * (b.1 as f32);
 
-            new_points.push((x.round() as i32, y.round() as i32));
+            new_points.push((x, y).into());
         }
 
         new_points.push(*self.core.points.last().unwrap());

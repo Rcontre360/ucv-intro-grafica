@@ -1,5 +1,5 @@
-use super::core::{is_transparent, Point, ShapeCore, ShapeImpl, UpdateOp};
 use crate::canvas::Canvas;
+use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
 
 pub struct Ellipse {
     core: ShapeCore,
@@ -10,37 +10,28 @@ pub struct Ellipse {
 
 impl ShapeImpl for Ellipse {
     fn new(core: ShapeCore) -> Ellipse {
-        let (x0, y0) = core.points[0];
-        let (x1, y1) = core.points[1];
+        let Point(x0, y0) = core.points[0];
+        let Point(x1, y1) = core.points[1];
 
         Ellipse {
             core,
-            center: ((x0 + x1) / 2, (y0 + y1) / 2),
+            center: ((x0 + x1) / 2, (y0 + y1) / 2).into(),
             a: ((x1 - x0) / 2).abs() as i32,
             b: ((y1 - y0) / 2).abs() as i32,
         }
     }
 
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
+    }
+
     fn update(&mut self, op: &UpdateOp) {
-        match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            _ => {}
-        }
+        self.update_basic(op);
 
-        let (x0, y0) = self.core.points[0];
-        let (x1, y1) = self.core.points[1];
+        let Point(x0, y0) = self.core.points[0];
+        let Point(x1, y1) = self.core.points[1];
 
-        self.center = ((x0 + x1) / 2, (y0 + y1) / 2);
+        self.center = ((x0 + x1) / 2, (y0 + y1) / 2).into();
         self.a = ((x1 - x0) / 2).abs() as i32;
         self.b = ((y1 - y0) / 2).abs() as i32;
     }
@@ -61,7 +52,7 @@ impl ShapeImpl for Ellipse {
         let sum_mx: i64 = 8 * b * b;
         let sum_my: i64 = 8 * a * a;
         let const_d1: i64 = (4 * b * b) + (4 * a * a);
-        let draw_fill = !is_transparent(self.core.fill_color);
+        let draw_fill = !self.core.fill_color.is_transparent();
 
         self.draw_symmetric(canvas, x, y);
         if draw_fill {
@@ -114,8 +105,8 @@ impl ShapeImpl for Ellipse {
     }
 
     fn hit_test(&self, point: Point) -> bool {
-        let (px, py) = point;
-        let (cx, cy) = self.center;
+        let Point(px, py) = point;
+        let Point(cx, cy) = self.center;
         let (a, b) = (self.a as f32, self.b as f32);
 
         let dx = (px - cx) as f32;
@@ -141,7 +132,7 @@ impl Ellipse {
 
     pub fn draw_symmetric(&self, canvas: &mut Canvas, x: i64, y: i64) {
         let (_x, _y) = (x as i32, y as i32);
-        let (cx, cy) = self.center;
+        let Point(cx, cy) = self.center;
         canvas.set_pixel(cx + _x, cy + _y, self.core.color);
         canvas.set_pixel(cx - _x, cy + _y, self.core.color);
         canvas.set_pixel(cx + _x, cy - _y, self.core.color);

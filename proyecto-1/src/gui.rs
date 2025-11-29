@@ -4,8 +4,8 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
-use crate::primitives::core::{Shape, ShapeImpl};
-use crate::state::State;
+use crate::core::Shape;
+use crate::state::{GUIEvent, State};
 
 /// Example application state. A real application will need a lot more state than this.
 pub(crate) struct TemplateApp {
@@ -28,42 +28,97 @@ impl TemplateApp {
             ui.separator();
 
             if ui.button("1. Line").clicked() {
-                self.state.current = Shape::Line;
+                self.state.gui_update(GUIEvent::ShapeType(Shape::Line));
             }
             if ui.button("2. Ellipse").clicked() {
-                self.state.current = Shape::Ellipse;
+                self.state.gui_update(GUIEvent::ShapeType(Shape::Ellipse));
             }
             if ui.button("3. Triangle").clicked() {
-                self.state.current = Shape::Triangle;
+                self.state.gui_update(GUIEvent::ShapeType(Shape::Triangle));
             }
             if ui.button("4. Rectangle").clicked() {
-                self.state.current = Shape::Rectangle;
+                self.state.gui_update(GUIEvent::ShapeType(Shape::Rectangle));
             }
             if ui.button("5. Bezier").clicked() {
-                self.state.current = Shape::Bezier;
+                self.state.gui_update(GUIEvent::ShapeType(Shape::Bezier));
+            }
+
+            if ui.button("Clear").clicked() {
+                self.state.gui_update(GUIEvent::Clear);
+            }
+
+            if ui.button("Save").clicked() {
+                self.state.gui_update(GUIEvent::Save);
+            }
+
+            if ui.button("Load From").clicked() {
+                self.state.gui_update(GUIEvent::Load);
             }
 
             ui.separator();
 
             if self.state.selected.is_some() {
                 if ui.button("Degree++").clicked() {
-                    self.state.subdivide_selected();
+                    self.state.gui_update(GUIEvent::Subdivide);
+                }
+                if ui.button("Front +1").clicked() {
+                    self.state.gui_update(GUIEvent::ToFront(false));
+                }
+                if ui.button("Back -1").clicked() {
+                    self.state.gui_update(GUIEvent::ToBack(false));
+                }
+                if ui.button("To Front").clicked() {
+                    self.state.gui_update(GUIEvent::ToFront(true));
+                }
+                if ui.button("To Back").clicked() {
+                    self.state.gui_update(GUIEvent::ToBack(true));
                 }
             }
 
             ui.heading("Color (RGBA)");
 
+            let colors = self.state.get_colors();
+            let (mut c, mut fill_c, mut pnt_c, mut back_c) = (
+                colors.0.into(),
+                colors.1.into(),
+                colors.2.into(),
+                colors.3.into(),
+            );
+
             ui.horizontal(|ui| {
-                ui.label("Color 1:");
-                ui.color_edit_button_srgba_unmultiplied(&mut self.state.color);
+                ui.label("Border color");
+                let response = ui.color_edit_button_srgba_unmultiplied(&mut c);
+
+                if response.changed() {
+                    self.state.gui_update(GUIEvent::BorderColor(c.into()));
+                }
             });
+
             ui.horizontal(|ui| {
-                ui.label("Color 2:");
-                ui.color_edit_button_srgba_unmultiplied(&mut self.state.fill_color);
+                ui.label("Fill color");
+                let response = ui.color_edit_button_srgba_unmultiplied(&mut fill_c);
+
+                if response.changed() {
+                    self.state.gui_update(GUIEvent::FillColor(fill_c.into()));
+                }
             });
+
             ui.horizontal(|ui| {
-                ui.label("Color 3:");
-                ui.color_edit_button_srgba_unmultiplied(&mut self.state.points_color);
+                ui.label("Points color");
+                let response = ui.color_edit_button_srgba_unmultiplied(&mut pnt_c);
+
+                if response.changed() {
+                    self.state.gui_update(GUIEvent::PointsColor(pnt_c.into()));
+                }
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Background color");
+                let response = ui.color_edit_button_srgba_unmultiplied(&mut back_c);
+
+                if response.changed() {
+                    self.state.gui_update(GUIEvent::PointsColor(back_c.into()));
+                }
             });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {

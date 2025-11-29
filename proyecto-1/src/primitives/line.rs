@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 
-use super::core::{Point, ShapeCore, ShapeImpl, UpdateOp};
+use crate::core::{Point, ShapeCore, ShapeImpl};
 
 pub struct Line {
     core: ShapeCore,
@@ -11,28 +11,14 @@ impl ShapeImpl for Line {
         Line { core }
     }
 
-    fn update(&mut self, op: &UpdateOp) {
-        match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            _ => {}
-        }
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
     }
 
     fn get_core(&self) -> ShapeCore {
         self.core.clone()
     }
 
-    //TODO fix drawing error saw in first homework
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         draw_line(&self.core, canvas);
     }
@@ -57,7 +43,7 @@ impl ShapeImpl for Line {
         } else if t > 1.0 {
             p2
         } else {
-            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32)
+            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32).into()
         };
 
         let dist = ((p.0 - closest_point.0).pow(2) + (p.1 - closest_point.1).pow(2)) as f32;
@@ -102,6 +88,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
             }
 
             x += x_inc;
+
             canvas.set_pixel(x, y, core.color);
         }
     } else {
@@ -114,6 +101,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
             }
 
             y += y_inc;
+
             canvas.set_pixel(x, y, core.color);
         }
     }

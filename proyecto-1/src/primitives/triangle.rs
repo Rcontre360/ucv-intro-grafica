@@ -1,6 +1,6 @@
-use super::core::{is_transparent, Point, ShapeCore, ShapeImpl, UpdateOp};
-use super::line::{draw_line, Line};
-use crate::canvas::Canvas; // To draw lines for the triangle
+use super::line::draw_line;
+use crate::canvas::Canvas;
+use crate::core::{Point, ShapeCore, ShapeImpl}; // To draw lines for the triangle
 
 pub struct Triangle {
     core: ShapeCore,
@@ -11,24 +11,8 @@ impl ShapeImpl for Triangle {
         Triangle { core }
     }
 
-    fn update(&mut self, op: &UpdateOp) {
-        match op {
-            UpdateOp::Move { delta } => {
-                for p in self.core.points.iter_mut() {
-                    p.0 += delta.0;
-                    p.1 += delta.1;
-                }
-            }
-            UpdateOp::ControlPoint { index, point } => {
-                if *index < self.core.points.len() {
-                    self.core.points[*index] = *point;
-                }
-            }
-            UpdateOp::AddControlPoint { point } => {
-                self.core.points.push(*point);
-            }
-            _ => {}
-        }
+    fn get_core_mut(&mut self) -> &mut ShapeCore {
+        &mut self.core
     }
 
     fn get_core(&self) -> ShapeCore {
@@ -39,7 +23,7 @@ impl ShapeImpl for Triangle {
         if self.core.points.len() <= 2 {
             draw_line(&self.core, canvas);
         } else {
-            if !is_transparent(self.core.fill_color) {
+            if !self.core.fill_color.is_transparent() {
                 self.fill_triangle(canvas);
             }
 
@@ -54,8 +38,22 @@ impl ShapeImpl for Triangle {
         }
     }
 
-    fn hit_test(&self, _point: Point) -> bool {
-        false
+    fn hit_test(&self, p: Point) -> bool {
+        if self.core.points.len() < 3 {
+            return false;
+        }
+
+        let a = self.core.points[0];
+        let b = self.core.points[1];
+        let c = self.core.points[2];
+
+        let cp1 = self.edge_side_check(a, b, p);
+        let cp2 = self.edge_side_check(b, c, p);
+        let cp3 = self.edge_side_check(c, a, p);
+
+        let is_same_side = (cp1 >= 0 && cp2 >= 0 && cp3 >= 0) || (cp1 <= 0 && cp2 <= 0 && cp3 <= 0);
+
+        is_same_side
     }
 }
 
@@ -82,7 +80,8 @@ impl Triangle {
         let p4 = (
             (p1.0 + ((p2.1 - p1.1) as f32 / (p3.1 - p1.1) as f32 * (p3.0 - p1.0) as f32) as i32),
             p2.1,
-        );
+        )
+            .into();
         self.fill_top_triangle(canvas, p1, p2, p4);
         self.fill_bottom_triangle(canvas, p2, p4, p3);
     }
@@ -122,5 +121,22 @@ impl Triangle {
         for x in x1..x2 {
             canvas.set_pixel(x, y, self.core.fill_color);
         }
+    }
+
+    fn edge_side_check(&self, a: Point, b: Point, p: Point) -> i64 {
+        let ax = a.0 as i64;
+        let ay = a.1 as i64;
+        let bx = b.0 as i64;
+        let by = b.1 as i64;
+        let px = p.0 as i64;
+        let py = p.1 as i64;
+
+        let ab_x = bx - ax;
+        let ab_y = by - ay;
+
+        let ap_x = px - ax;
+        let ap_y = py - ay;
+
+        ab_x * ap_y - ab_y * ap_x
     }
 }
