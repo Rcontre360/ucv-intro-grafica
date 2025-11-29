@@ -131,12 +131,17 @@ impl AppState {
     }
 
     pub fn update(&mut self, event: EventType) -> CursorIcon {
+        if let EventType::Mouse(MouseEvent::Move, _, _) = event {
+        } else {
+            println!("ARRIVED EVENT");
+        }
         match event {
             EventType::GUI(gui_ev) => {
                 self.handle_gui_event(gui_ev);
             }
             EventType::Mouse(mouse_ev, btn, point) => {
                 if MouseEvent::Click == mouse_ev && btn == 0 {
+                    println!("CLICK");
                     if !self.is_building_bezier() {
                         if let Some(fig) = self.selected.as_ref() {
                             if let Some(point_idx) = self.is_control_point_select(fig.index, point)
@@ -156,6 +161,7 @@ impl AppState {
                 }
 
                 if MouseEvent::PressDrag == mouse_ev && btn == 0 {
+                    println!("PRESS DRAG");
                     if let Some(selected) = self.selected.as_mut() {
                         let orig = selected.coord_clicked;
                         if selected.control_point_selected.is_some() {
@@ -171,6 +177,7 @@ impl AppState {
                 }
 
                 if MouseEvent::Release == mouse_ev && btn == 0 {
+                    println!("RELEASE");
                     if let Some(selected) = self.selected.as_mut() {
                         selected.control_point_selected = None;
                         selected.coord_clicked = None;
@@ -266,12 +273,22 @@ impl AppState {
                 }
             }
             GUIEvent::Clear => {
-                // self.objects.clear();
+                self.draw_state.clear();
                 self.selected = None;
                 self.cur_shape = None;
             }
-            GUIEvent::Undo => self.draw_state.undo(),
-            GUIEvent::Redo => self.draw_state.redo(),
+            GUIEvent::Undo => {
+                // must do since we might have selected a shape that will
+                // disappear
+                self.selected = None;
+                self.draw_state.undo();
+            }
+            GUIEvent::Redo => {
+                // edge case happens when you delete a shape, create another one
+                // and then undo, select the deleted and redo. This triggers the same undo error
+                self.selected = None;
+                self.draw_state.redo()
+            }
         };
     }
 
@@ -388,6 +405,11 @@ impl AppState {
     fn handle_move_selected_shape(&mut self, origin: Point, end: Point) {
         if let Some(selected) = self.selected.as_ref() {
             let delta = end - origin;
+
+            // this condition avoids having a drag event after selection (normal click)
+            if delta == Point(0, 0) {
+                return;
+            }
 
             let op = UpdateOp::Move(delta);
             self.draw_state.update_shape(selected.index, op);

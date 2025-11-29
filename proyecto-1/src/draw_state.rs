@@ -9,8 +9,10 @@ use crate::{
 enum RecordType {
     IndexChange(usize, usize),
     ShapeChange(usize, UpdateOp, ShapeCore, ShapeCore),
+    Subdivision(usize, ShapeCore, (ShapeCore, ShapeCore)),
     Deletion(usize, ShapeCore),
     Creation(ShapeCore),
+    Clear(Vec<ShapeCore>),
 }
 
 pub struct DrawState {
@@ -84,8 +86,18 @@ impl DrawState {
                     RecordType::ShapeChange(idx, _, prev, _) => {
                         self.objects[idx] = new_shape_from_core(prev);
                     }
+                    RecordType::Subdivision(idx, init, _) => {
+                        self.objects[idx] = new_shape_from_core(init);
+                        self.objects.pop();
+                    }
                     RecordType::Deletion(_, prev) => {
                         self.objects.push(new_shape_from_core(prev));
+                    }
+                    RecordType::Clear(history) => {
+                        self.objects = history
+                            .iter()
+                            .map(|core| new_shape_from_core(core.clone()))
+                            .collect();
                     }
                     RecordType::Creation(_) => {
                         self.objects.pop();
@@ -106,6 +118,13 @@ impl DrawState {
                 RecordType::ShapeChange(idx, _, _, post) => {
                     self.objects[idx] = new_shape_from_core(post);
                 }
+                RecordType::Subdivision(idx, _, (core1, core2)) => {
+                    self.objects[idx] = new_shape_from_core(core1);
+                    self.objects.push(new_shape_from_core(core2));
+                }
+                RecordType::Clear(_) => {
+                    self.objects.clear();
+                }
                 RecordType::Deletion(idx, _) => {
                     self.objects.remove(idx);
                 }
@@ -115,6 +134,13 @@ impl DrawState {
             }
             self.history_idx += 1;
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.push_history(&RecordType::Clear(
+            self.objects.iter().map(|obj| obj.get_core()).collect(),
+        ));
+        self.objects.clear();
     }
 
     pub fn add_shape(&mut self, shape: Box<dyn ShapeImpl>) {
@@ -143,11 +169,18 @@ impl DrawState {
     pub fn subdivide_shape(&mut self, shape_idx: usize) {
         if let Some(shape) = self.objects.get_mut(shape_idx) {
             let res = shape.subdivide();
+            let prev_core = shape.get_core();
 
             // only those shapes that implement subdivide can reach this
-            if let Some((orig, new)) = res.as_ref() {
-                self.update_shape(shape_idx, UpdateOp::RewritePoints(orig.points.clone()));
-                self.add_shape(new_shape_from_core(new.clone()));
+            if let Some((core1, core2)) = res.as_ref() {
+                shape.update(&UpdateOp::RewritePoints(core1.points.clone()));
+                self.objects.push(new_shape_from_core(core2.clone()));
+
+                self.push_history(&RecordType::Subdivision(
+                    shape_idx,
+                    prev_core,
+                    (core1.clone(), core2.clone()),
+                ));
             }
         }
     }
