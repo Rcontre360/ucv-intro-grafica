@@ -37,8 +37,7 @@ impl<'a> Canvas<'a> {
         }
     }
 
-    pub fn clear(&mut self) {
-        let color = RGBA::new(0, 0, 0, 0);
+    pub fn clear(&mut self, color: RGBA) {
         for pixel in self.buffer.chunks_exact_mut(4) {
             pixel.copy_from_slice(&color);
         }

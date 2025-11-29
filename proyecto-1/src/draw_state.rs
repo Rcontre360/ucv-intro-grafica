@@ -1,7 +1,9 @@
-use std::mem::discriminant;
+use std::{fs, mem::discriminant, path::PathBuf};
+
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{ShapeCore, ShapeImpl, UpdateOp},
+    core::{ShapeCore, ShapeImpl, UpdateOp, RGBA},
     primitives::new_shape_from_core,
 };
 
@@ -12,11 +14,19 @@ enum RecordType {
     Subdivision(usize, ShapeCore, (ShapeCore, ShapeCore)),
     Deletion(usize, ShapeCore),
     Creation(ShapeCore),
+    BackgroundColor(RGBA, RGBA),
     Clear(Vec<ShapeCore>),
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SerializedState {
+    pub objects: Vec<ShapeCore>,
+    pub background_color: RGBA,
+}
+
 pub struct DrawState {
-    pub objects: Vec<Box<dyn ShapeImpl>>,
+    objects: Vec<Box<dyn ShapeImpl>>,
+    background_color: RGBA,
     history: Vec<RecordType>,
     history_idx: usize,
 }
@@ -27,7 +37,12 @@ impl DrawState {
             objects: vec![],
             history: vec![],
             history_idx: 0,
+            background_color: RGBA::default(),
         }
+    }
+
+    pub fn get_background_color(&self) -> RGBA {
+        return self.background_color;
     }
 
     pub fn get_object(&self, idx: usize) -> &Box<dyn ShapeImpl> {
@@ -43,7 +58,7 @@ impl DrawState {
 
         // There's an issue since we update objects on real time.
         // so there are MANY instances of updates when we simply move an object or change its color
-        // the solution is only storing the start and finish of this event
+        // the solution is only storing one event with the initial and final state
         let last_update = self.history.last();
 
         // this match structure runs when the last update and record match the values below
@@ -54,7 +69,7 @@ impl DrawState {
             ) => {
                 // with this we compare the enum type but not the arguments
                 if discriminant(change_last) == discriminant(change_cur) {
-                    // in case the last update and the record
+                    // only the last is updated with the result record
                     let i = self.history.len() - 1;
                     self.history[i] = RecordType::ShapeChange(
                         *idx,
@@ -64,6 +79,11 @@ impl DrawState {
                     );
                     return;
                 }
+            }
+            (Some(RecordType::BackgroundColor(orig, _)), RecordType::BackgroundColor(_, post)) => {
+                let i = self.history.len() - 1;
+                self.history[i] = RecordType::BackgroundColor(*orig, *post);
+                return;
             }
             _ => {}
         }
@@ -102,6 +122,9 @@ impl DrawState {
                     RecordType::Creation(_) => {
                         self.objects.pop();
                     }
+                    RecordType::BackgroundColor(prev, _) => {
+                        self.background_color = prev;
+                    }
                 }
             }
         }
@@ -131,6 +154,9 @@ impl DrawState {
                 RecordType::Creation(core) => {
                     self.objects.push(new_shape_from_core(core));
                 }
+                RecordType::BackgroundColor(_, nxt) => {
+                    self.background_color = nxt;
+                }
             }
             self.history_idx += 1;
         }
@@ -141,6 +167,11 @@ impl DrawState {
             self.objects.iter().map(|obj| obj.get_core()).collect(),
         ));
         self.objects.clear();
+    }
+
+    pub fn change_background_color(&mut self, color: RGBA) {
+        self.push_history(&RecordType::BackgroundColor(self.background_color, color));
+        self.background_color = color;
     }
 
     pub fn add_shape(&mut self, shape: Box<dyn ShapeImpl>) {
@@ -194,5 +225,36 @@ impl DrawState {
 
             self.push_history(&RecordType::ShapeChange(shape_idx, op, prev_core, new_core));
         }
+    }
+
+    pub fn load_from_file(&mut self, file_path: PathBuf) {
+        let state_str = fs::read_to_string(&file_path).unwrap();
+        let loaded_state: SerializedState = serde_json::from_str(&state_str).unwrap();
+
+        self.history.clear();
+        self.objects.clear();
+        self.history_idx = 0;
+
+        for core in loaded_state.objects.iter() {
+            let boxed_shape = new_shape_from_core(core.clone());
+            self.objects.push(boxed_shape);
+        }
+
+        self.background_color = loaded_state.background_color;
+    }
+
+    pub fn save_to_file(&self, file_path: PathBuf) {
+        let mut core_arr = vec![];
+        for shape in self.get_objects().iter() {
+            core_arr.push(shape.get_core());
+        }
+
+        let saved_state = SerializedState {
+            objects: core_arr,
+            background_color: self.background_color,
+        };
+
+        let state_str = serde_json::to_string_pretty(&saved_state).unwrap();
+        fs::write(file_path, state_str).unwrap();
     }
 }

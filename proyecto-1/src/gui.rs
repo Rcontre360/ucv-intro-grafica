@@ -144,7 +144,7 @@ impl TemplateApp {
 
                 if response.changed() {
                     self.app_state
-                        .gui_update(GUIEvent::PointsColor(back_c.into()));
+                        .gui_update(GUIEvent::BackgroundColor(back_c.into()));
                 }
             });
 

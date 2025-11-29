@@ -28,6 +28,7 @@ pub enum GUIEvent {
     BorderColor(RGBA),
     FillColor(RGBA),
     PointsColor(RGBA),
+    BackgroundColor(RGBA),
     ToFront(bool),
     ToBack(bool),
     Save,
@@ -75,12 +76,6 @@ impl ShapeSelected {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct SerializedState {
-    objects: Vec<ShapeCore>,
-    background_color: RGBA,
-}
-
 pub struct AppState {
     pub current: Shape,
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
@@ -91,7 +86,6 @@ pub struct AppState {
     color: RGBA,
     fill_color: RGBA,
     points_color: RGBA,
-    background_color: RGBA,
 }
 
 impl AppState {
@@ -101,7 +95,6 @@ impl AppState {
             color: RGBA::new(255, 255, 255, 255),
             fill_color: RGBA::new(100, 50, 10, 150),
             points_color: RGBA::new(0, 0, 255, 255),
-            background_color: RGBA::default(),
             cur_shape: None,
             selected: None,
             draw_state: DrawState::new(),
@@ -114,7 +107,7 @@ impl AppState {
             self.color,
             self.fill_color,
             self.points_color,
-            self.background_color,
+            self.draw_state.get_background_color(),
         )
     }
 
@@ -131,17 +124,12 @@ impl AppState {
     }
 
     pub fn update(&mut self, event: EventType) -> CursorIcon {
-        if let EventType::Mouse(MouseEvent::Move, _, _) = event {
-        } else {
-            println!("ARRIVED EVENT");
-        }
         match event {
             EventType::GUI(gui_ev) => {
                 self.handle_gui_event(gui_ev);
             }
             EventType::Mouse(mouse_ev, btn, point) => {
                 if MouseEvent::Click == mouse_ev && btn == 0 {
-                    println!("CLICK");
                     if !self.is_building_bezier() {
                         if let Some(fig) = self.selected.as_ref() {
                             if let Some(point_idx) = self.is_control_point_select(fig.index, point)
@@ -161,7 +149,6 @@ impl AppState {
                 }
 
                 if MouseEvent::PressDrag == mouse_ev && btn == 0 {
-                    println!("PRESS DRAG");
                     if let Some(selected) = self.selected.as_mut() {
                         let orig = selected.coord_clicked;
                         if selected.control_point_selected.is_some() {
@@ -177,7 +164,6 @@ impl AppState {
                 }
 
                 if MouseEvent::Release == mouse_ev && btn == 0 {
-                    println!("RELEASE");
                     if let Some(selected) = self.selected.as_mut() {
                         selected.control_point_selected = None;
                         selected.coord_clicked = None;
@@ -230,6 +216,7 @@ impl AppState {
         match event {
             GUIEvent::ShapeType(shape) => self.current = shape,
             GUIEvent::PointsColor(c) => self.points_color = c,
+            GUIEvent::BackgroundColor(c) => self.draw_state.change_background_color(c),
             GUIEvent::DegreeElevate => self.handle_degree_elevate(),
             GUIEvent::Subdivide => self.handle_subdivide(),
             GUIEvent::SubdivisionValue(t) => {
@@ -340,7 +327,7 @@ impl AppState {
     }
 
     pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        canvas.clear();
+        canvas.clear(self.draw_state.get_background_color());
 
         for shape in self.draw_state.get_objects().iter() {
             shape.draw(canvas);
@@ -486,24 +473,13 @@ impl AppState {
     }
 
     fn save_state(&self) {
-        let mut core_arr = vec![];
-        for shape in self.draw_state.get_objects().iter() {
-            core_arr.push(shape.get_core());
-        }
-
-        let saved_state = SerializedState {
-            objects: core_arr,
-            background_color: self.background_color,
-        };
-
-        let state_str = serde_json::to_string_pretty(&saved_state).unwrap();
         if let Some(path) = FileDialog::new()
             .set_title("Save drawing")
             .set_file_name("drawing.json")
             .add_filter("JSON Files", &["json"])
             .save_file()
         {
-            fs::write(path, state_str).unwrap();
+            self.draw_state.save_to_file(path);
         }
     }
 
@@ -513,14 +489,7 @@ impl AppState {
             .add_filter("JSON Files", &["json"])
             .pick_file()
         {
-            let state_str = fs::read_to_string(&path).unwrap();
-            let loaded_state: SerializedState = serde_json::from_str(&state_str).unwrap();
-
-            for core in loaded_state.objects {
-                let boxed_shape = new_shape_from_core(core);
-                self.draw_state.add_shape(boxed_shape);
-            }
-            self.background_color = loaded_state.background_color;
+            self.draw_state.load_from_file(path);
         }
     }
 }
