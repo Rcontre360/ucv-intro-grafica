@@ -1,12 +1,14 @@
+use std::mem::discriminant;
+
 use crate::{
-    core::{Point, ShapeCore, ShapeImpl, UpdateOp},
+    core::{ShapeCore, ShapeImpl, UpdateOp},
     primitives::new_shape_from_core,
 };
 
 #[derive(Clone)]
 enum RecordType {
     IndexChange(usize, usize),
-    ShapeChange(usize, ShapeCore, ShapeCore),
+    ShapeChange(usize, UpdateOp, ShapeCore, ShapeCore),
     Deletion(usize, ShapeCore),
     Creation(ShapeCore),
 }
@@ -30,21 +32,43 @@ impl DrawState {
         &self.objects
     }
 
-    pub fn get_objects_mut(&mut self) -> &mut Vec<Box<dyn ShapeImpl>> {
-        &mut self.objects
-    }
+    fn push_history(&mut self, record: &RecordType) {
+        self.history.truncate(self.history_idx);
 
-    fn push_history(&mut self, record: RecordType) {
-        if self.history_idx != self.history.len() - 1 {
-            self.history.truncate(self.history_idx);
+        // There's an issue since we update objects on real time.
+        // so there are MANY instances of updates when we simply move an object or change its color
+        // the solution is only storing the start and finish of this event
+        let last_update = self.history.last();
+
+        // this match structure runs when the last update and record match the values below
+        match (last_update, record) {
+            (
+                Some(RecordType::ShapeChange(idx, change_last, prev, _)),
+                RecordType::ShapeChange(_, change_cur, _, post),
+            ) => {
+                // with this we compare the enum type but not the arguments
+                if discriminant(change_last) == discriminant(change_cur) {
+                    // in case the last update and the record
+                    let i = self.history.len() - 1;
+                    self.history[i] = RecordType::ShapeChange(
+                        *idx,
+                        change_cur.clone(),
+                        prev.clone(),
+                        post.clone(),
+                    );
+                    return;
+                }
+            }
+            _ => {}
         }
 
-        self.history.push(record);
-        self.history_idx = self.history.len() - 1;
+        self.history.push(record.clone());
+        self.history_idx = self.history.len();
     }
 
     pub fn undo(&mut self) {
         if self.history_idx > 0 {
+            self.history_idx -= 1;
             let record = self.history[self.history_idx].clone();
 
             match record {
@@ -52,7 +76,7 @@ impl DrawState {
                     let shape = self.objects.remove(dst);
                     self.objects.insert(src, shape);
                 }
-                RecordType::ShapeChange(idx, prev, _) => {
+                RecordType::ShapeChange(idx, _, prev, _) => {
                     self.objects[idx] = new_shape_from_core(prev);
                 }
                 RecordType::Deletion(_, prev) => {
@@ -62,20 +86,18 @@ impl DrawState {
                     self.objects.pop();
                 }
             }
-
-            self.history_idx -= 1;
         }
     }
 
     pub fn redo(&mut self) {
-        if self.history_idx < self.history.len() - 1 {
+        if self.history_idx < self.history.len() {
             let record = self.history[self.history_idx].clone();
             match record {
                 RecordType::IndexChange(src, dst) => {
                     let shape = self.objects.remove(src);
                     self.objects.insert(dst, shape);
                 }
-                RecordType::ShapeChange(idx, _, post) => {
+                RecordType::ShapeChange(idx, _, _, post) => {
                     self.objects[idx] = new_shape_from_core(post);
                 }
                 RecordType::Deletion(idx, _) => {
@@ -90,14 +112,14 @@ impl DrawState {
     }
 
     pub fn add_shape(&mut self, shape: Box<dyn ShapeImpl>) {
-        self.push_history(RecordType::Creation(shape.get_core()));
+        self.push_history(&RecordType::Creation(shape.get_core()));
         self.objects.push(shape);
     }
 
     pub fn delete_shape(&mut self, index: usize) {
         if index < self.objects.len() {
             let core = self.objects[index].get_core();
-            self.push_history(RecordType::Deletion(index, core));
+            self.push_history(&RecordType::Deletion(index, core));
             self.objects.remove(index);
         }
     }
@@ -106,32 +128,18 @@ impl DrawState {
         if from < self.objects.len() && to < self.objects.len() {
             let shape = self.objects.remove(from);
             self.objects.insert(to, shape);
-            self.push_history(RecordType::IndexChange(from, to));
+            self.push_history(&RecordType::IndexChange(from, to));
         }
     }
 
-    pub fn update_shape_control_point(&mut self, shape_idx: usize, point_idx: usize, point: Point) {
+    // this is the only way to mutate a shape, and this allows us to record shape changes
+    pub fn update_shape(&mut self, shape_idx: usize, op: UpdateOp) {
         if let Some(shape) = self.objects.get_mut(shape_idx) {
             let prev_core = shape.get_core().clone();
-            let op = UpdateOp::ControlPoint {
-                index: point_idx,
-                point,
-            };
             shape.update(&op);
             let new_core = shape.get_core().clone();
 
-            self.push_history(RecordType::ShapeChange(shape_idx, prev_core, new_core));
-        }
-    }
-
-    pub fn move_shape(&mut self, shape_idx: usize, delta: Point) {
-        if let Some(shape) = self.objects.get_mut(shape_idx) {
-            let prev_core = shape.get_core().clone();
-            let op = UpdateOp::Move(delta);
-            shape.update(&op);
-            let new_core = shape.get_core().clone();
-
-            self.push_history(RecordType::ShapeChange(shape_idx, prev_core, new_core));
+            self.push_history(&RecordType::ShapeChange(shape_idx, op, prev_core, new_core));
         }
     }
 }

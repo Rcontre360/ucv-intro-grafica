@@ -192,14 +192,16 @@ impl AppState {
                 GUIEvent::Load => self.load_state(),
                 GUIEvent::BorderColor(c) => {
                     self.color = c;
-                    if let Some((shape, _)) = self.get_selected_shape() {
-                        shape.update(&UpdateOp::ChangeColor(c));
+                    if let Some(selected) = self.selected.as_ref() {
+                        self.draw_state
+                            .update_shape(selected.index, UpdateOp::ChangeColor(c));
                     }
                 }
                 GUIEvent::FillColor(c) => {
                     self.fill_color = c;
-                    if let Some((shape, _)) = self.get_selected_shape() {
-                        shape.update(&UpdateOp::ChangeFillColor(c));
+                    if let Some(selected) = self.selected.as_ref() {
+                        self.draw_state
+                            .update_shape(selected.index, UpdateOp::ChangeFillColor(c));
                     }
                 }
                 GUIEvent::ToFront(all) => {
@@ -303,8 +305,9 @@ impl AppState {
     }
 
     fn handle_bezier_subdivide(&mut self) {
-        if let Some((object, _)) = self.get_selected_shape() {
-            object.update(&UpdateOp::DegreeElevate);
+        if let Some(selected) = self.selected.as_ref() {
+            self.draw_state
+                .update_shape(selected.index, UpdateOp::DegreeElevate);
         }
     }
 
@@ -318,14 +321,15 @@ impl AppState {
     }
 
     fn handle_move_selected_shape(&mut self, origin: Point, end: Point) {
-        let (index, delta) = if let Some((_, selected)) = self.get_selected_shape() {
-            (selected.index, end - origin)
-        } else {
-            return;
-        };
-        self.draw_state.move_shape(index, delta);
-        if let Some(selected) = self.selected.as_mut() {
-            selected.coord_clicked = Some(end);
+        if let Some(selected) = self.selected.as_ref() {
+            let delta = end - origin;
+
+            let op = UpdateOp::Move(delta);
+            self.draw_state.update_shape(selected.index, op);
+
+            if let Some(selected) = self.selected.as_mut() {
+                selected.coord_clicked = Some(end);
+            }
         }
     }
 
@@ -405,13 +409,15 @@ impl AppState {
     }
 
     fn update_selected_control_point(&mut self, point: Point) {
-        let (shape_idx, point_idx) = if let Some((_, select)) = self.get_selected_shape() {
-            (select.index, select.control_point_selected.unwrap())
-        } else {
-            return;
-        };
-        self.draw_state
-            .update_shape_control_point(shape_idx, point_idx, point);
+        if let Some(selected) = self.selected.as_ref() {
+            if let Some(pnt_idx) = selected.control_point_selected {
+                let op = UpdateOp::ControlPoint {
+                    index: pnt_idx,
+                    point,
+                };
+                self.draw_state.update_shape(selected.index, op);
+            }
+        }
     }
 
     fn save_state(&self) {
@@ -452,14 +458,5 @@ impl AppState {
             }
             self.background_color = loaded_state.background_color;
         }
-    }
-
-    fn get_selected_shape(&mut self) -> Option<(&mut Box<dyn ShapeImpl>, &mut ShapeSelected)> {
-        if let Some(selected) = self.selected.as_mut() {
-            if let Some(object) = self.draw_state.get_objects_mut().get_mut(selected.index) {
-                return Some((object, selected));
-            }
-        }
-        None
     }
 }

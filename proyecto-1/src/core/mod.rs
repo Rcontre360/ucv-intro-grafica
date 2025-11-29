@@ -16,6 +16,7 @@ pub enum Shape {
     Bezier,
 }
 
+#[derive(Clone, PartialEq)]
 pub enum UpdateOp {
     Move(Point),
     ChangeColor(RGBA),
