@@ -141,7 +141,7 @@ fn main() -> Result<(), Error> {
                     }
                     WindowEvent::RedrawRequested => {
                         let size = window.inner_size();
-                        let mut canvas = Canvas::new(pixels.frame_mut(), size.width, size.height);
+                        let mut canvas = Canvas::new(pixels.frame_mut(), size.width);
 
                         framework.get_state().draw(&mut canvas);
                         framework.prepare(&window);

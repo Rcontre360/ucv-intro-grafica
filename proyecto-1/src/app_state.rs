@@ -1,7 +1,6 @@
-use std::{cmp::min, fs};
+use std::cmp::min;
 
 use rfd::FileDialog;
-use serde::{Deserialize, Serialize};
 use winit::keyboard::KeyCode;
 use winit::window::CursorIcon;
 
@@ -9,7 +8,6 @@ use crate::{
     canvas::Canvas,
     core::{Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
     draw_state::DrawState,
-    primitives::bezier::Bezier,
     primitives::new_shape_from_core,
 };
 

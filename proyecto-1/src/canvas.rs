@@ -6,16 +6,11 @@ use crate::core::RGBA;
 pub struct Canvas<'a> {
     buffer: &'a mut [u8],
     width: u32,
-    height: u32,
 }
 
 impl<'a> Canvas<'a> {
-    pub fn new(buffer: &'a mut [u8], width: u32, height: u32) -> Self {
-        Canvas {
-            buffer,
-            width,
-            height,
-        }
+    pub fn new(buffer: &'a mut [u8], width: u32) -> Self {
+        Canvas { buffer, width }
     }
 
     // notice we will have left down corner as origin (0,0)
