@@ -4,19 +4,19 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
+use crate::app_state::{AppState, GUIEvent};
 use crate::core::Shape;
-use crate::state::{GUIEvent, State};
 
 /// Example application state. A real application will need a lot more state than this.
 pub(crate) struct TemplateApp {
-    state: State,
+    app_state: AppState,
 }
 
 impl TemplateApp {
     /// Called once before the first frame.
     pub fn new() -> Self {
         Self {
-            state: State::new(),
+            app_state: AppState::new(),
         }
     }
 
@@ -28,56 +28,68 @@ impl TemplateApp {
             ui.separator();
 
             if ui.button("1. Line").clicked() {
-                self.state.gui_update(GUIEvent::ShapeType(Shape::Line));
+                self.app_state.gui_update(GUIEvent::ShapeType(Shape::Line));
             }
             if ui.button("2. Ellipse").clicked() {
-                self.state.gui_update(GUIEvent::ShapeType(Shape::Ellipse));
+                self.app_state
+                    .gui_update(GUIEvent::ShapeType(Shape::Ellipse));
             }
             if ui.button("3. Triangle").clicked() {
-                self.state.gui_update(GUIEvent::ShapeType(Shape::Triangle));
+                self.app_state
+                    .gui_update(GUIEvent::ShapeType(Shape::Triangle));
             }
             if ui.button("4. Rectangle").clicked() {
-                self.state.gui_update(GUIEvent::ShapeType(Shape::Rectangle));
+                self.app_state
+                    .gui_update(GUIEvent::ShapeType(Shape::Rectangle));
             }
             if ui.button("5. Bezier").clicked() {
-                self.state.gui_update(GUIEvent::ShapeType(Shape::Bezier));
+                self.app_state.gui_update(GUIEvent::ShapeType(Shape::Bezier));
             }
 
             if ui.button("Clear").clicked() {
-                self.state.gui_update(GUIEvent::Clear);
+                self.app_state.gui_update(GUIEvent::Clear);
             }
 
             if ui.button("Save").clicked() {
-                self.state.gui_update(GUIEvent::Save);
+                self.app_state.gui_update(GUIEvent::Save);
             }
 
             if ui.button("Load From").clicked() {
-                self.state.gui_update(GUIEvent::Load);
+                self.app_state.gui_update(GUIEvent::Load);
             }
 
             ui.separator();
 
-            if self.state.selected.is_some() {
+            if ui.button("Undo").clicked() {
+                self.app_state.gui_update(GUIEvent::Undo);
+            }
+            if ui.button("Redo").clicked() {
+                self.app_state.gui_update(GUIEvent::Redo);
+            }
+
+            ui.separator();
+
+            if self.app_state.selected.is_some() {
                 if ui.button("Degree++").clicked() {
-                    self.state.gui_update(GUIEvent::Subdivide);
+                    self.app_state.gui_update(GUIEvent::Subdivide);
                 }
                 if ui.button("Front +1").clicked() {
-                    self.state.gui_update(GUIEvent::ToFront(false));
+                    self.app_state.gui_update(GUIEvent::ToFront(false));
                 }
                 if ui.button("Back -1").clicked() {
-                    self.state.gui_update(GUIEvent::ToBack(false));
+                    self.app_state.gui_update(GUIEvent::ToBack(false));
                 }
                 if ui.button("To Front").clicked() {
-                    self.state.gui_update(GUIEvent::ToFront(true));
+                    self.app_state.gui_update(GUIEvent::ToFront(true));
                 }
                 if ui.button("To Back").clicked() {
-                    self.state.gui_update(GUIEvent::ToBack(true));
+                    self.app_state.gui_update(GUIEvent::ToBack(true));
                 }
             }
 
             ui.heading("Color (RGBA)");
 
-            let colors = self.state.get_colors();
+            let colors = self.app_state.get_colors();
             let (mut c, mut fill_c, mut pnt_c, mut back_c) = (
                 colors.0.into(),
                 colors.1.into(),
@@ -90,7 +102,7 @@ impl TemplateApp {
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::BorderColor(c.into()));
+                    self.app_state.gui_update(GUIEvent::BorderColor(c.into()));
                 }
             });
 
@@ -99,7 +111,8 @@ impl TemplateApp {
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut fill_c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::FillColor(fill_c.into()));
+                    self.app_state
+                        .gui_update(GUIEvent::FillColor(fill_c.into()));
                 }
             });
 
@@ -108,7 +121,8 @@ impl TemplateApp {
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut pnt_c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::PointsColor(pnt_c.into()));
+                    self.app_state
+                        .gui_update(GUIEvent::PointsColor(pnt_c.into()));
                 }
             });
 
@@ -117,7 +131,8 @@ impl TemplateApp {
                 let response = ui.color_edit_button_srgba_unmultiplied(&mut back_c);
 
                 if response.changed() {
-                    self.state.gui_update(GUIEvent::PointsColor(back_c.into()));
+                    self.app_state
+                        .gui_update(GUIEvent::PointsColor(back_c.into()));
                 }
             });
 
@@ -265,8 +280,8 @@ impl Framework {
         }
     }
 
-    pub(crate) fn get_state(&mut self) -> &mut State {
-        &mut self.gui.state
+    pub(crate) fn get_state(&mut self) -> &mut AppState {
+        &mut self.gui.app_state
     }
 
     pub(crate) fn wants_pointer_input(&self) -> bool {

@@ -12,14 +12,15 @@ use winit::keyboard::KeyCode;
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
+use crate::app_state::MouseEvent;
 use crate::gui::Framework;
-use crate::state::MouseEvent;
 
+mod app_state;
 mod canvas;
 mod core;
+mod draw_state;
 mod gui;
 mod primitives;
-mod state;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;

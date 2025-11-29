@@ -7,7 +7,8 @@ use winit::keyboard::KeyCode;
 use crate::{
     canvas::Canvas,
     core::{Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
-    primitives,
+    draw_state::DrawState,
+    primitives::{self, new_shape_from_core},
 };
 
 // we define our own events to not depend on these libraries.
@@ -31,6 +32,8 @@ pub enum GUIEvent {
     Load,
     Subdivide,
     Clear,
+    Undo,
+    Redo,
 }
 
 #[derive(Copy, Clone)]
@@ -74,32 +77,29 @@ struct SerializedState {
     background_color: RGBA,
 }
 
-pub struct State {
+pub struct AppState {
     pub current: Shape,
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
-
     pub selected: Option<ShapeSelected>,
 
-    objects: Vec<Box<dyn ShapeImpl>>,
+    draw_state: DrawState,
     color: RGBA,
     fill_color: RGBA,
     points_color: RGBA,
     background_color: RGBA,
 }
 
-impl State {
+impl AppState {
     pub fn new() -> Self {
         Self {
             current: Shape::Triangle,
-
             color: RGBA::new(255, 255, 255, 255),
             fill_color: RGBA::new(100, 50, 10, 150),
             points_color: RGBA::new(0, 0, 255, 255),
             background_color: RGBA::default(),
-
-            objects: vec![],
             cur_shape: None,
             selected: None,
+            draw_state: DrawState::new(),
         }
     }
 
@@ -128,19 +128,13 @@ impl State {
         //checking if event is a normal figure selection
         if let EventType::Mouse(MouseEvent::Click, 0, point) = event {
             if !self.is_building_bezier() {
-                // if we have a selected figure and we're hitting its control points
-                // also if we are dragging that figure
                 if let Some(fig) = self.selected.as_ref() {
                     if let Some(point_idx) = self.is_control_point_select(fig.index, point) {
-                        // this needs to be done here and not on the "fig" variable because
-                        // above we are borrowing an inmutable reference and we can read as we want
-                        // from it but not mutate it. Here we mutate so we need to "borrow" again
                         self.selected.as_mut().unwrap().set_control_point(point_idx);
                         return;
                     }
                 }
 
-                // if we are selecting a figure
                 if let Some(fig) = self.is_figure_selection(point) {
                     self.selected = Some(ShapeSelected::new_with_point(fig, point));
                     return;
@@ -150,7 +144,6 @@ impl State {
             }
         }
 
-        // if we are dragging and control point is selected
         if let EventType::Mouse(MouseEvent::PressDrag, 0, point) = event {
             if let Some(selected) = self.selected.as_mut() {
                 let orig = selected.coord_clicked;
@@ -166,14 +159,12 @@ impl State {
         }
 
         if let EventType::Mouse(MouseEvent::Release, 0, _) = event {
-            // we stopped moving control point
             if let Some(selected) = self.selected.as_mut() {
                 selected.control_point_selected = None;
                 selected.coord_clicked = None;
             }
         }
 
-        // if none of the above are true then we are drawing something
         self.handle_keyboard_event(event);
         self.handle_figure_draw(event);
         self.handle_gui_event(event);
@@ -201,21 +192,19 @@ impl State {
                 GUIEvent::Load => self.load_state(),
                 GUIEvent::BorderColor(c) => {
                     self.color = c;
-                    let all = self.get_selected_shape();
-                    if let Some((shape, _)) = all {
+                    if let Some((shape, _)) = self.get_selected_shape() {
                         shape.update(&UpdateOp::ChangeColor(c));
                     }
                 }
                 GUIEvent::FillColor(c) => {
                     self.fill_color = c;
-                    let all = self.get_selected_shape();
-                    if let Some((shape, _)) = all {
+                    if let Some((shape, _)) = self.get_selected_shape() {
                         shape.update(&UpdateOp::ChangeFillColor(c));
                     }
                 }
                 GUIEvent::ToFront(all) => {
                     if let Some(i) = self.selected.as_ref() {
-                        let len = self.objects.len();
+                        let len = self.draw_state.get_objects().len();
                         let target_index = if all {
                             len - 1
                         } else {
@@ -231,10 +220,12 @@ impl State {
                     }
                 }
                 GUIEvent::Clear => {
-                    self.objects.clear();
+                    // self.objects.clear();
                     self.selected = None;
                     self.cur_shape = None;
                 }
+                GUIEvent::Undo => self.draw_state.undo(),
+                GUIEvent::Redo => self.draw_state.redo(),
             },
             _ => {}
         };
@@ -251,24 +242,16 @@ impl State {
                             self.shape_start(point);
                         }
                     }
-                    MouseEvent::PressDrag => {
-                        self.shape_update_last_point(point);
-                    }
-                    MouseEvent::Release => {
-                        self.shape_add_control_point(point);
-                    }
-                    MouseEvent::Move => {
-                        self.shape_update_last_point(point);
-                    }
+                    MouseEvent::PressDrag => self.shape_update_last_point(point),
+                    MouseEvent::Release => self.shape_add_control_point(point),
+                    MouseEvent::Move => self.shape_update_last_point(point),
                 },
                 _ => {}
-            }, // Not implemented
+            },
             Shape::Bezier => match event {
                 EventType::Mouse(action, button, point) => match action {
                     MouseEvent::Click => {
-                        // left button == 0
                         if button == 0 {
-                            // we add control points with each click
                             if self.cur_shape.is_some() {
                                 self.shape_add_control_point(point);
                             } else {
@@ -278,25 +261,16 @@ impl State {
                             self.shape_end(point);
                         }
                     }
-                    MouseEvent::Move => {
-                        self.shape_update_last_point(point);
-                    }
+                    MouseEvent::Move => self.shape_update_last_point(point),
                     _ => {}
                 },
                 _ => {}
             },
-
             _ => match event {
                 EventType::Mouse(action, 0, point) => match action {
-                    MouseEvent::Click => {
-                        self.shape_start(point);
-                    }
-                    MouseEvent::PressDrag => {
-                        self.shape_update_last_point(point);
-                    }
-                    MouseEvent::Release => {
-                        self.shape_end(point);
-                    }
+                    MouseEvent::Click => self.shape_start(point),
+                    MouseEvent::PressDrag => self.shape_update_last_point(point),
+                    MouseEvent::Release => self.shape_end(point),
                     _ => {}
                 },
                 _ => {}
@@ -307,14 +281,14 @@ impl State {
     pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         canvas.clear();
 
-        // objects are drawn in order, so the last one is on top (front).
-        for shape in self.objects.iter() {
+        for shape in self.draw_state.get_objects().iter() {
             shape.draw(canvas);
         }
 
         if let Some(selected) = self.selected.as_ref() {
-            let shape = self.objects.get(selected.index).unwrap();
-            shape.draw_selection(self.points_color, canvas);
+            if let Some(shape) = self.draw_state.get_objects().get(selected.index) {
+                shape.draw_selection(self.points_color, canvas);
+            }
         }
 
         if let Some(cur) = self.cur_shape.as_ref() {
@@ -324,41 +298,39 @@ impl State {
 
     fn handle_delete_figure(&mut self) {
         if let Some(selected) = self.selected.take() {
-            self.objects.remove(selected.index);
+            self.draw_state.delete_shape(selected.index);
         }
     }
 
     fn handle_bezier_subdivide(&mut self) {
-        let all = self.get_selected_shape();
-        if let Some((object, _)) = all {
-            let op = UpdateOp::DegreeElevate;
-            object.as_mut().update(&op);
+        if let Some((object, _)) = self.get_selected_shape() {
+            object.update(&UpdateOp::DegreeElevate);
         }
     }
 
     fn reorder_selected(&mut self, new_index: usize) {
         if let Some(selected) = self.selected.as_ref() {
-            if selected.index != new_index && new_index < self.objects.len() {
-                let object = self.objects.remove(selected.index);
-                self.objects.insert(new_index, object);
+            if selected.index != new_index {
+                self.draw_state.reorder_shape(selected.index, new_index);
                 self.selected = Some(ShapeSelected::new(new_index));
             }
         }
     }
 
     fn handle_move_selected_shape(&mut self, origin: Point, end: Point) {
-        let all = self.get_selected_shape();
-        if let Some((shape, selected)) = all {
-            let delta = end - origin;
-            let op = UpdateOp::Move(delta);
-            shape.as_mut().update(&op);
+        let (index, delta) = if let Some((_, selected)) = self.get_selected_shape() {
+            (selected.index, end - origin)
+        } else {
+            return;
+        };
+        self.draw_state.move_shape(index, delta);
+        if let Some(selected) = self.selected.as_mut() {
             selected.coord_clicked = Some(end);
         }
     }
 
     fn is_figure_selection(&self, pt: Point) -> Option<usize> {
-        // Iterate backwards to select the topmost (last drawn) figure first
-        for (i, object) in self.objects.iter().enumerate().rev() {
+        for (i, object) in self.draw_state.get_objects().iter().enumerate().rev() {
             if object.hit_test(pt) {
                 return Some(i);
             }
@@ -367,13 +339,11 @@ impl State {
     }
 
     fn is_building_bezier(&self) -> bool {
-        // This function should probably check if self.current is Shape::Bezier AND self.cur_shape is Some
-        // However, based on the original code, I will keep it returning false to match the provided logic.
         false
     }
 
     fn is_control_point_select(&self, fig: usize, target: Point) -> Option<usize> {
-        if let Some(object) = self.objects.get(fig) {
+        if let Some(object) = self.draw_state.get_objects().get(fig) {
             for (i, p) in object.get_core().points.iter().enumerate() {
                 if (target.0 - p.0).pow(2) + (target.1 - p.1).pow(2) <= 5i32.pow(2) {
                     return Some(i);
@@ -395,35 +365,29 @@ impl State {
 
     fn shape_add_control_point(&mut self, nxt: Point) {
         if let Some(cur) = self.cur_shape.as_mut() {
-            let op = UpdateOp::AddControlPoint(nxt);
-            cur.as_mut().update(&op);
+            cur.update(&UpdateOp::AddControlPoint(nxt));
         }
     }
 
     fn shape_update_last_point(&mut self, nxt: Point) {
         if let Some(cur) = self.cur_shape.as_mut() {
             let last_point = cur.get_core().points.len() - 1;
-            let op = UpdateOp::ControlPoint {
+            cur.update(&UpdateOp::ControlPoint {
                 index: last_point,
                 point: nxt,
-            };
-            cur.as_mut().update(&op);
+            });
         }
     }
 
     fn shape_end(&mut self, end: Point) {
-        // "take" function already does self.cur_shape = None
-        if let Some(cur) = self.cur_shape.take() {
-            self.shape_update_last_point(end);
-            self.objects.push(cur);
+        if let Some(mut cur) = self.cur_shape.take() {
+            let last_point = cur.get_core().points.len() - 1;
+            cur.update(&UpdateOp::ControlPoint {
+                index: last_point,
+                point: end,
+            });
+            self.draw_state.add_shape(cur);
         }
-    }
-
-    fn box_new_shape<T>(&self, core: ShapeCore) -> Box<dyn ShapeImpl>
-    where
-        T: ShapeImpl + Sized + 'static,
-    {
-        Box::new(T::new(core))
     }
 
     fn box_init_shape<T>(&self, start: Point) -> Box<dyn ShapeImpl>
@@ -437,26 +401,23 @@ impl State {
             fill_color: self.fill_color,
             shape_type: self.current,
         };
-        self.box_new_shape::<T>(core)
+        new_shape_from_core(core)
     }
 
     fn update_selected_control_point(&mut self, point: Point) {
-        let all = self.get_selected_shape();
-        if let Some((obj, select)) = all {
-            let op = UpdateOp::ControlPoint {
-                index: select.control_point_selected.unwrap(),
-                point,
-            };
-            obj.as_mut().update(&op);
-        }
+        let (shape_idx, point_idx) = if let Some((_, select)) = self.get_selected_shape() {
+            (select.index, select.control_point_selected.unwrap())
+        } else {
+            return;
+        };
+        self.draw_state
+            .update_shape_control_point(shape_idx, point_idx, point);
     }
 
-    // serialize what we need using the SerializedState and save it
     fn save_state(&self) {
         let mut core_arr = vec![];
-        for shape in self.objects.iter() {
-            let core = shape.get_core();
-            core_arr.push(core);
+        for shape in self.draw_state.get_objects().iter() {
+            core_arr.push(shape.get_core());
         }
 
         let saved_state = SerializedState {
@@ -465,50 +426,37 @@ impl State {
         };
 
         let state_str = serde_json::to_string_pretty(&saved_state).unwrap();
-        let file_path = FileDialog::new()
+        if let Some(path) = FileDialog::new()
             .set_title("Save drawing")
             .set_file_name("drawing.json")
-            .add_filter("JSON Files", &["json"]) // Suggest the .json extension
-            .save_file();
-
-        if let Some(path) = file_path {
-            println!("saving to: {:?}", path);
+            .add_filter("JSON Files", &["json"])
+            .save_file()
+        {
             fs::write(path, state_str).unwrap();
-        } else {
-            println!("File save cancelled by the user.");
         }
     }
 
     pub fn load_state(&mut self) {
-        let file_path = FileDialog::new()
+        if let Some(path) = FileDialog::new()
             .set_title("Open Drawing State")
             .add_filter("JSON Files", &["json"])
-            .pick_file();
-
-        if let Some(path) = file_path {
+            .pick_file()
+        {
             let state_str = fs::read_to_string(&path).unwrap();
             let loaded_state: SerializedState = serde_json::from_str(&state_str).unwrap();
-            self.objects = vec![];
+            // self.objects = vec![];
 
             for core in loaded_state.objects {
-                let boxed_shape = match core.shape_type {
-                    Shape::Line => self.box_new_shape::<primitives::Line>(core),
-                    Shape::Ellipse => self.box_new_shape::<primitives::Ellipse>(core),
-                    Shape::Triangle => self.box_new_shape::<primitives::Triangle>(core),
-                    Shape::Rectangle => self.box_new_shape::<primitives::Rectangle>(core),
-                    Shape::Bezier => self.box_new_shape::<primitives::Bezier>(core),
-                };
-                self.objects.push(boxed_shape);
+                let boxed_shape = new_shape_from_core(core);
+                self.draw_state.add_shape(boxed_shape);
             }
             self.background_color = loaded_state.background_color;
-
-            println!("Successfully loaded state from file.");
         }
     }
 
     fn get_selected_shape(&mut self) -> Option<(&mut Box<dyn ShapeImpl>, &mut ShapeSelected)> {
         if let Some(selected) = self.selected.as_mut() {
-            if let Some(object) = self.objects.get_mut(selected.index) {
+            if let Some(object) = self.draw_state.get_objects_mut().get_mut(selected.index) {
                 return Some((object, selected));
             }
         }
