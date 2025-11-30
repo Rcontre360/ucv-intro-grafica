@@ -37,6 +37,9 @@ impl<'a> Canvas<'a> {
             // here we get the previous color on that position
             let raw_prev = &self.buffer[index..index + 4];
             let prev_color = RGBA::new(raw_prev[0], raw_prev[1], raw_prev[2], raw_prev[3]);
+            if prev_color[3] > 0 {
+                println!("OVERLAPPING");
+            }
             // the + operation between colors is defined at ./src/core/rgba.rs
             let new_color = color + prev_color;
 

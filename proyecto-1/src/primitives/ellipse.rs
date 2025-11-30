@@ -53,6 +53,8 @@ impl ShapeImpl for Ellipse {
     }
 }
 
+/// we draw an ellipse using an integer only algorithm. Same as the one used on homework 1 with the
+/// optimizations included.
 fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
     let (center, a, b) = get_ellipse(core);
 
@@ -69,6 +71,8 @@ fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
     let draw_fill = !core.fill_color.is_transparent();
 
     draw_symmetric(canvas, center, x, y, core.color);
+    // here we added an extra condition that draws the inside of the ellipse.
+    // it should only be used on each different "y"
     if draw_fill {
         draw_fill_line(canvas, center, x as i32, y as i32, core.fill_color);
     }
@@ -118,6 +122,8 @@ fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
     }
 }
 
+/// this just draws a line from center-x+1 to center+x-1.
+/// its always an horizontal line
 fn draw_fill_line(canvas: &mut Canvas, center: Point, x: i32, y: i32, color: RGBA) {
     let x_start = center.0 - x + 1;
     let x_end = center.0 + x - 1;
@@ -131,6 +137,7 @@ fn draw_fill_line(canvas: &mut Canvas, center: Point, x: i32, y: i32, color: RGB
     }
 }
 
+/// draws 4 points symetric given the first one on the first quadrant
 fn draw_symmetric(canvas: &mut Canvas, center: Point, x: i64, y: i64, color: RGBA) {
     let (_x, _y) = (x as i32, y as i32);
     let Point(cx, cy) = center;
@@ -140,6 +147,7 @@ fn draw_symmetric(canvas: &mut Canvas, center: Point, x: i64, y: i64, color: RGB
     canvas.set_pixel(cx - _x, cy - _y, color);
 }
 
+/// draws the edge case when the ellipse is flat on the x axis. Done in homework 1 as well
 fn draw_edge_case(canvas: &mut Canvas, center: Point, a: i32, x_drawn: i32, color: RGBA) {
     let mut x = center.0 - a;
     let end = center.0 - x_drawn;
@@ -156,6 +164,7 @@ fn draw_edge_case(canvas: &mut Canvas, center: Point, a: i32, x_drawn: i32, colo
     }
 }
 
+/// returns the common values of an ellipse, center, a and b
 fn get_ellipse(core: &ShapeCore) -> (Point, i64, i64) {
     let p1 = core.points[0];
     let p2 = core.points[1];

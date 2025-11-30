@@ -1,11 +1,13 @@
 use super::line::draw_line;
 use crate::canvas::Canvas;
-use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
+use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
 
+/// triangle object that holds the implementation for it
 pub struct Triangle {
     core: ShapeCore,
 }
 
+/// triangle shape implementation
 impl ShapeImpl for Triangle {
     fn new(core: ShapeCore) -> Triangle {
         Triangle { core }
@@ -44,10 +46,13 @@ impl ShapeImpl for Triangle {
     }
 }
 
+/// draws a triangle. if we dont have enough points means we are only drawing the first line
+/// if we have 3 points we draw 3 lines
 fn draw_triangle(core: &ShapeCore, canvas: &mut Canvas) {
     if core.points.len() <= 2 {
         draw_line(&core, canvas);
     } else {
+        // if we have a fill color defined then we will fill the triangle
         if !core.fill_color.is_transparent() {
             fill_triangle(core, canvas);
         }
@@ -62,8 +67,12 @@ fn draw_triangle(core: &ShapeCore, canvas: &mut Canvas) {
     }
 }
 
+/// this function fills the triangle given the shape core.
+/// to fill it we build the top triangle from the horizontal line on the corner. Then do the same
+/// on the bottom triangle
 fn fill_triangle(core: &ShapeCore, canvas: &mut Canvas) {
     let mut points = core.points.clone();
+    // we sort the points by "y" to get the lowest one first
     points.sort_by(|a, b| a.1.cmp(&b.1));
 
     let p1 = points[0];
@@ -74,40 +83,62 @@ fn fill_triangle(core: &ShapeCore, canvas: &mut Canvas) {
         return; // Flat triangle
     }
 
+    // the 4th point from the horizontal line intersection with the triangle side
     let p4 = (
         (p1.0 + ((p2.1 - p1.1) as f32 / (p3.1 - p1.1) as f32 * (p3.0 - p1.0) as f32) as i32),
         p2.1,
     )
         .into();
+    // first fills the top triangle then the bottom one
     fill_top_triangle(canvas, p1, p2, p4, core.fill_color);
     fill_bottom_triangle(canvas, p2, p4, p3, core.fill_color);
 }
 
+/// given a triangle (3 points), with the bottom side horizontal, we fill it with a color
 fn fill_top_triangle(canvas: &mut Canvas, p1: Point, p2: Point, p3: Point, color: RGBA) {
     let m_1 = (p2.0 - p1.0) as f32 / (p2.1 - p1.1) as f32;
     let m_2 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
 
-    let mut cur_x1 = p1.0 as f32;
-    let mut cur_x2 = p1.0 as f32;
-
-    for y in p1.1..p2.1 {
-        draw_horizontal(canvas, cur_x1.round() as i32, cur_x2.round() as i32, y, color);
-        cur_x1 += m_1;
-        cur_x2 += m_2;
-    }
+    fill_horizontal_triangle(p1.1..p2.1, Point(p1.0, p1.0), m_1, m_2, color, canvas);
 }
 
 fn fill_bottom_triangle(canvas: &mut Canvas, p1: Point, p2: Point, p3: Point, color: RGBA) {
     let m_1 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
     let m_2 = (p3.0 - p2.0) as f32 / (p3.1 - p2.1) as f32;
 
-    let mut cur_x1 = p3.0 as f32;
-    let mut cur_x2 = p3.0 as f32;
+    fill_horizontal_triangle(
+        (p1.1..p3.1).rev(),
+        Point(p3.0, p3.0),
+        -m_1,
+        -m_2,
+        color,
+        canvas,
+    );
+}
 
-    for y in (p1.1..p3.1).rev() {
-        draw_horizontal(canvas, cur_x1.round() as i32, cur_x2.round() as i32, y, color);
-        cur_x1 -= m_1;
-        cur_x2 -= m_2;
+fn fill_horizontal_triangle<T>(
+    all_y: T,
+    x_lim: Point,
+    m_1: f32,
+    m_2: f32,
+    color: RGBA,
+    canvas: &mut Canvas,
+) where
+    T: Iterator<Item = i32>,
+{
+    let mut cur_x1 = x_lim.0 as f32;
+    let mut cur_x2 = x_lim.1 as f32;
+
+    for y in all_y {
+        draw_horizontal(
+            canvas,
+            cur_x1.round() as i32,
+            cur_x2.round() as i32,
+            y,
+            color,
+        );
+        cur_x1 += m_1;
+        cur_x2 += m_2;
     }
 }
 
