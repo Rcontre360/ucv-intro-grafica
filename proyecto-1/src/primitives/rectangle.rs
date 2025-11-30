@@ -58,14 +58,20 @@ fn draw_rectangle<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
     let min_y = min(p1.1, p2.1);
     let max_y = max(p1.1, p2.1);
 
-    for x in min_x..max_x {
+    // we draw x inclusive
+    for x in min_x..(max_x + 1) {
         canvas.set_pixel(x, max_y, core.color);
-        canvas.set_pixel(x, min_y, core.color);
+        if min_y != max_y {
+            canvas.set_pixel(x, min_y, core.color);
+        }
     }
 
-    for y in min_y..max_y {
+    // we draw y exclusive to avoid drawing the corners twice
+    for y in (min_y + 1)..max_y {
         canvas.set_pixel(min_x, y, core.color);
-        canvas.set_pixel(max_x, y, core.color);
+        if min_x != max_x {
+            canvas.set_pixel(max_x, y, core.color);
+        }
     }
 
     if !core.fill_color.is_transparent() {

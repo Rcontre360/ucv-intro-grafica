@@ -40,6 +40,7 @@ impl ShapeImpl for Bezier {
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
+        println!("DRAWING BEZIER");
         draw_bezier(&self.core, canvas);
     }
 
