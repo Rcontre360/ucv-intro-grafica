@@ -146,15 +146,15 @@ fn draw_symmetric(canvas: &mut Canvas, center: Point, x: i64, y: i64, color: RGB
 
     canvas.set_pixel(cx + _x, cy + _y, color);
 
-    if cx + _x != cx - _x {
+    if _x != 0 {
         canvas.set_pixel(cx - _x, cy + _y, color);
     }
 
-    if cy - _y != cy + _y {
+    if _y != 0 {
         canvas.set_pixel(cx + _x, cy - _y, color);
     }
 
-    if cy + _y != cy - _y && cx + _x != cx - _x {
+    if _x != 0 && _y != 0 {
         canvas.set_pixel(cx - _x, cy - _y, color);
     }
 }
@@ -168,7 +168,7 @@ fn draw_edge_case(canvas: &mut Canvas, center: Point, a: i32, x_drawn: i32, colo
         x += 1;
     }
 
-    x = center.0 + x_drawn;
+    x = center.0 + x_drawn + 1;
     let end = center.0 + a;
     while x < end {
         canvas.set_pixel(x, center.1, color);
