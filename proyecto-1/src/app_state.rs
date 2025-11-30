@@ -100,6 +100,12 @@ impl AppState {
         }
     }
 
+    pub fn get_selected_shape_type(&self) -> Option<Shape> {
+        self.selected
+            .as_ref()
+            .map(|s| self.draw_state.get_object(s.index).get_core().shape_type)
+    }
+
     pub fn get_colors(&self) -> (RGBA, RGBA, RGBA, RGBA) {
         (
             self.color,
