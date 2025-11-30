@@ -1,15 +1,219 @@
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu::{Renderer, ScreenDescriptor};
-use pixels::{wgpu, PixelsContext};
+use pixels::{PixelsContext, wgpu};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
 use crate::app_state::{AppState, GUIEvent};
 use crate::core::Shape;
 
-/// Example application state. A real application will need a lot more state than this.
+// --- Panels Trait and Implementations ---
+
+/// A trait for a UI panel that can be drawn on the screen.
+trait UiPanel {
+    /// Draws the panel.
+    fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState);
+}
+
+/// Panel for top-level controls like File menu, Undo, and Redo.
+struct TopControlsPanel;
+impl UiPanel for TopControlsPanel {
+    fn draw(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context, app_state: &mut AppState) {
+        ui.horizontal(|ui| {
+            ui.menu_button("File", |ui| {
+                if ui.button("Open...").clicked() {
+                    app_state.gui_update(GUIEvent::Load);
+                    ui.close_menu();
+                }
+                if ui.button("Save As...").clicked() {
+                    app_state.gui_update(GUIEvent::Save);
+                    ui.close_menu();
+                }
+            });
+
+            if ui.button("↩").on_hover_text("Undo").clicked() {
+                app_state.gui_update(GUIEvent::Undo);
+            }
+            if ui.button("↪").on_hover_text("Redo").clicked() {
+                app_state.gui_update(GUIEvent::Redo);
+            }
+        });
+        ui.separator();
+    }
+}
+
+/// Panel for shape selection and clearing the canvas.
+struct ShapePanel;
+impl UiPanel for ShapePanel {
+    fn draw(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context, app_state: &mut AppState) {
+        ui.horizontal(|ui| {
+            ui.label("Shape:");
+            egui::ComboBox::from_id_source("shape_selector")
+                .selected_text(app_state.current.to_string())
+                .show_ui(ui, |ui| {
+                    let shapes = [
+                        Shape::Line,
+                        Shape::Ellipse,
+                        Shape::Triangle,
+                        Shape::Rectangle,
+                        Shape::Bezier,
+                    ];
+                    for shape in shapes.iter() {
+                        if ui
+                            .selectable_value(&mut app_state.current, *shape, shape.to_string())
+                            .changed()
+                        {
+                            app_state.gui_update(GUIEvent::ShapeType(*shape));
+                        }
+                    }
+                });
+        });
+
+        if ui.button("Clear Canvas").clicked() {
+            app_state.gui_update(GUIEvent::Clear);
+        }
+        ui.separator();
+    }
+}
+
+/// Panel for color controls.
+struct ColorPanel;
+impl UiPanel for ColorPanel {
+    fn draw(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context, app_state: &mut AppState) {
+        ui.heading("COLOR");
+        let colors = app_state.get_colors();
+        let (mut border, mut fill, mut points, mut background) = (
+            colors.0.into(),
+            colors.1.into(),
+            colors.2.into(),
+            colors.3.into(),
+        );
+
+        egui::Grid::new("color_grid")
+            .num_columns(2)
+            .spacing([10.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Border");
+                if ui
+                    .color_edit_button_srgba_unmultiplied(&mut border)
+                    .changed()
+                {
+                    app_state.gui_update(GUIEvent::BorderColor(border.into()));
+                }
+                ui.end_row();
+
+                ui.label("Fill");
+                if ui.color_edit_button_srgba_unmultiplied(&mut fill).changed() {
+                    app_state.gui_update(GUIEvent::FillColor(fill.into()));
+                }
+                ui.end_row();
+
+                ui.label("Points");
+                if ui
+                    .color_edit_button_srgba_unmultiplied(&mut points)
+                    .changed()
+                {
+                    app_state.gui_update(GUIEvent::PointsColor(points.into()));
+                }
+                ui.end_row();
+
+                ui.label("Background");
+                if ui
+                    .color_edit_button_srgba_unmultiplied(&mut background)
+                    .changed()
+                {
+                    app_state.gui_update(GUIEvent::BackgroundColor(background.into()));
+                }
+                ui.end_row();
+            });
+        ui.separator();
+    }
+}
+
+/// Panel for adjusting shape depth (z-ordering).
+struct DepthPanel;
+impl UiPanel for DepthPanel {
+    fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState) {
+        let is_shape_selected = app_state.selected.is_some();
+        let depth_header = egui::CollapsingHeader::new("Depth")
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.add_enabled_ui(is_shape_selected, |ui| {
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("Forward")
+                            .on_hover_text("Bring forward by one")
+                            .clicked()
+                        {
+                            app_state.gui_update(GUIEvent::ToFront(false));
+                        }
+                        if ui
+                            .button("Backward")
+                            .on_hover_text("Send backward by one")
+                            .clicked()
+                        {
+                            app_state.gui_update(GUIEvent::ToBack(false));
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("To Front")
+                            .on_hover_text("Bring to front")
+                            .clicked()
+                        {
+                            app_state.gui_update(GUIEvent::ToFront(true));
+                        }
+                        if ui.button("To Back").on_hover_text("Send to back").clicked() {
+                            app_state.gui_update(GUIEvent::ToBack(true));
+                        }
+                    });
+                });
+            });
+        if !is_shape_selected && depth_header.header_response.hovered() {
+            egui::show_tooltip(ctx, egui::Id::new("depth_tooltip"), |ui| {
+                ui.label("Select a shape to enable these options.");
+            });
+        }
+    }
+}
+
+/// Panel for Bezier-specific settings.
+struct BezierPanel;
+impl UiPanel for BezierPanel {
+    fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState) {
+        let is_bezier_selected = matches!(app_state.get_selected_shape_type(), Some(Shape::Bezier));
+        let bezier_header = egui::CollapsingHeader::new("Bezier Settings")
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.add_enabled_ui(is_bezier_selected, |ui| {
+                    if ui.button("Degree Elevate").clicked() {
+                        app_state.gui_update(GUIEvent::DegreeElevate);
+                    }
+                    if ui.button("Subdivide").clicked() {
+                        app_state.gui_update(GUIEvent::Subdivide);
+                    }
+                    let mut subdivision_t = app_state.ui_subdivision_t;
+                    if ui
+                        .add(egui::Slider::new(&mut subdivision_t, 0.0..=1.0).text("Subdivision"))
+                        .changed()
+                    {
+                        app_state.gui_update(GUIEvent::SubdivisionValue(subdivision_t));
+                    }
+                });
+            });
+
+        if !is_bezier_selected && bezier_header.header_response.hovered() {
+            egui::show_tooltip(ctx, egui::Id::new("bezier_tooltip"), |ui| {
+                ui.label("Select a Bezier curve to enable these options.");
+            });
+        }
+    }
+}
+
+/// Manages the application's UI panels and state.
 pub(crate) struct TemplateApp {
     app_state: AppState,
+    panels: Vec<Box<dyn UiPanel>>,
 }
 
 impl TemplateApp {
@@ -17,174 +221,32 @@ impl TemplateApp {
     pub fn new() -> Self {
         Self {
             app_state: AppState::new(),
+            panels: vec![
+                Box::new(TopControlsPanel),
+                Box::new(ShapePanel),
+                Box::new(ColorPanel),
+                Box::new(DepthPanel),
+                Box::new(BezierPanel),
+            ],
         }
     }
 
     /// Called each time the UI is updated.
     pub fn update(&mut self, ctx: &egui::Context) {
-        // 1. Font size
-        let mut style = (*ctx.style()).clone();
-        style.text_styles = [
-            (egui::TextStyle::Heading, egui::FontId::new(22.0, egui::FontFamily::Proportional)),
-            (egui::TextStyle::Body, egui::FontId::new(18.0, egui::FontFamily::Proportional)),
-            (egui::TextStyle::Button, egui::FontId::new(18.0, egui::FontFamily::Proportional)),
-            (egui::TextStyle::Small, egui::FontId::new(14.0, egui::FontFamily::Proportional)),
-        ].into();
-        ctx.set_style(style);
-
         egui::SidePanel::left("side_panel")
-        .default_width(250.0)
-        .show(ctx, |ui| {
-            // 2. Top-left controls (File, Undo, Redo)
-            ui.horizontal(|ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open...").clicked() {
-                        self.app_state.gui_update(GUIEvent::Load);
-                        ui.close_menu();
-                    }
-                    if ui.button("Save As...").clicked() {
-                        self.app_state.gui_update(GUIEvent::Save);
-                        ui.close_menu();
-                    }
-                });
-
-                if ui.button("↩").on_hover_text("Undo").clicked() {
-                    self.app_state.gui_update(GUIEvent::Undo);
+            .default_width(250.0)
+            .show(ctx, |ui| {
+                for panel in &mut self.panels {
+                    panel.draw(ui, ctx, &mut self.app_state);
                 }
-                if ui.button("↪").on_hover_text("Redo").clicked() {
-                    self.app_state.gui_update(GUIEvent::Redo);
-                }
+
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                    ui.add(egui::github_link_file!(
+                        "https://github.com/emilk/egui/blob/master/",
+                        "Source code."
+                    ));
+                });
             });
-
-            ui.separator();
-
-            // 3. Shape Selection
-            ui.horizontal(|ui| {
-                ui.label("Shape:");
-                egui::ComboBox::from_id_source("shape_selector")
-                    .selected_text(self.app_state.current.to_string())
-                    .show_ui(ui, |ui| {
-                        let shapes = [Shape::Line, Shape::Ellipse, Shape::Triangle, Shape::Rectangle, Shape::Bezier];
-                        for shape in shapes.iter() {
-                            if ui.selectable_value(&mut self.app_state.current, *shape, shape.to_string()).changed() {
-                                self.app_state.gui_update(GUIEvent::ShapeType(*shape));
-                            }
-                        }
-                    });
-            });
-
-            if ui.button("Clear Canvas").clicked() {
-                self.app_state.gui_update(GUIEvent::Clear);
-            }
-
-            ui.separator();
-
-            // 4. Color Section (Grid layout)
-            ui.heading("COLOR");
-            let colors = self.app_state.get_colors();
-            let (mut border, mut fill, mut points, mut background) = (
-                colors.0.into(),
-                colors.1.into(),
-                colors.2.into(),
-                colors.3.into(),
-            );
-
-            egui::Grid::new("color_grid")
-                .num_columns(2)
-                .spacing([10.0, 8.0])
-                .show(ui, |ui| {
-                    ui.label("Border");
-                    if ui.color_edit_button_srgba_unmultiplied(&mut border).changed() {
-                        self.app_state.gui_update(GUIEvent::BorderColor(border.into()));
-                    }
-                    ui.end_row();
-
-                    ui.label("Fill");
-                    if ui.color_edit_button_srgba_unmultiplied(&mut fill).changed() {
-                        self.app_state.gui_update(GUIEvent::FillColor(fill.into()));
-                    }
-                    ui.end_row();
-
-                    ui.label("Points");
-                    if ui.color_edit_button_srgba_unmultiplied(&mut points).changed() {
-                        self.app_state.gui_update(GUIEvent::PointsColor(points.into()));
-                    }
-                    ui.end_row();
-
-                    ui.label("Background");
-                    if ui.color_edit_button_srgba_unmultiplied(&mut background).changed() {
-                        self.app_state.gui_update(GUIEvent::BackgroundColor(background.into()));
-                    }
-                    ui.end_row();
-                });
-
-
-            ui.separator();
-
-            // 5. Depth Section (CollapsingHeader)
-            let is_shape_selected = self.app_state.selected.is_some();
-            let depth_header = egui::CollapsingHeader::new("Depth")
-                .default_open(false)
-                .show(ui, |ui| {
-                     ui.add_enabled_ui(is_shape_selected, |ui| {
-                        ui.horizontal(|ui| {
-                            if ui.button("Forward").on_hover_text("Bring forward by one").clicked() {
-                                self.app_state.gui_update(GUIEvent::ToFront(false));
-                            }
-                            if ui.button("Backward").on_hover_text("Send backward by one").clicked() {
-                                self.app_state.gui_update(GUIEvent::ToBack(false));
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            if ui.button("To Front").on_hover_text("Bring to front").clicked() {
-                                self.app_state.gui_update(GUIEvent::ToFront(true));
-                            }
-                            if ui.button("To Back").on_hover_text("Send to back").clicked() {
-                                self.app_state.gui_update(GUIEvent::ToBack(true));
-                            }
-                        });
-                    });
-                });
-            if !is_shape_selected && depth_header.header_response.hovered() {
-                egui::show_tooltip(ctx, egui::Id::new("depth_tooltip"), |ui| {
-                   ui.label("Select a shape to enable these options.");
-               });
-           }
-
-
-            // 6. Bezier Settings
-            let is_bezier_selected = matches!(self.app_state.get_selected_shape_type(), Some(Shape::Bezier));
-            let bezier_header = egui::CollapsingHeader::new("Bezier Settings")
-                .default_open(false)
-                .show(ui, |ui| {
-                    ui.add_enabled_ui(is_bezier_selected, |ui| {
-                        if ui.button("Degree Elevate").clicked() {
-                            self.app_state.gui_update(GUIEvent::DegreeElevate);
-                        }
-                        if ui.button("Subdivide").clicked() {
-                            self.app_state.gui_update(GUIEvent::Subdivide);
-                        }
-                        let mut subdivision_t = self.app_state.ui_subdivision_t;
-                        if ui.add(egui::Slider::new(&mut subdivision_t, 0.0..=1.0).text("Subdivision")).changed() {
-                            self.app_state.gui_update(GUIEvent::SubdivisionValue(subdivision_t));
-                        }
-                    });
-                });
-
-            if !is_bezier_selected && bezier_header.header_response.hovered() {
-                 egui::show_tooltip(ctx, egui::Id::new("bezier_tooltip"), |ui| {
-                    ui.label("Select a Bezier curve to enable these options.");
-                });
-            }
-
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                ui.add(egui::github_link_file!(
-                    "https://github.com/emilk/egui/blob/master/",
-                    "Source code."
-                ));
-            });
-        });
     }
 }
 
@@ -214,6 +276,30 @@ impl Framework {
         let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
 
         let egui_ctx = Context::default();
+
+        // Set style on creation
+        let mut style = (*egui_ctx.style()).clone();
+        style.text_styles = [
+            (
+                egui::TextStyle::Heading,
+                egui::FontId::new(22.0, egui::FontFamily::Proportional),
+            ),
+            (
+                egui::TextStyle::Body,
+                egui::FontId::new(18.0, egui::FontFamily::Proportional),
+            ),
+            (
+                egui::TextStyle::Button,
+                egui::FontId::new(18.0, egui::FontFamily::Proportional),
+            ),
+            (
+                egui::TextStyle::Small,
+                egui::FontId::new(14.0, egui::FontFamily::Proportional),
+            ),
+        ]
+        .into();
+        egui_ctx.set_style(style);
+
         let egui_state = egui_winit::State::new(
             egui_ctx.clone(),
             ViewportId::ROOT,

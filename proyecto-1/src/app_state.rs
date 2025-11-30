@@ -6,7 +6,7 @@ use winit::window::CursorIcon;
 
 use crate::{
     canvas::Canvas,
-    core::{Point, Shape, ShapeCore, ShapeImpl, UpdateOp, RGBA},
+    core::{Point, RGBA, Shape, ShapeCore, ShapeImpl, UpdateOp},
     draw_state::DrawState,
     primitives::new_shape_from_core,
 };
@@ -84,6 +84,7 @@ pub struct AppState {
     color: RGBA,
     fill_color: RGBA,
     points_color: RGBA,
+    selection_color: RGBA,
 }
 
 impl AppState {
@@ -92,7 +93,8 @@ impl AppState {
             current: Shape::Line,
             color: RGBA::new(255, 255, 255, 255),
             fill_color: RGBA::new(100, 50, 10, 150),
-            points_color: RGBA::new(0, 0, 255, 255),
+            points_color: RGBA::new(255, 80, 80, 255),
+            selection_color: RGBA::new(80, 80, 250, 255),
             cur_shape: None,
             selected: None,
             draw_state: DrawState::new(),
@@ -333,13 +335,13 @@ impl AppState {
     pub fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         canvas.clear(self.draw_state.get_background_color());
 
-        for shape in self.draw_state.get_objects().iter() {
-            shape.draw(canvas);
-        }
-
-        if let Some(selected) = self.selected.as_ref() {
-            let shape = self.draw_state.get_object(selected.index);
-            shape.draw_selection(self.points_color, canvas);
+        for (id, shape) in self.draw_state.get_objects().iter().enumerate() {
+            if self.selected.as_ref().is_some() && self.selected.as_ref().unwrap().index == id {
+                shape.draw_with_color(self.selection_color, canvas);
+                shape.draw_selection(self.points_color, canvas);
+            } else {
+                shape.draw(canvas);
+            }
         }
 
         if let Some(cur) = self.cur_shape.as_ref() {
@@ -420,9 +422,11 @@ impl AppState {
         None
     }
 
-    //TODO finish this
     fn is_building_bezier(&self) -> bool {
-        false
+        if let Some(shape) = self.cur_shape.as_ref() {
+            return shape.get_type() == Shape::Bezier;
+        }
+        return false;
     }
 
     fn is_control_point_select(&self, fig: usize, target: Point) -> Option<usize> {

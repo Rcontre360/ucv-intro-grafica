@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 
-use crate::core::{Point, ShapeCore, ShapeImpl};
+use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
 
 pub struct Line {
     core: ShapeCore,
@@ -21,6 +21,10 @@ impl ShapeImpl for Line {
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
         draw_line(&self.core, canvas);
+    }
+
+    fn draw_with_color<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        draw_line(&self.core.copy_with_color(color), canvas);
     }
 
     fn hit_test(&self, point: Point) -> bool {

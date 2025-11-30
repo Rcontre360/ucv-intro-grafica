@@ -6,7 +6,6 @@ const DETAIL_FACTOR: f32 = 0.3;
 
 pub struct Bezier {
     core: ShapeCore,
-    // each bezier holds its own subdivide since its part of its drawing selection process
     subdivide_t: f32,
 }
 
@@ -41,37 +40,25 @@ impl ShapeImpl for Bezier {
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        let mut t = 0.0;
-        let detail = self.get_detail();
-        let mut prev_pts: Option<Point> = None;
+        draw_bezier(&self.core, canvas);
+    }
 
-        while t <= 1.0 {
-            let p = self.de_casteljau(t);
-            if let Some(prev) = prev_pts {
-                let mut core = self.core.clone();
-                core.points = vec![prev, p];
-                draw_line(&core, canvas);
-            }
-
-            prev_pts = Some(p);
-            t += detail;
-        }
+    fn draw_with_color<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        draw_bezier(&self.core.copy_with_color(color), canvas);
     }
 
     fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
-        let points = &self.core.points;
         self.draw_selection_basic(color, canvas);
 
-        for i in 1..points.len() {
-            let lin = ShapeCore::new(vec![points[i - 1], points[i]], self.core.color);
-            draw_line(&lin, canvas);
+        for i in 1..self.core.points.len() {
+            let line_core = self.core.copy_with_points(vec![self.core.points[i - 1], self.core.points[i]]);
+            draw_line(&line_core, canvas);
         }
 
-        let p = self.de_casteljau(self.subdivide_t);
+        let p = de_casteljau(&self.core, self.subdivide_t);
         self.draw_control_point(p, color, canvas);
     }
 
-    // this hit tests is simple
     fn hit_test(&self, point: Point) -> bool {
         if self.core.points.is_empty() {
             return false;
@@ -118,18 +105,6 @@ impl ShapeImpl for Bezier {
 }
 
 impl Bezier {
-    fn de_casteljau(&self, t: f32) -> Point {
-        let mut pts_cpy = self.core.points.clone();
-
-        for r in 1..pts_cpy.len() {
-            for i in 0..(pts_cpy.len() - r) {
-                pts_cpy[i] = pts_cpy[i].interpolate(pts_cpy[i + 1], t);
-            }
-        }
-
-        pts_cpy[0]
-    }
-
     fn degree_elevate(&mut self) {
         let n = self.core.points.len() as f32;
         let mut new_points: Vec<Point> = Vec::with_capacity(n as usize + 1);
@@ -143,19 +118,51 @@ impl Bezier {
             new_points.push(b.interpolate(b_prev, i as f32 / n));
         }
 
-        new_points.push(self.core.points.last().unwrap().clone());
+        new_points.push(*self.core.points.last().unwrap());
 
         self.core.points = new_points;
     }
+}
 
-    fn get_detail(&self) -> f32 {
-        let mut distance = 0.0;
-        let pts = &self.core.points;
-        for i in 0..pts.len() - 1 {
-            distance += pts[i].distance(pts[i + 1]);
+fn draw_bezier(core: &ShapeCore, canvas: &mut Canvas) {
+    let mut t = 0.0;
+    let detail = get_detail(core);
+    let mut prev_pts: Option<Point> = None;
+
+    while t <= 1.0 {
+        let p = de_casteljau(core, t);
+        if let Some(prev) = prev_pts {
+            let line_core = core.copy_with_points(vec![prev, p]);
+            draw_line(&line_core, canvas);
         }
 
-        let dist = distance * DETAIL_FACTOR / 10.0;
-        1.0 / dist
+        prev_pts = Some(p);
+        t += detail;
     }
+}
+
+fn de_casteljau(core: &ShapeCore, t: f32) -> Point {
+    let mut pts_cpy = core.points.clone();
+
+    for r in 1..pts_cpy.len() {
+        for i in 0..(pts_cpy.len() - r) {
+            pts_cpy[i] = pts_cpy[i].interpolate(pts_cpy[i + 1], t);
+        }
+    }
+
+    pts_cpy[0]
+}
+
+fn get_detail(core: &ShapeCore) -> f32 {
+    let mut distance = 0.0;
+    let pts = &core.points;
+    for i in 0..pts.len() - 1 {
+        distance += pts[i].distance(pts[i + 1]);
+    }
+
+    let dist = distance * DETAIL_FACTOR / 10.0;
+    if dist.abs() < 1.0 {
+        return 0.1;
+    }
+    1.0 / dist
 }
