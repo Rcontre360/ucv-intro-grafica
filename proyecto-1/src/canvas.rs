@@ -38,6 +38,10 @@ impl<'a> Canvas<'a> {
             let raw_prev = &self.buffer[index..index + 4];
             let prev_color = RGBA::new(raw_prev[0], raw_prev[1], raw_prev[2], raw_prev[3]);
 
+            // THIS IS USED for debugging. if you want to check if our
+            if prev_color[3] > 0 {
+                println!("ALREADY DRAWN");
+            }
             // the + operation between colors is defined at ./src/core/rgba.rs
             let new_color = color + prev_color;
 
