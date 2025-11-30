@@ -91,8 +91,8 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             current: Shape::Line,
-            color: RGBA::new(255, 255, 255, 255),
-            fill_color: RGBA::new(100, 50, 10, 150),
+            color: RGBA::new(255, 255, 255, 200),
+            fill_color: RGBA::new(100, 50, 10, 0),
             points_color: RGBA::new(255, 80, 80, 255),
             selection_color: RGBA::new(80, 80, 250, 255),
             cur_shape: None,

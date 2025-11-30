@@ -47,23 +47,33 @@ impl ShapeImpl for Triangle {
 }
 
 /// draws a triangle. if we dont have enough points means we are only drawing the first line
-/// if we have 3 points we draw 3 lines
+/// if we have 3 points we draw 3 lines without overlapping
 fn draw_triangle(core: &ShapeCore, canvas: &mut Canvas) {
     if core.points.len() <= 2 {
-        draw_line(&core, canvas);
+        draw_line(&core, canvas, false);
     } else {
         // if we have a fill color defined then we will fill the triangle
         if !core.fill_color.is_transparent() {
             fill_triangle(core, canvas);
         }
 
-        let ab_core = core.copy_with_points(core.points[0..2].to_vec());
-        let bc_core = core.copy_with_points(core.points[1..3].to_vec());
-        let ca_core = core.copy_with_points(vec![core.points[2], core.points[0]]);
+        // here is important to notice that we should not draw 2 times the same pixel (endings of
+        // lines).
+        // So we do a trick, first line drawn is (a,b], second is (c,a] and third one is (b,c]
+        let ab = core.points[0..2].to_vec();
+        let ca = vec![core.points[2], core.points[0]];
+        let bc = core.points[1..3].to_vec();
 
-        draw_line(&ab_core, canvas);
-        draw_line(&bc_core, canvas);
-        draw_line(&ca_core, canvas);
+        let ab_core = core.copy_with_points(ab);
+        let ca_core = core.copy_with_points(ca);
+        let bc_core = core.copy_with_points(bc);
+
+        // draws b but not a
+        draw_line(&ab_core, canvas, false);
+        // draws a but not c
+        draw_line(&ca_core, canvas, false);
+        // draws c but not b
+        draw_line(&bc_core, canvas, false);
     }
 }
 
@@ -99,46 +109,33 @@ fn fill_top_triangle(canvas: &mut Canvas, p1: Point, p2: Point, p3: Point, color
     let m_1 = (p2.0 - p1.0) as f32 / (p2.1 - p1.1) as f32;
     let m_2 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
 
-    fill_horizontal_triangle(p1.1..p2.1, Point(p1.0, p1.0), m_1, m_2, color, canvas);
+    let mut cur_x1 = p1.0 as f32;
+    let mut cur_x2 = p1.0 as f32;
+
+    for y in p1.1..p2.1 {
+        draw_horizontal(canvas, cur_x1.ceil() as i32, cur_x2.ceil() as i32, y, color);
+        cur_x1 += m_1;
+        cur_x2 += m_2;
+    }
 }
 
 fn fill_bottom_triangle(canvas: &mut Canvas, p1: Point, p2: Point, p3: Point, color: RGBA) {
     let m_1 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
     let m_2 = (p3.0 - p2.0) as f32 / (p3.1 - p2.1) as f32;
 
-    fill_horizontal_triangle(
-        (p1.1..p3.1).rev(),
-        Point(p3.0, p3.0),
-        -m_1,
-        -m_2,
-        color,
-        canvas,
-    );
-}
+    let mut cur_x1 = p3.0 as f32;
+    let mut cur_x2 = p3.0 as f32;
 
-fn fill_horizontal_triangle<T>(
-    all_y: T,
-    x_lim: Point,
-    m_1: f32,
-    m_2: f32,
-    color: RGBA,
-    canvas: &mut Canvas,
-) where
-    T: Iterator<Item = i32>,
-{
-    let mut cur_x1 = x_lim.0 as f32;
-    let mut cur_x2 = x_lim.1 as f32;
-
-    for y in all_y {
+    for y in (p1.1..p3.1).rev() {
         draw_horizontal(
             canvas,
-            cur_x1.round() as i32,
-            cur_x2.round() as i32,
+            cur_x1.floor() as i32,
+            cur_x2.floor() as i32,
             y,
             color,
         );
-        cur_x1 += m_1;
-        cur_x2 += m_2;
+        cur_x1 -= m_1;
+        cur_x2 -= m_2;
     }
 }
 

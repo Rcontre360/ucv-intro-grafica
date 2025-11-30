@@ -1,6 +1,6 @@
 use super::line::draw_line;
 use crate::canvas::Canvas;
-use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
+use crate::core::{Point, RGBA, ShapeCore, ShapeImpl, UpdateOp};
 
 const DETAIL_FACTOR: f32 = 0.3;
 
@@ -51,8 +51,10 @@ impl ShapeImpl for Bezier {
         self.draw_selection_basic(color, canvas);
 
         for i in 1..self.core.points.len() {
-            let line_core = self.core.copy_with_points(vec![self.core.points[i - 1], self.core.points[i]]);
-            draw_line(&line_core, canvas);
+            let line_core = self
+                .core
+                .copy_with_points(vec![self.core.points[i - 1], self.core.points[i]]);
+            draw_line(&line_core, canvas, true);
         }
 
         let p = de_casteljau(&self.core, self.subdivide_t);
@@ -128,16 +130,23 @@ fn draw_bezier(core: &ShapeCore, canvas: &mut Canvas) {
     let mut t = 0.0;
     let detail = get_detail(core);
     let mut prev_pts: Option<Point> = None;
+    let mut draw_last = false;
 
     while t <= 1.0 {
         let p = de_casteljau(core, t);
         if let Some(prev) = prev_pts {
-            let line_core = core.copy_with_points(vec![prev, p]);
-            draw_line(&line_core, canvas);
+            // since draw line must not draw the first point we sort the points backwards p first
+            // then prev
+            // that way we draw a line that is connected to the next one without overlapping
+            let line_core = core.copy_with_points(vec![p, prev]);
+            draw_line(&line_core, canvas, draw_last);
         }
 
         prev_pts = Some(p);
         t += detail;
+        // our lines are drawn from a to b like this [a,b). the last point must be drawn, when this
+        // is true the full line is drawn [a,b]
+        draw_last = t + detail > 1.0;
     }
 }
 

@@ -24,11 +24,11 @@ impl ShapeImpl for Line {
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        draw_line(&self.core, canvas);
+        draw_line(&self.core, canvas, true);
     }
 
     fn draw_with_color<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
-        draw_line(&self.core.copy_with_color(color), canvas);
+        draw_line(&self.core.copy_with_color(color), canvas, true);
     }
 
     fn hit_test(&self, point: Point) -> bool {
@@ -37,7 +37,8 @@ impl ShapeImpl for Line {
 }
 
 /// draws a line given a shape core. Used by other shapes
-pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
+/// draw first is used to NOT draw the first point, used for other shapes to avoid overlapping
+pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>, draw_first: bool) {
     let points = &core.points;
     let a = points[0];
     let b = points[1];
@@ -61,7 +62,10 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
     let mut d = (dx - 2 * dy) * if run_on_x { 1 } else { -1 };
     let mut x = a.0 as i32;
     let mut y = a.1 as i32;
-    canvas.set_pixel(x, y, core.color);
+
+    if draw_first {
+        canvas.set_pixel(x, y, core.color);
+    }
 
     if run_on_x {
         while x > b.0 || x < b.0 {
@@ -77,7 +81,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
             canvas.set_pixel(x, y, core.color);
         }
     } else {
-        while y > b.1 || y < b.1 {
+        while (y > b.1 || y < b.1) {
             if d <= 0 {
                 d += inc_ne;
                 x += x_inc;
@@ -89,6 +93,12 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
 
             canvas.set_pixel(x, y, core.color);
         }
+
+        x += x_inc;
+        // edge case found. we want to draw a full line from a to b inclusive
+        // this ensures that b is drawn, when reaching this else condition it is not drawn
+        // This was tested to check if there are overlaps on the canvas
+        canvas.set_pixel(x, y, core.color);
     }
 }
 
