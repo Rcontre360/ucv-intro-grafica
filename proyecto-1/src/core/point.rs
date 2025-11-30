@@ -86,4 +86,20 @@ impl Point {
     pub fn dot(&self, other: Point) -> i32 {
         self.0 * other.0 + self.1 * other.1
     }
+
+    /// checks if the current point (self) is within the box formed by p1 and p2
+    pub fn is_within_box(&self, p1: Point, p2: Point) -> bool {
+        let Point(x1, y1) = p1;
+        let Point(x2, y2) = p2;
+
+        let min_x = x1.min(x2);
+        let max_x = x1.max(x2);
+        let min_y = y1.min(y2);
+        let max_y = y1.max(y2);
+
+        let is_x_inside = self.0 >= min_x && self.0 <= max_x;
+        let is_y_inside = self.1 >= min_y && self.1 <= max_y;
+
+        is_x_inside && is_y_inside
+    }
 }

@@ -2,7 +2,7 @@ use crate::canvas::Canvas;
 
 use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
 
-const LINE_DISTANCE_THRESHOLD: i32 = 100;
+const LINE_DISTANCE_THRESHOLD: u64 = 100;
 
 /// line object definition
 pub struct Line {
@@ -31,29 +31,8 @@ impl ShapeImpl for Line {
         draw_line(&self.core.copy_with_color(color), canvas);
     }
 
-    /// for the line hit test we just check if the given point is at certain distance from the line
-    /// I use the vector to point formulation since it gives me the distance of a finite line
-    /// (vector)
     fn hit_test(&self, point: Point) -> bool {
-        let p1 = self.core.points[0];
-        let p2 = self.core.points[1];
-
-        let delta = p2 - p1;
-        let delta_sqr = delta.dot(delta);
-
-        let p_to_p1 = point - p1;
-        let n = p_to_p1.dot(delta);
-
-        let closest_point = if n < 0 {
-            p1
-        } else if n > delta_sqr {
-            p2
-        } else {
-            p1 + (n as f32 / delta_sqr as f32) * delta
-        };
-
-        let dist_prev = point - closest_point;
-        return dist_prev.dot(dist_prev) < LINE_DISTANCE_THRESHOLD;
+        return line_hit_test(&self.core, point);
     }
 }
 
@@ -111,4 +90,57 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
             canvas.set_pixel(x, y, core.color);
         }
     }
+}
+
+/// for the line hit test we just check if the given point is at certain distance from the line
+/// I use the vector to point formulation since it gives me the distance of a finite line
+/// (vector)
+/// I modified the original formula of point to vector to use ONLY INTEGER ARITHMETIC
+pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
+    let p1 = core.points[0];
+    let p2 = core.points[1];
+
+    if p1 == p2 {
+        // if a line is a point then is impossible to select it.
+        // What we do is create a box around this point of 10 pixels and check if the click is
+        // within that box
+        return point.is_within_box(p1 + Point(10, 10), p1 - Point(10, 10));
+    }
+
+    let delta = p2 - p1;
+    let delta_sqr = delta.dot(delta) as u64;
+
+    let p_to_p1 = point - p1;
+    let n = p_to_p1.dot(delta);
+
+    let closest_point = if n < 0 {
+        p1
+    } else if n as u64 > delta_sqr {
+        p2
+    } else {
+        /* originally this should be:
+        I changed this formula to use only integer arithmetic
+
+        p1 + n / delta_sqr * delta
+        The DISTANCE formula IS:
+        distance = dist_n.dot(dist_n)
+        dist_n = (point - p1 + ( n / delta_sqr ) * delta)
+
+        SINCE:
+        c*(a.dot(b)) = a.dot(c*b)
+        delta_sqr * dist_n = dist_n*point - dist_n*p1 + delta * n
+
+        THEN WITH:
+        dist_n = delta_sqr * point - delta_sqr * p1 + n * delta
+        distance = dist_n / (delta_sqr*delta_sqr)
+        */
+
+        (delta_sqr as i32) * p1 + n * delta
+    };
+
+    let dist_prev_x = delta_sqr * point.0 as u64 - closest_point.0 as u64;
+    let dist_prev_y = delta_sqr * point.1 as u64 - closest_point.1 as u64;
+
+    let distance = dist_prev_x * dist_prev_x + dist_prev_y * dist_prev_y;
+    return distance < LINE_DISTANCE_THRESHOLD * delta_sqr * delta_sqr;
 }

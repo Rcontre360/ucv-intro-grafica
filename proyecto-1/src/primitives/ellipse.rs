@@ -1,5 +1,7 @@
 use crate::canvas::Canvas;
-use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
+use crate::core::{Point, RGBA, ShapeCore, ShapeImpl, UpdateOp};
+
+use super::line::line_hit_test;
 
 pub struct Ellipse {
     core: ShapeCore,
@@ -30,26 +32,29 @@ impl ShapeImpl for Ellipse {
         draw_ellipse(&self.core.copy_with_color(color), canvas);
     }
 
+    /// hit test for ellipse uses ONLY integer arithmetic
+    /// we just use the same formula to know if a point is within the ellipse
+    /// the formula is dx*dx / (a*a) + dy * dy / (b*b) <= 1. After some simple algebra manipulation
+    /// we get the formula bellow. We just multiply both sides by a^2 * b^2
     fn hit_test(&self, point: Point) -> bool {
-        let p1 = self.core.points[0];
-        let p2 = self.core.points[1];
-        let center: Point = ((p1.0 + p2.0) / 2, (p1.1 + p2.1) / 2).into();
-        let a = ((p2.0 - p1.0) / 2).abs() as f32;
-        let b = ((p2.1 - p1.1) / 2).abs() as f32;
+        let (center, a, b) = get_ellipse(&self.core);
 
-        let dx = (point.0 - center.0) as f32;
-        let dy = (point.1 - center.1) as f32;
+        // special case where the ellipse is completelly flat
+        if a == 0 || b == 0 {
+            return line_hit_test(&self.core, point);
+        }
 
-        (dx * dx) / (a * a) + (dy * dy) / (b * b) <= 1.0
+        let delta = point - center;
+
+        let dx = delta.0 as i64;
+        let dy = delta.1 as i64;
+
+        (dx * dx) * (b * b) + (dy * dy) * (a * a) <= a * a * b * b
     }
 }
 
 fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
-    let p1 = core.points[0];
-    let p2 = core.points[1];
-    let center: Point = ((p1.0 + p2.0) / 2, (p1.1 + p2.1) / 2).into();
-    let a = ((p2.0 - p1.0) / 2).abs() as i64;
-    let b = ((p2.1 - p1.1) / 2).abs() as i64;
+    let (center, a, b) = get_ellipse(core);
 
     let mut x: i64 = 0;
     let mut y: i64 = b;
@@ -149,4 +154,13 @@ fn draw_edge_case(canvas: &mut Canvas, center: Point, a: i32, x_drawn: i32, colo
         canvas.set_pixel(x, center.1, color);
         x += 1;
     }
+}
+
+fn get_ellipse(core: &ShapeCore) -> (Point, i64, i64) {
+    let p1 = core.points[0];
+    let p2 = core.points[1];
+    let a = ((p2.0 - p1.0) >> 1).abs() as i64;
+    let b = ((p2.1 - p1.1) >> 1).abs() as i64;
+
+    (Point((p1.0 + p2.0) >> 1, (p1.1 + p2.1) >> 1), a, b)
 }
