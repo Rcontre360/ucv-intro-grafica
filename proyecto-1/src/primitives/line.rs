@@ -2,10 +2,14 @@ use crate::canvas::Canvas;
 
 use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
 
+const LINE_DISTANCE_THRESHOLD: i32 = 100;
+
+/// line object definition
 pub struct Line {
     core: ShapeCore,
 }
 
+/// line object shape implementation
 impl ShapeImpl for Line {
     fn new(core: ShapeCore) -> Line {
         Line { core }
@@ -27,35 +31,33 @@ impl ShapeImpl for Line {
         draw_line(&self.core.copy_with_color(color), canvas);
     }
 
+    /// for the line hit test we just check if the given point is at certain distance from the line
+    /// I use the vector to point formulation since it gives me the distance of a finite line
+    /// (vector)
     fn hit_test(&self, point: Point) -> bool {
         let p1 = self.core.points[0];
         let p2 = self.core.points[1];
-        let p = point;
 
-        let dx = (p2.0 - p1.0) as f32;
-        let dy = (p2.1 - p1.1) as f32;
+        let delta = p2 - p1;
+        let delta_sqr = delta.dot(delta);
 
-        if dx == 0.0 && dy == 0.0 {
-            let dist = ((p.0 - p1.0).pow(2) + (p.1 - p1.1).pow(2)) as f32;
-            return dist.sqrt() < 5.0;
-        }
+        let p_to_p1 = point - p1;
+        let n = p_to_p1.dot(delta);
 
-        let t = ((p.0 - p1.0) as f32 * dx + (p.1 - p1.1) as f32 * dy) / (dx * dx + dy * dy);
-
-        let closest_point = if t < 0.0 {
+        let closest_point = if n < 0 {
             p1
-        } else if t > 1.0 {
+        } else if n > delta_sqr {
             p2
         } else {
-            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32).into()
+            p1 + (n as f32 / delta_sqr as f32) * delta
         };
 
-        let dist = ((p.0 - closest_point.0).pow(2) + (p.1 - closest_point.1).pow(2)) as f32;
-        dist.sqrt() < 5.0
+        let dist_prev = point - closest_point;
+        return dist_prev.dot(dist_prev) < LINE_DISTANCE_THRESHOLD;
     }
 }
 
-// exposed for usage on triangles
+/// draws a line given a shape core. Used by other shapes
 pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
     let points = &core.points;
     let a = points[0];

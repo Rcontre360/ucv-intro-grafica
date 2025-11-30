@@ -1,6 +1,6 @@
 // this "serde" is a library for serialization and deserialization into JSON
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 
 //here we have a "#[derive]" keyword. Basically implements other functionality into this object
 //for example, Clone allows this object to have the ".clone()" method, which makes a copy of it
@@ -46,6 +46,22 @@ impl Sub for Point {
     }
 }
 
+impl Mul<Point> for i32 {
+    type Output = Point;
+
+    fn mul(self, p: Point) -> Self::Output {
+        (self * p.0, self * p.1).into()
+    }
+}
+
+impl Mul<Point> for f32 {
+    type Output = Point;
+
+    fn mul(self, p: Point) -> Self::Output {
+        (self * p.0 as f32, self * p.1 as f32).into()
+    }
+}
+
 // custom methods for point
 impl Point {
     /// computes an interpolation between current point and the one passed as argument.
@@ -64,5 +80,10 @@ impl Point {
         let dy = self.1 - other.1;
         // euclidean distance
         ((dx * dx + dy * dy) as f32).sqrt()
+    }
+
+    /// computes the dot product between current point and another one
+    pub fn dot(&self, other: Point) -> i32 {
+        self.0 * other.0 + self.1 * other.1
     }
 }

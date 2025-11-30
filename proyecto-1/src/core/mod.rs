@@ -103,6 +103,7 @@ pub trait ShapeImpl {
                     core.points[*index] = *point;
                 }
             }
+            // there are other modification methods that should be implemented by a concrete object
             _ => {}
         }
     }
@@ -116,6 +117,8 @@ pub trait ShapeImpl {
         }
     }
 
+    /// this method draws the control points of a given shape
+    /// it receives the point to draw and the color
     fn draw_control_point<'a>(&self, p: Point, color: RGBA, canvas: &mut Canvas<'a>) {
         for x in (p.0 - 5)..(p.0 + 5) {
             for y in (p.1 - 5)..(p.1 + 5) {
@@ -134,31 +137,40 @@ pub trait ShapeImpl {
         }
     }
 
+    /// update method receives an update operation and makes the update
     fn update(&mut self, op: &UpdateOp) {
         self.update_basic(op);
     }
 
+    /// draws how a shape should look and can be modified by concrete classes
     fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
         self.draw_selection_basic(color, canvas);
     }
 
-    // only bezier implements this
+    /// subdivision function to create 2 more shapes from the original
+    /// Currently only bezier implements this
     fn subdivide(&self) -> Option<(ShapeCore, ShapeCore)> {
         None
     }
 
+    /// returns the shape type of the current shape
     fn get_type(&self) -> Shape {
         self.get_core().shape_type
     }
 
+    /// return the shape core mutable reference
     fn get_core_mut(&mut self) -> &mut ShapeCore;
 
+    /// returns a copy of the shape core
     fn get_core(&self) -> ShapeCore;
 
+    /// draws the shape into a given canvas
     fn draw<'a>(&self, canvas: &mut Canvas<'a>);
 
+    /// draws the shape with a given border color
     fn draw_with_color<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>);
 
+    /// checks if the shape was hit or clicked on a given point
     fn hit_test(&self, point: Point) -> bool;
 }
 
