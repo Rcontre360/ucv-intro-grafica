@@ -41,6 +41,10 @@ impl<'a> Canvas<'a> {
             // THIS IS USED for debugging. if you want to check if our
             if prev_color[3] > 0 {
                 println!("ALREADY DRAWN");
+                let new_color = RGBA::new(255, 0, 0, 255);
+                self.buffer[index..index + 4].copy_from_slice(&new_color);
+                //panic!("");
+                return;
             }
             // the + operation between colors is defined at ./src/core/rgba.rs
             let new_color = color + prev_color;

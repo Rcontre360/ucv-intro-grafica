@@ -138,13 +138,25 @@ fn draw_fill_line(canvas: &mut Canvas, center: Point, x: i32, y: i32, color: RGB
 }
 
 /// draws 4 points symetric given the first one on the first quadrant
+/// we must check that we are not drawing the same points again so we have conditions on
+/// each quadrant
 fn draw_symmetric(canvas: &mut Canvas, center: Point, x: i64, y: i64, color: RGBA) {
     let (_x, _y) = (x as i32, y as i32);
     let Point(cx, cy) = center;
+
     canvas.set_pixel(cx + _x, cy + _y, color);
-    canvas.set_pixel(cx - _x, cy + _y, color);
-    canvas.set_pixel(cx + _x, cy - _y, color);
-    canvas.set_pixel(cx - _x, cy - _y, color);
+
+    if cx + _x != cx - _x {
+        canvas.set_pixel(cx - _x, cy + _y, color);
+    }
+
+    if cy - _y != cy + _y {
+        canvas.set_pixel(cx + _x, cy - _y, color);
+    }
+
+    if cy + _y != cy - _y && cx + _x != cx - _x {
+        canvas.set_pixel(cx - _x, cy - _y, color);
+    }
 }
 
 /// draws the edge case when the ellipse is flat on the x axis. Done in homework 1 as well
