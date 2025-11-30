@@ -6,6 +6,7 @@ mod rgba;
 pub use point::Point;
 pub use rgba::RGBA;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Shape {
@@ -14,6 +15,18 @@ pub enum Shape {
     Triangle,
     Rectangle,
     Bezier,
+}
+
+impl fmt::Display for Shape {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Shape::Line => write!(f, "Line"),
+            Shape::Ellipse => write!(f, "Ellipse"),
+            Shape::Triangle => write!(f, "Triangle"),
+            Shape::Rectangle => write!(f, "Rectangle"),
+            Shape::Bezier => write!(f, "Bezier"),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]

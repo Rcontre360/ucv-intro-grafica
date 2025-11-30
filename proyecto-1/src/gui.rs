@@ -22,131 +22,161 @@ impl TemplateApp {
 
     /// Called each time the UI is updated.
     pub fn update(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Shapes");
+        // 1. Font size
+        let mut style = (*ctx.style()).clone();
+        style.text_styles = [
+            (egui::TextStyle::Heading, egui::FontId::new(22.0, egui::FontFamily::Proportional)),
+            (egui::TextStyle::Body, egui::FontId::new(18.0, egui::FontFamily::Proportional)),
+            (egui::TextStyle::Button, egui::FontId::new(18.0, egui::FontFamily::Proportional)),
+            (egui::TextStyle::Small, egui::FontId::new(14.0, egui::FontFamily::Proportional)),
+        ].into();
+        ctx.set_style(style);
+
+        egui::SidePanel::left("side_panel")
+        .default_width(250.0)
+        .show(ctx, |ui| {
+            // 2. Top-left controls (File, Undo, Redo)
+            ui.horizontal(|ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open...").clicked() {
+                        self.app_state.gui_update(GUIEvent::Load);
+                        ui.close_menu();
+                    }
+                    if ui.button("Save As...").clicked() {
+                        self.app_state.gui_update(GUIEvent::Save);
+                        ui.close_menu();
+                    }
+                });
+
+                if ui.button("↩").on_hover_text("Undo").clicked() {
+                    self.app_state.gui_update(GUIEvent::Undo);
+                }
+                if ui.button("↪").on_hover_text("Redo").clicked() {
+                    self.app_state.gui_update(GUIEvent::Redo);
+                }
+            });
 
             ui.separator();
 
-            if ui.button("1. Line").clicked() {
-                self.app_state.gui_update(GUIEvent::ShapeType(Shape::Line));
-            }
-            if ui.button("2. Ellipse").clicked() {
-                self.app_state
-                    .gui_update(GUIEvent::ShapeType(Shape::Ellipse));
-            }
-            if ui.button("3. Triangle").clicked() {
-                self.app_state
-                    .gui_update(GUIEvent::ShapeType(Shape::Triangle));
-            }
-            if ui.button("4. Rectangle").clicked() {
-                self.app_state
-                    .gui_update(GUIEvent::ShapeType(Shape::Rectangle));
-            }
-            if ui.button("5. Bezier").clicked() {
-                self.app_state
-                    .gui_update(GUIEvent::ShapeType(Shape::Bezier));
-            }
+            // 3. Shape Selection
+            ui.horizontal(|ui| {
+                ui.label("Shape:");
+                egui::ComboBox::from_id_source("shape_selector")
+                    .selected_text(self.app_state.current.to_string())
+                    .show_ui(ui, |ui| {
+                        let shapes = [Shape::Line, Shape::Ellipse, Shape::Triangle, Shape::Rectangle, Shape::Bezier];
+                        for shape in shapes.iter() {
+                            if ui.selectable_value(&mut self.app_state.current, *shape, shape.to_string()).changed() {
+                                self.app_state.gui_update(GUIEvent::ShapeType(*shape));
+                            }
+                        }
+                    });
+            });
 
-            if ui.button("Clear").clicked() {
+            if ui.button("Clear Canvas").clicked() {
                 self.app_state.gui_update(GUIEvent::Clear);
             }
 
-            if ui.button("Save").clicked() {
-                self.app_state.gui_update(GUIEvent::Save);
-            }
-
-            if ui.button("Load From").clicked() {
-                self.app_state.gui_update(GUIEvent::Load);
-            }
-
             ui.separator();
 
-            if ui.button("Undo").clicked() {
-                self.app_state.gui_update(GUIEvent::Undo);
-            }
-            if ui.button("Redo").clicked() {
-                self.app_state.gui_update(GUIEvent::Redo);
-            }
-
-            ui.separator();
-
-            if self.app_state.selected.is_some() {
-                if ui.button("Degree Elevate").clicked() {
-                    self.app_state.gui_update(GUIEvent::DegreeElevate);
-                }
-                if ui.button("Subdivide").clicked() {
-                    self.app_state.gui_update(GUIEvent::Subdivide);
-                }
-                let mut subdivision_t = self.app_state.ui_subdivision_t;
-                if ui
-                    .add(egui::Slider::new(&mut subdivision_t, 0.0..=1.0).text("Subdivision"))
-                    .changed()
-                {
-                    self.app_state
-                        .gui_update(GUIEvent::SubdivisionValue(subdivision_t));
-                }
-                if ui.button("Front +1").clicked() {
-                    self.app_state.gui_update(GUIEvent::ToFront(false));
-                }
-                if ui.button("Back -1").clicked() {
-                    self.app_state.gui_update(GUIEvent::ToBack(false));
-                }
-                if ui.button("To Front").clicked() {
-                    self.app_state.gui_update(GUIEvent::ToFront(true));
-                }
-                if ui.button("To Back").clicked() {
-                    self.app_state.gui_update(GUIEvent::ToBack(true));
-                }
-            }
-
-            ui.heading("Color (RGBA)");
-
+            // 4. Color Section (Grid layout)
+            ui.heading("COLOR");
             let colors = self.app_state.get_colors();
-            let (mut c, mut fill_c, mut pnt_c, mut back_c) = (
+            let (mut border, mut fill, mut points, mut background) = (
                 colors.0.into(),
                 colors.1.into(),
                 colors.2.into(),
                 colors.3.into(),
             );
 
-            ui.horizontal(|ui| {
-                ui.label("Border color");
-                let response = ui.color_edit_button_srgba_unmultiplied(&mut c);
+            egui::Grid::new("color_grid")
+                .num_columns(2)
+                .spacing([10.0, 8.0])
+                .show(ui, |ui| {
+                    ui.label("Border");
+                    if ui.color_edit_button_srgba_unmultiplied(&mut border).changed() {
+                        self.app_state.gui_update(GUIEvent::BorderColor(border.into()));
+                    }
+                    ui.end_row();
 
-                if response.changed() {
-                    self.app_state.gui_update(GUIEvent::BorderColor(c.into()));
-                }
-            });
+                    ui.label("Fill");
+                    if ui.color_edit_button_srgba_unmultiplied(&mut fill).changed() {
+                        self.app_state.gui_update(GUIEvent::FillColor(fill.into()));
+                    }
+                    ui.end_row();
 
-            ui.horizontal(|ui| {
-                ui.label("Fill color");
-                let response = ui.color_edit_button_srgba_unmultiplied(&mut fill_c);
+                    ui.label("Points");
+                    if ui.color_edit_button_srgba_unmultiplied(&mut points).changed() {
+                        self.app_state.gui_update(GUIEvent::PointsColor(points.into()));
+                    }
+                    ui.end_row();
 
-                if response.changed() {
-                    self.app_state
-                        .gui_update(GUIEvent::FillColor(fill_c.into()));
-                }
-            });
+                    ui.label("Background");
+                    if ui.color_edit_button_srgba_unmultiplied(&mut background).changed() {
+                        self.app_state.gui_update(GUIEvent::BackgroundColor(background.into()));
+                    }
+                    ui.end_row();
+                });
 
-            ui.horizontal(|ui| {
-                ui.label("Points color");
-                let response = ui.color_edit_button_srgba_unmultiplied(&mut pnt_c);
 
-                if response.changed() {
-                    self.app_state
-                        .gui_update(GUIEvent::PointsColor(pnt_c.into()));
-                }
-            });
+            ui.separator();
 
-            ui.horizontal(|ui| {
-                ui.label("Background color");
-                let response = ui.color_edit_button_srgba_unmultiplied(&mut back_c);
+            // 5. Depth Section (CollapsingHeader)
+            let is_shape_selected = self.app_state.selected.is_some();
+            let depth_header = egui::CollapsingHeader::new("Depth")
+                .default_open(false)
+                .show(ui, |ui| {
+                     ui.add_enabled_ui(is_shape_selected, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("Forward").on_hover_text("Bring forward by one").clicked() {
+                                self.app_state.gui_update(GUIEvent::ToFront(false));
+                            }
+                            if ui.button("Backward").on_hover_text("Send backward by one").clicked() {
+                                self.app_state.gui_update(GUIEvent::ToBack(false));
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            if ui.button("To Front").on_hover_text("Bring to front").clicked() {
+                                self.app_state.gui_update(GUIEvent::ToFront(true));
+                            }
+                            if ui.button("To Back").on_hover_text("Send to back").clicked() {
+                                self.app_state.gui_update(GUIEvent::ToBack(true));
+                            }
+                        });
+                    });
+                });
+            if !is_shape_selected && depth_header.header_response.hovered() {
+                egui::show_tooltip(ctx, egui::Id::new("depth_tooltip"), |ui| {
+                   ui.label("Select a shape to enable these options.");
+               });
+           }
 
-                if response.changed() {
-                    self.app_state
-                        .gui_update(GUIEvent::BackgroundColor(back_c.into()));
-                }
-            });
+
+            // 6. Bezier Settings
+            let is_bezier_selected = matches!(self.app_state.get_selected_shape_type(), Some(Shape::Bezier));
+            let bezier_header = egui::CollapsingHeader::new("Bezier Settings")
+                .default_open(false)
+                .show(ui, |ui| {
+                    ui.add_enabled_ui(is_bezier_selected, |ui| {
+                        if ui.button("Degree Elevate").clicked() {
+                            self.app_state.gui_update(GUIEvent::DegreeElevate);
+                        }
+                        if ui.button("Subdivide").clicked() {
+                            self.app_state.gui_update(GUIEvent::Subdivide);
+                        }
+                        let mut subdivision_t = self.app_state.ui_subdivision_t;
+                        if ui.add(egui::Slider::new(&mut subdivision_t, 0.0..=1.0).text("Subdivision")).changed() {
+                            self.app_state.gui_update(GUIEvent::SubdivisionValue(subdivision_t));
+                        }
+                    });
+                });
+
+            if !is_bezier_selected && bezier_header.header_response.hovered() {
+                 egui::show_tooltip(ctx, egui::Id::new("bezier_tooltip"), |ui| {
+                    ui.label("Select a Bezier curve to enable these options.");
+                });
+            }
+
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.add(egui::github_link_file!(
