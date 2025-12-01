@@ -1,11 +1,15 @@
 use crate::canvas::Canvas;
 
-use crate::core::{Point, ShapeCore, ShapeImpl};
+use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
 
+const LINE_DISTANCE_THRESHOLD: u64 = 100;
+
+/// line object definition
 pub struct Line {
     core: ShapeCore,
 }
 
+/// line object shape implementation
 impl ShapeImpl for Line {
     fn new(core: ShapeCore) -> Line {
         Line { core }
@@ -20,39 +24,21 @@ impl ShapeImpl for Line {
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        draw_line(&self.core, canvas);
+        draw_line(&self.core, canvas, true);
+    }
+
+    fn draw_with_color<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
+        draw_line(&self.core.copy_with_color(color), canvas, true);
     }
 
     fn hit_test(&self, point: Point) -> bool {
-        let p1 = self.core.points[0];
-        let p2 = self.core.points[1];
-        let p = point;
-
-        let dx = (p2.0 - p1.0) as f32;
-        let dy = (p2.1 - p1.1) as f32;
-
-        if dx == 0.0 && dy == 0.0 {
-            let dist = ((p.0 - p1.0).pow(2) + (p.1 - p1.1).pow(2)) as f32;
-            return dist.sqrt() < 5.0;
-        }
-
-        let t = ((p.0 - p1.0) as f32 * dx + (p.1 - p1.1) as f32 * dy) / (dx * dx + dy * dy);
-
-        let closest_point = if t < 0.0 {
-            p1
-        } else if t > 1.0 {
-            p2
-        } else {
-            (p1.0 + (t * dx) as i32, p1.1 + (t * dy) as i32).into()
-        };
-
-        let dist = ((p.0 - closest_point.0).pow(2) + (p.1 - closest_point.1).pow(2)) as f32;
-        dist.sqrt() < 5.0
+        return line_hit_test(&self.core, point);
     }
 }
 
-// exposed for usage on triangles
-pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
+/// draws a line given a shape core. Used by other shapes
+/// draw first is used to NOT draw the first point, used for other shapes to avoid overlapping
+pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>, draw_first: bool) {
     let points = &core.points;
     let a = points[0];
     let b = points[1];
@@ -76,7 +62,10 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
     let mut d = (dx - 2 * dy) * if run_on_x { 1 } else { -1 };
     let mut x = a.0 as i32;
     let mut y = a.1 as i32;
-    canvas.set_pixel(x, y, core.color);
+
+    if draw_first {
+        canvas.set_pixel(x, y, core.color);
+    }
 
     if run_on_x {
         while x > b.0 || x < b.0 {
@@ -104,5 +93,64 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
 
             canvas.set_pixel(x, y, core.color);
         }
+
+        x += x_inc;
+        // edge case found. we want to draw a full line from a to b inclusive
+        // this ensures that b is drawn, when reaching this else condition it is not drawn
+        // This was tested to check if there are overlaps on the canvas
+        canvas.set_pixel(x, y, core.color);
     }
+}
+
+/// for the line hit test we just check if the given point is at certain distance from the line
+/// I use the vector to point formulation since it gives me the distance of a finite line
+/// (vector)
+/// I modified the original formula of point to vector to use ONLY INTEGER ARITHMETIC
+pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
+    let p1 = core.points[0];
+    let p2 = core.points[1];
+
+    if p1 == p2 {
+        // if a line is a point then is impossible to select it.
+        // What we do is create a box around this point of 10 pixels and check if the click is
+        // within that box
+        return point.is_within_box(p1 + Point(10, 10), p1 - Point(10, 10));
+    }
+
+    let delta = p2 - p1;
+    let delta_sqr = delta.dot(delta) as u64;
+
+    let p_to_p1 = point - p1;
+    let n = p_to_p1.dot(delta);
+
+    let closest_point = if n < 0 {
+        p1
+    } else if n as u64 > delta_sqr {
+        p2
+    } else {
+        /* originally this should be:
+        I changed this formula to use only integer arithmetic
+
+        p1 + n / delta_sqr * delta
+        The DISTANCE formula IS:
+        distance = dist_n.dot(dist_n)
+        dist_n = (point - p1 + ( n / delta_sqr ) * delta)
+
+        SINCE:
+        c*(a.dot(b)) = a.dot(c*b)
+        delta_sqr * dist_n = dist_n*point - dist_n*p1 + delta * n
+
+        THEN WITH:
+        dist_n = delta_sqr * point - delta_sqr * p1 + n * delta
+        distance = dist_n / (delta_sqr*delta_sqr)
+        */
+
+        (delta_sqr as i32) * p1 + n * delta
+    };
+
+    let dist_prev_x = delta_sqr * point.0 as u64 - closest_point.0 as u64;
+    let dist_prev_y = delta_sqr * point.1 as u64 - closest_point.1 as u64;
+
+    let distance = dist_prev_x * dist_prev_x + dist_prev_y * dist_prev_y;
+    return distance < LINE_DISTANCE_THRESHOLD * delta_sqr * delta_sqr;
 }

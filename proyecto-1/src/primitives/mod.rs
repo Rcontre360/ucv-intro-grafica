@@ -1,17 +1,21 @@
 use crate::core::{Shape, ShapeCore, ShapeImpl};
 
-pub mod bezier;
+// This is the primitives module. holds each shape
+
+mod bezier;
 mod ellipse;
 mod line;
 mod rectangle;
 mod triangle;
 
+// we only expose each shape directly for the module
 pub use bezier::Bezier;
 pub use ellipse::Ellipse;
 pub use line::Line;
 pub use rectangle::Rectangle;
 pub use triangle::Triangle;
 
+/// given a shape core allows you to create a dynamic ShapeImpl stored on the Heap
 pub fn new_shape_from_core(core: ShapeCore) -> Box<dyn ShapeImpl> {
     match core.shape_type {
         Shape::Line => Box::new(Line::new(core)),

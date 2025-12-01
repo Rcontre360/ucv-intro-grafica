@@ -23,9 +23,13 @@ mod draw_state;
 mod gui;
 mod primitives;
 
+// initial width and height
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
 
+/// The main entry point of the application.
+/// This function initializes the logger, creates the event loop, window, and the `Pixels` and `Framework` instances.
+/// It then enters the event loop and handles events until the application is closed.
 fn main() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
@@ -60,6 +64,7 @@ fn main() -> Result<(), Error> {
         if input.update(&event) {
             let is_gui = framework.wants_pointer_input();
             let state = framework.get_state();
+            // this is the mouse cursor. We update it from the state and then load it on the window
             let mut cursor_icon = CursorIcon::Default;
 
             if input.key_pressed(KeyCode::Escape) || input.close_requested() {
@@ -87,8 +92,11 @@ fn main() -> Result<(), Error> {
                 state.keyboard_update(KeyCode::ShiftRight);
             }
 
-            // mouse events on GUI dont matter
+            // mouse events on GUI. Avoids drawing while selecting gui buttons
             if !is_gui {
+                // here we update the app state with different mouse events
+                // here we also use cursor_icon, if needed the state decides if we are draggin and
+                // need the cursor dragging logo
                 //mouse is moved on the ui
                 if let Some((x, y)) = input.cursor() {
                     cursor_icon = state.mouse_update(MouseEvent::Move, 0, (x, y).into());
@@ -114,21 +122,27 @@ fn main() -> Result<(), Error> {
                     cursor_icon = state.mouse_update(MouseEvent::Release, 0, (x, y).into());
                 }
             }
-            // Update the scale factor
+            // Update the scale factor for the window size change
             if let Some(scale_factor) = input.scale_factor() {
                 framework.scale_factor(scale_factor);
             }
 
+            // udpate the cursor on the window
             window.set_cursor_icon(cursor_icon);
             window.request_redraw();
         }
 
+        // usually the GUI handler (input variable) above would facilitate these events for us
+        // but the GUI package above doesnt work well for these events. so we do it here instead
         match event {
             Event::WindowEvent { event, .. } => {
                 framework.handle_event(&window, &event);
                 match event {
+                    // important for resizing
                     WindowEvent::Resized(size) => {
                         if size.width > 0 && size.height > 0 {
+                            // on resizing we need to resize the SURFACE AND THE BUFFER
+                            // the surface is the window and the buffer is what we modify/render
                             if let Err(err) = pixels.resize_surface(size.width, size.height) {
                                 log_error("pixels.resize_surface", err);
                             }
@@ -139,13 +153,22 @@ fn main() -> Result<(), Error> {
                             window.request_redraw();
                         }
                     }
+                    // this runs every time a redraw is requested
+                    // if we dont do anything the event loop runs but a redraw is not done
                     WindowEvent::RedrawRequested => {
+                        // we initialize a new canvas with each run
+                        // the canvas has a lifetime bounded to the buffer. So when this loop ends
+                        // the canvas is removed from memory. Check the Canvas definition for more
                         let size = window.inner_size();
+                        // pixels (the library we're using) gives us the buffer through
+                        // "frame_mut"
                         let mut canvas = Canvas::new(pixels.frame_mut(), size.width);
 
+                        //drawing with that buffer
                         framework.get_state().draw(&mut canvas);
                         framework.prepare(&window);
 
+                        //rendering result
                         let render_result =
                             pixels.render_with(|encoder, render_target, context| {
                                 context.scaling_renderer.render(encoder, render_target);
@@ -154,6 +177,8 @@ fn main() -> Result<(), Error> {
                                 Ok(())
                             });
 
+                        // simple error handling. A possible improvement would be to return a
+                        // possible error on "draw" from the state and return it here if applicable
                         if let Err(err) = render_result {
                             log_error("pixels.render", err);
                             elwt.exit();
