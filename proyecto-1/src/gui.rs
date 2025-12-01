@@ -253,14 +253,21 @@ impl TemplateApp {
 /// Manages all state required for rendering egui over `Pixels`.
 pub(crate) struct Framework {
     // State for egui.
+    /// The egui context.
     egui_ctx: Context,
+    /// The egui state.
     egui_state: egui_winit::State,
+    /// The screen descriptor.
     screen_descriptor: ScreenDescriptor,
+    /// The egui renderer.
     renderer: Renderer,
+    /// The paint jobs to be rendered.
     paint_jobs: Vec<ClippedPrimitive>,
+    /// The textures delta.
     textures: TexturesDelta,
 
     // State for the GUI
+    /// The GUI application state.
     gui: TemplateApp,
 }
 
@@ -408,10 +415,12 @@ impl Framework {
         }
     }
 
+    /// Returns a mutable reference to the application state.
     pub(crate) fn get_state(&mut self) -> &mut AppState {
         &mut self.gui.app_state
     }
 
+    /// Returns `true` if the GUI wants to capture pointer input.
     pub(crate) fn wants_pointer_input(&self) -> bool {
         self.egui_ctx.wants_pointer_input() || self.egui_ctx.is_pointer_over_area()
     }

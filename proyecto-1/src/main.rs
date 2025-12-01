@@ -27,6 +27,9 @@ mod primitives;
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
 
+/// The main entry point of the application.
+/// This function initializes the logger, creates the event loop, window, and the `Pixels` and `Framework` instances.
+/// It then enters the event loop and handles events until the application is closed.
 fn main() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();

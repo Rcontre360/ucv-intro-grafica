@@ -21,6 +21,7 @@ impl RGBA {
 
 // implementation of the default function. Returns the color BLACK with 0 alpha
 impl Default for RGBA {
+    /// the default color is black with alpha 0
     fn default() -> Self {
         RGBA([0, 0, 0, 0])
     }
