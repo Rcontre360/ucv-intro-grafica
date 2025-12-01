@@ -118,8 +118,8 @@ fn fill_top_triangle(
     let mut cur_x1 = p1.0;
     let mut cur_x2 = p1.0;
 
-    for y in (p1.1.round() as i32)..(p2.1.round() as i32) {
-        draw_horizontal(cur_x1, cur_x2, y, color, canvas, drawn);
+    for y in (p1.1.ceil() as i32)..(p2.1.ceil() as i32) {
+        draw_horizontal(cur_x1.ceil(), cur_x2.ceil(), y, color, canvas, drawn);
         cur_x1 += m_1;
         cur_x2 += m_2;
     }
@@ -140,7 +140,22 @@ fn fill_bottom_triangle(
     let mut cur_x2 = p3.0;
 
     for y in ((p1.1.round() as i32)..(p3.1.round() as i32)).rev() {
-        draw_horizontal(cur_x1, cur_x2, y, color, canvas, drawn);
+        draw_horizontal(
+            if m_1 > 0.0 {
+                cur_x1.floor()
+            } else {
+                cur_x1.ceil() + 1.0
+            },
+            if m_2 > 0.0 {
+                cur_x2.floor()
+            } else {
+                cur_x2.ceil()
+            },
+            y,
+            color,
+            canvas,
+            drawn,
+        );
         cur_x1 -= m_1;
         cur_x2 -= m_2;
     }
@@ -157,7 +172,7 @@ fn draw_horizontal(
     if x1 > x2 {
         std::mem::swap(&mut x1, &mut x2);
     }
-    for x in (x1.ceil() as i32)..(x2.ceil() as i32) {
+    for x in (x1.round() as i32)..(x2.round() as i32) {
         if drawn.get(&(x, y)).is_none() {
             canvas.set_pixel(x, y, color);
         }
