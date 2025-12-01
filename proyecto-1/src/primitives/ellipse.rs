@@ -71,10 +71,18 @@ fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
     let draw_fill = !core.fill_color.is_transparent();
 
     draw_symmetric(canvas, center, x, y, core.color);
+
     // here we added an extra condition that draws the inside of the ellipse.
     // it should only be used on each different "y"
     if draw_fill {
-        draw_fill_line(canvas, center, x as i32, y as i32, core.fill_color);
+        draw_fill_line(
+            canvas,
+            center,
+            center.0 - x as i32 + 1,
+            center.0 + x as i32 - 1,
+            y as i32,
+            core.fill_color,
+        );
     }
 
     while m_x < m_y {
@@ -85,7 +93,14 @@ fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
             y -= 1;
             m_y -= sum_my;
             if draw_fill {
-                draw_fill_line(canvas, center, (x + 1) as i32, y as i32, core.fill_color);
+                draw_fill_line(
+                    canvas,
+                    center,
+                    center.0 - (x + 1) as i32 + 1,
+                    center.0 + (x + 1) as i32 - 1,
+                    y as i32,
+                    core.fill_color,
+                );
             }
         }
         x += 1;
@@ -116,7 +131,14 @@ fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
         y -= 1;
         m_y -= sum_my;
         if draw_fill {
-            draw_fill_line(canvas, center, (x + 1) as i32, y as i32, core.fill_color);
+            draw_fill_line(
+                canvas,
+                center,
+                center.0 - x as i32 + 1,
+                center.0 + x as i32 - 1,
+                y as i32,
+                core.fill_color,
+            );
         }
         draw_symmetric(canvas, center, x, y, core.color);
     }
@@ -124,11 +146,15 @@ fn draw_ellipse(core: &ShapeCore, canvas: &mut Canvas) {
 
 /// this just draws a line from center-x+1 to center+x-1.
 /// its always an horizontal line
-fn draw_fill_line(canvas: &mut Canvas, center: Point, x: i32, y: i32, color: RGBA) {
-    let x_start = center.0 - x + 1;
-    let x_end = center.0 + x - 1;
-
-    for ix in x_start..x_end {
+fn draw_fill_line(
+    canvas: &mut Canvas,
+    center: Point,
+    x_start: i32,
+    x_end: i32,
+    y: i32,
+    color: RGBA,
+) {
+    for ix in x_start..(x_end + 1) {
         canvas.set_pixel(ix, center.1 + y, color);
         //edge case when we only use 1st part of algorithm. Avoids double draw
         if center.1 - y != center.1 + y {

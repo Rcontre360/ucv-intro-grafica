@@ -75,8 +75,8 @@ fn draw_rectangle<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>) {
     }
 
     if !core.fill_color.is_transparent() {
-        for x in (min_x + 1)..(max_x - 1) {
-            for y in (min_y + 1)..(max_y - 1) {
+        for x in (min_x + 1)..max_x {
+            for y in (min_y + 1)..max_y {
                 canvas.set_pixel(x, y, core.fill_color);
             }
         }
