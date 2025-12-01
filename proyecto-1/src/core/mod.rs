@@ -143,8 +143,8 @@ pub trait ShapeImpl {
     }
 
     /// draws how a shape should look and can be modified by concrete classes
-    fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
-        self.draw_selection_basic(color, canvas);
+    fn draw_selection<'a>(&self, color1: RGBA, _color2: RGBA, canvas: &mut Canvas<'a>) {
+        self.draw_selection_basic(color1, canvas);
     }
 
     /// subdivision function to create 2 more shapes from the original

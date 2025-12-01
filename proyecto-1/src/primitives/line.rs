@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 
-use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
+use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
 
 const LINE_DISTANCE_THRESHOLD: u64 = 100;
 
@@ -81,7 +81,7 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>, draw_first: bool
             canvas.set_pixel(x, y, core.color);
         }
     } else {
-        while (y > b.1 || y < b.1) {
+        while y > b.1 || y < b.1 {
             if d <= 0 {
                 d += inc_ne;
                 x += x_inc;

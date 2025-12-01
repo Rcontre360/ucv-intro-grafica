@@ -1,6 +1,6 @@
 use super::line::draw_line;
 use crate::canvas::Canvas;
-use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
+use crate::core::{Point, RGBA, ShapeCore, ShapeImpl, UpdateOp};
 
 /// detail factor is used to configure how much detail the bezier curve step t will have.
 const DETAIL_FACTOR: f32 = 0.03;
@@ -51,18 +51,19 @@ impl ShapeImpl for Bezier {
 
     /// bezier on draw_selection also draws the subdivision point.
     /// we we modify this function to also draw those and the control points
-    fn draw_selection<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
-        self.draw_selection_basic(color, canvas);
+    fn draw_selection<'a>(&self, color1: RGBA, color2: RGBA, canvas: &mut Canvas<'a>) {
+        self.draw_selection_basic(color1, canvas);
 
         for i in 1..self.core.points.len() {
-            let line_core = self
+            let mut line_core = self
                 .core
                 .copy_with_points(vec![self.core.points[i - 1], self.core.points[i]]);
+            line_core.color = color2;
             draw_line(&line_core, canvas, true);
         }
 
         let p = de_casteljau(&self.core, self.subdivide_t);
-        self.draw_control_point(p, color, canvas);
+        self.draw_control_point(p, color1, canvas);
     }
 
     /// on the bezier hit test we pick the biggest possible square

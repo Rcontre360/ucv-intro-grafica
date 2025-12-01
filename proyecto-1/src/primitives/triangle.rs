@@ -266,7 +266,7 @@ pub fn draw_line_for_triangle<'a>(
             draw_if_available(x, y);
         }
     } else {
-        while (y > b.1 || y < b.1) {
+        while y > b.1 || y < b.1 {
             if d <= 0 {
                 d += inc_ne;
                 x += x_inc;

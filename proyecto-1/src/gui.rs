@@ -1,6 +1,6 @@
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu::{Renderer, ScreenDescriptor};
-use pixels::{PixelsContext, wgpu};
+use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
@@ -86,7 +86,7 @@ impl UiPanel for ColorPanel {
             colors.0.into(),
             colors.1.into(),
             colors.2.into(),
-            colors.3.into(),
+            colors.4.into(),
         );
 
         egui::Grid::new("color_grid")
@@ -198,6 +198,17 @@ impl UiPanel for BezierPanel {
                         .changed()
                     {
                         app_state.gui_update(GUIEvent::SubdivisionValue(subdivision_t));
+                    }
+
+                    let colors = app_state.get_colors();
+
+                    let mut polygon_color = colors.3.into();
+                    ui.label("Polygon Color");
+                    if ui
+                        .color_edit_button_srgba_unmultiplied(&mut polygon_color)
+                        .changed()
+                    {
+                        app_state.gui_update(GUIEvent::ControlPolygonColor(polygon_color.into()));
                     }
                 });
             });

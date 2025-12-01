@@ -51,6 +51,8 @@ pub enum GUIEvent {
     DegreeElevate,
     /// subdivide button clicked
     Subdivide,
+    /// change of control polygon color
+    ControlPolygonColor(RGBA),
     /// subdivision value changed
     SubdivisionValue(f32),
     /// clear button clicked
@@ -133,6 +135,8 @@ pub struct AppState {
     points_color: RGBA,
     /// color of a selected shape. Cannot be changed
     selection_color: RGBA,
+    /// bezier control polygon color
+    bezier_control_polygon_color: RGBA,
 }
 
 impl AppState {
@@ -143,6 +147,7 @@ impl AppState {
             color: RGBA::new(255, 255, 255, 200),
             fill_color: RGBA::new(100, 50, 10, 0),
             points_color: RGBA::new(255, 80, 80, 255),
+            bezier_control_polygon_color: RGBA::new(255, 80, 80, 255),
             selection_color: RGBA::new(80, 80, 250, 255),
             cur_shape: None,
             selected: None,
@@ -159,11 +164,12 @@ impl AppState {
     }
 
     /// returns all the color related fields on the UI
-    pub fn get_colors(&self) -> (RGBA, RGBA, RGBA, RGBA) {
+    pub fn get_colors(&self) -> (RGBA, RGBA, RGBA, RGBA, RGBA) {
         (
             self.color,
             self.fill_color,
             self.points_color,
+            self.bezier_control_polygon_color,
             self.draw_state.get_background_color(),
         )
     }
@@ -265,14 +271,18 @@ impl AppState {
                 // self.selected is not null (a shape is selected)
                 // so if we are not building a bezier curve and we hover over a shape, we have a
                 // pointer cursor
-                (false, Some(fig_index), Some(fig_selected)) => {
-                    if fig_index == fig_selected.index {
+                (false, Some(fig_index), Some(selected)) => {
+                    if fig_index == selected.index {
                         return CursorIcon::Pointer;
                     }
-
-                    // if we are over a control point, then we change the cursor to a "grab"
-                    if self.is_control_point_select(fig_index, point).is_some() {
-                        return CursorIcon::Grab;
+                }
+                (false, None, Some(selected)) => {
+                    // if we are over a control point of the selected shape, then we change the cursor
+                    if self
+                        .is_control_point_select(selected.index, point)
+                        .is_some()
+                    {
+                        return CursorIcon::Pointer;
                     }
                 }
                 _ => {}
@@ -300,6 +310,7 @@ impl AppState {
         match event {
             GUIEvent::ShapeType(shape) => self.current = shape,
             GUIEvent::PointsColor(c) => self.points_color = c,
+            GUIEvent::ControlPolygonColor(c) => self.bezier_control_polygon_color = c,
             GUIEvent::BackgroundColor(c) => self.draw_state.change_background_color(c),
             GUIEvent::DegreeElevate => self.handle_degree_elevate(),
             GUIEvent::Subdivide => self.handle_subdivide(),
@@ -432,7 +443,7 @@ impl AppState {
         for (id, shape) in self.draw_state.get_objects().iter().enumerate() {
             if self.selected.as_ref().is_some() && self.selected.as_ref().unwrap().index == id {
                 shape.draw_with_color(self.selection_color, canvas);
-                shape.draw_selection(self.points_color, canvas);
+                shape.draw_selection(self.points_color, self.bezier_control_polygon_color, canvas);
             } else {
                 shape.draw(canvas);
             }
@@ -539,7 +550,8 @@ impl AppState {
     fn is_control_point_select(&self, fig: usize, target: Point) -> Option<usize> {
         let object = self.draw_state.get_object(fig);
         for (i, p) in object.get_core().points.iter().enumerate() {
-            if (target.0 - p.0).pow(2) + (target.1 - p.1).pow(2) <= 5i32.pow(2) {
+            let delta = target - *p;
+            if delta.0 * delta.0 + delta.1 * delta.1 <= 100 {
                 return Some(i);
             }
         }
