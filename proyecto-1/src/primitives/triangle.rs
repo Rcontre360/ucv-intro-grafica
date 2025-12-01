@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use super::line::draw_line;
 use crate::canvas::Canvas;
-use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
+use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
+
+type PointFloat = (f32, f32);
 
 /// triangle object that holds the implementation for it
 pub struct Triangle {
@@ -83,20 +85,19 @@ fn fill_triangle(core: &ShapeCore, canvas: &mut Canvas, drawn: &HashMap<(i32, i3
     // we sort the points by "y" to get the lowest one first
     points.sort_by(|a, b| a.1.cmp(&b.1));
 
-    let p1 = points[0];
-    let p2 = points[1];
-    let p3 = points[2];
+    let p1: (f32, f32) = points[0].into();
+    let p2: (f32, f32) = points[1].into();
+    let p3: (f32, f32) = points[2].into();
 
-    if p1.1 == p3.1 {
+    if points[0].1 == points[2].1 {
         return; // Flat triangle
     }
 
     // the 4th point from the horizontal line intersection with the triangle side
     let p4 = (
-        (p1.0 + ((p2.1 - p1.1) as f32 / (p3.1 - p1.1) as f32 * (p3.0 - p1.0) as f32) as i32),
-        p2.1,
-    )
-        .into();
+        (p1.0 + ((p2.1 - p1.1) as f32 / (p3.1 - p1.1) as f32 * (p3.0 - p1.0) as f32)),
+        p2.1 as f32,
+    );
     // first fills the top triangle then the bottom one
     fill_top_triangle(p1, p2, p4, core.fill_color, canvas, drawn);
     fill_bottom_triangle(p2, p4, p3, core.fill_color, canvas, drawn);
@@ -104,64 +105,50 @@ fn fill_triangle(core: &ShapeCore, canvas: &mut Canvas, drawn: &HashMap<(i32, i3
 
 /// given a triangle (3 points), with the bottom side horizontal, we fill it with a color
 fn fill_top_triangle(
-    p1: Point,
-    p2: Point,
-    p3: Point,
+    p1: PointFloat,
+    p2: PointFloat,
+    p3: PointFloat,
     color: RGBA,
     canvas: &mut Canvas,
     drawn: &HashMap<(i32, i32), bool>,
 ) {
-    let m_1 = (p2.0 - p1.0) as f32 / (p2.1 - p1.1) as f32;
-    let m_2 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
+    let m_1 = (p2.0 - p1.0) / (p2.1 - p1.1);
+    let m_2 = (p3.0 - p1.0) / (p3.1 - p1.1);
 
-    let mut cur_x1 = p1.0 as f32;
-    let mut cur_x2 = p1.0 as f32;
+    let mut cur_x1 = p1.0;
+    let mut cur_x2 = p1.0;
 
-    for y in p1.1..p2.1 {
-        draw_horizontal(
-            cur_x1.ceil() as i32,
-            cur_x2.ceil() as i32,
-            y,
-            color,
-            canvas,
-            drawn,
-        );
+    for y in (p1.1.round() as i32)..(p2.1.round() as i32) {
+        draw_horizontal(cur_x1, cur_x2, y, color, canvas, drawn);
         cur_x1 += m_1;
         cur_x2 += m_2;
     }
 }
 
 fn fill_bottom_triangle(
-    p1: Point,
-    p2: Point,
-    p3: Point,
+    p1: PointFloat,
+    p2: PointFloat,
+    p3: PointFloat,
     color: RGBA,
     canvas: &mut Canvas,
     drawn: &HashMap<(i32, i32), bool>,
 ) {
-    let m_1 = (p3.0 - p1.0) as f32 / (p3.1 - p1.1) as f32;
-    let m_2 = (p3.0 - p2.0) as f32 / (p3.1 - p2.1) as f32;
+    let m_1 = (p3.0 - p1.0) / (p3.1 - p1.1);
+    let m_2 = (p3.0 - p2.0) / (p3.1 - p2.1);
 
-    let mut cur_x1 = p3.0 as f32;
-    let mut cur_x2 = p3.0 as f32;
+    let mut cur_x1 = p3.0;
+    let mut cur_x2 = p3.0;
 
-    for y in (p1.1..p3.1).rev() {
-        draw_horizontal(
-            cur_x1.floor() as i32,
-            cur_x2.floor() as i32,
-            y,
-            color,
-            canvas,
-            drawn,
-        );
+    for y in ((p1.1.round() as i32)..(p3.1.round() as i32)).rev() {
+        draw_horizontal(cur_x1, cur_x2, y, color, canvas, drawn);
         cur_x1 -= m_1;
         cur_x2 -= m_2;
     }
 }
 
 fn draw_horizontal(
-    mut x1: i32,
-    mut x2: i32,
+    mut x1: f32,
+    mut x2: f32,
     y: i32,
     color: RGBA,
     canvas: &mut Canvas,
@@ -170,7 +157,7 @@ fn draw_horizontal(
     if x1 > x2 {
         std::mem::swap(&mut x1, &mut x2);
     }
-    for x in x1..x2 {
+    for x in (x1.ceil() as i32)..(x2.ceil() as i32) {
         if drawn.get(&(x, y)).is_none() {
             canvas.set_pixel(x, y, color);
         }

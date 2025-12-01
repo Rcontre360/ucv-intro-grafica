@@ -28,6 +28,13 @@ impl From<(f32, f32)> for Point {
     }
 }
 
+// cast for (f32,f32). First it rounds the number to the closest int and then casts it to Point
+impl From<Point> for (f32, f32) {
+    fn from(coords: Point) -> Self {
+        (coords.0 as f32, coords.1 as f32)
+    }
+}
+
 // implements the addition for point
 impl Add for Point {
     type Output = Point;
