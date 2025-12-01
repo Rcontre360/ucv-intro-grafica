@@ -9,7 +9,7 @@ use crate::core::Shape;
 
 /// we have different panels that are drawn, this is a trait (interface) for all of them
 trait UiPanel {
-    /// Draws the panel.
+    /// draws the panel
     fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState);
 }
 
@@ -74,7 +74,7 @@ impl UiPanel for ShapePanel {
     }
 }
 
-/// Panel for color controls.
+/// panel for only color related stuf
 struct ColorPanel;
 impl UiPanel for ColorPanel {
     fn draw(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context, app_state: &mut AppState) {
@@ -128,7 +128,7 @@ impl UiPanel for ColorPanel {
     }
 }
 
-/// Panel for adjusting shape depth (z-ordering).
+/// panel for depth stuff. only available when selecting a shape
 struct DepthPanel;
 impl UiPanel for DepthPanel {
     fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState) {
@@ -175,7 +175,7 @@ impl UiPanel for DepthPanel {
     }
 }
 
-/// Panel for Bezier-specific settings.
+/// banel for bezier-specific settings. Only available when selecting a bezier curve
 struct BezierPanel;
 impl UiPanel for BezierPanel {
     fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState) {
@@ -219,14 +219,14 @@ impl UiPanel for BezierPanel {
     }
 }
 
-/// Manages the application's UI panels and state.
+/// UI
 pub(crate) struct TemplateApp {
     app_state: AppState,
     panels: Vec<Box<dyn UiPanel>>,
 }
 
 impl TemplateApp {
-    /// Called once before the first frame.
+    /// called once before the first frame
     pub fn new() -> Self {
         Self {
             app_state: AppState::new(),
@@ -240,7 +240,7 @@ impl TemplateApp {
         }
     }
 
-    /// Called each time the UI is updated.
+    /// called each time the UI is updated
     pub fn update(&mut self, ctx: &egui::Context) {
         egui::SidePanel::left("side_panel")
             .default_width(250.0)
@@ -259,29 +259,21 @@ impl TemplateApp {
     }
 }
 
-/// Manages all state required for rendering egui over `Pixels`.
+/// manages all state required for rendering egui with the pixels library
+/// this was taken from an internet example on how to use egui with pixels
+/// see https://github.com/parasyte/pixels/tree/main/examples/minimal-egui
 pub(crate) struct Framework {
-    // State for egui.
-    /// The egui context.
     egui_ctx: Context,
-    /// The egui state.
     egui_state: egui_winit::State,
-    /// The screen descriptor.
     screen_descriptor: ScreenDescriptor,
-    /// The egui renderer.
     renderer: Renderer,
-    /// The paint jobs to be rendered.
     paint_jobs: Vec<ClippedPrimitive>,
-    /// The textures delta.
     textures: TexturesDelta,
 
-    // State for the GUI
-    /// The GUI application state.
     gui: TemplateApp,
 }
 
 impl Framework {
-    /// Create egui.
     pub(crate) fn new<T>(
         event_loop: &EventLoopWindowTarget<T>,
         width: u32,
@@ -293,7 +285,6 @@ impl Framework {
 
         let egui_ctx = Context::default();
 
-        // Set style on creation
         let mut style = (*egui_ctx.style()).clone();
         style.text_styles = [
             (
@@ -342,29 +333,27 @@ impl Framework {
         }
     }
 
-    /// Handle input events from the window manager.
+    /// handle input events from the window manager
     pub(crate) fn handle_event(&mut self, window: &Window, event: &winit::event::WindowEvent) {
         let _ = self.egui_state.on_window_event(window, event);
     }
 
-    /// Resize egui.
+    /// resize egui
     pub(crate) fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.screen_descriptor.size_in_pixels = [width, height];
         }
     }
 
-    /// Update scaling factor.
+    /// update scaling factor
     pub(crate) fn scale_factor(&mut self, scale_factor: f64) {
         self.screen_descriptor.pixels_per_point = scale_factor as f32;
     }
 
-    /// Prepare egui.
+    /// prepare egui
     pub(crate) fn prepare(&mut self, window: &Window) {
-        // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
-            // Draw the demo application.
             self.gui.update(egui_ctx);
         });
 
@@ -376,7 +365,7 @@ impl Framework {
             .tessellate(output.shapes, self.screen_descriptor.pixels_per_point);
     }
 
-    /// Render egui.
+    /// render egui
     pub(crate) fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
@@ -424,12 +413,12 @@ impl Framework {
         }
     }
 
-    /// Returns a mutable reference to the application state.
+    /// returns a mutable reference to the application state
     pub(crate) fn get_state(&mut self) -> &mut AppState {
         &mut self.gui.app_state
     }
 
-    /// Returns `true` if the GUI wants to capture pointer input.
+    /// returns "true" if the GUI wants to capture pointer input..
     pub(crate) fn wants_pointer_input(&self) -> bool {
         self.egui_ctx.wants_pointer_input() || self.egui_ctx.is_pointer_over_area()
     }
