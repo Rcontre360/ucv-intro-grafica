@@ -148,7 +148,8 @@ pub trait ShapeImpl {
     }
 
     /// subdivision function to create 2 more shapes from the original
-    /// Currently only bezier implements this
+    /// Currently only bezier implements this, we added it as part of the interface to keep the app
+    /// state management agnostic from the shape type used
     fn subdivide(&self) -> Option<(ShapeCore, ShapeCore)> {
         None
     }

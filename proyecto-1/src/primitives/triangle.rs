@@ -103,7 +103,10 @@ fn fill_triangle(core: &ShapeCore, canvas: &mut Canvas, drawn: &HashMap<(i32, i3
     fill_bottom_triangle(p2, p4, p3, core.fill_color, canvas, drawn);
 }
 
-/// given a triangle (3 points), with the bottom side horizontal, we fill it with a color
+/// We didnt managed to have a "PERFECT" fill for all triangles, we modified fill_top_triangle and
+/// fill_bottom_triangle to produce the best triangles we could, with as many pixels of the inside
+/// filled and as less pixels outside the border filled. We tested this with an array of triangles
+/// with different angles on different points
 fn fill_top_triangle(
     p1: PointFloat,
     p2: PointFloat,
@@ -125,6 +128,10 @@ fn fill_top_triangle(
     }
 }
 
+/// We didnt managed to have a "PERFECT" fill for all triangles, we modified fill_top_triangle and
+/// fill_bottom_triangle to produce the best triangles we could, with as many pixels of the inside
+/// filled and as less pixels outside the border filled. We tested this with an array of triangles
+/// with different angles on different points
 fn fill_bottom_triangle(
     p1: PointFloat,
     p2: PointFloat,
@@ -141,6 +148,7 @@ fn fill_bottom_triangle(
 
     for y in ((p1.1.round() as i32)..(p3.1.round() as i32)).rev() {
         draw_horizontal(
+            // for different slopes (angles) this configuration gave us the best filling possible
             if m_1 > 0.0 {
                 cur_x1.floor()
             } else {
@@ -161,6 +169,8 @@ fn fill_bottom_triangle(
     }
 }
 
+/// draws horizontal lines to fill the triangle. Recieves the height (y), the start and end (x1,x2)
+/// checks if we are in a border before filling
 fn draw_horizontal(
     mut x1: f32,
     mut x2: f32,
