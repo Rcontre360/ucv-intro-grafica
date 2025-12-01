@@ -7,15 +7,13 @@ use winit::window::Window;
 use crate::app_state::{AppState, GUIEvent};
 use crate::core::Shape;
 
-// --- Panels Trait and Implementations ---
-
-/// A trait for a UI panel that can be drawn on the screen.
+/// we have different panels that are drawn, this is a trait (interface) for all of them
 trait UiPanel {
     /// Draws the panel.
     fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState);
 }
 
-/// Panel for top-level controls like File menu, Undo, and Redo.
+/// top panel which holds undo/redo and file functionality
 struct TopControlsPanel;
 impl UiPanel for TopControlsPanel {
     fn draw(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context, app_state: &mut AppState) {
@@ -42,7 +40,7 @@ impl UiPanel for TopControlsPanel {
     }
 }
 
-/// Panel for shape selection and clearing the canvas.
+/// panel to select shapes and modify them. Main one
 struct ShapePanel;
 impl UiPanel for ShapePanel {
     fn draw(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context, app_state: &mut AppState) {

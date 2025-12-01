@@ -267,15 +267,11 @@ impl AppState {
             ) {
                 // we fall here if:
                 // "is_building_bezier" == false
-                // is_figure_selection is not null
-                // self.selected is not null (a shape is selected)
+                // we are NOT hovering over a shape
+                // self.selected is not null (a shape is selected). Since control points dont
+                // appear unless a shape is selected.
                 // so if we are not building a bezier curve and we hover over a shape, we have a
                 // pointer cursor
-                (false, Some(fig_index), Some(selected)) => {
-                    if fig_index == selected.index {
-                        return CursorIcon::Pointer;
-                    }
-                }
                 (false, None, Some(selected)) => {
                     // if we are over a control point of the selected shape, then we change the cursor
                     if self
@@ -284,6 +280,12 @@ impl AppState {
                     {
                         return CursorIcon::Pointer;
                     }
+                }
+                // we fall here if:
+                // "is_building_bezier" == false
+                // the point we are hovering has a shape
+                (false, Some(_), _) => {
+                    return CursorIcon::Pointer;
                 }
                 _ => {}
             }

@@ -16,3 +16,4 @@ transparencia del pixel para mezclarse el color que ya está dibujado en el búf
 (color_de_buffer[x][y] = color_de_buffer[x][y] * (1-alpha) + color * alpha).
 Implementar este blending con cuidado, debido a las conversiones de tipo (1 punto)."
 Porque dice que hay que tener cuidado con el blending?
+
