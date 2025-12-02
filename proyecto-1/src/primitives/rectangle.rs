@@ -35,7 +35,7 @@ impl ShapeImpl for Rectangle {
     }
 
     /// simple hit test for rectangle just gets the square and checks if the point is within that
-    /// square
+    /// square if its filled. Or if its over the lines if its not filled
     fn hit_test(&self, point: Point) -> bool {
         let p1 = self.core.points[0];
         let p2 = self.core.points[1];
@@ -50,7 +50,7 @@ impl ShapeImpl for Rectangle {
             return point.is_within_box(p1, p2, 0);
         }
 
-        // checking if the click is on the lines
+        // checking if the click is on the lines. we create a "box" surrounding each line
         return point.is_within_box(p1, Point(p1.0, p2.1), HIT_TEST_THRESHOLD)
             || point.is_within_box(p1, Point(p2.0, p1.1), HIT_TEST_THRESHOLD)
             || point.is_within_box(p2, Point(p2.0, p1.1), HIT_TEST_THRESHOLD)

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::line::draw_line;
+use super::line::{draw_line, line_hit_test};
 use crate::canvas::Canvas;
 use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
 
@@ -41,6 +41,13 @@ impl ShapeImpl for Triangle {
         let a = self.core.points[0];
         let b = self.core.points[1];
         let c = self.core.points[2];
+
+        // if its transparent we check for it touching the lines
+        if self.core.fill_color.is_transparent() {
+            return line_hit_test(&self.core.copy_with_points(vec![a, b]), p)
+                || line_hit_test(&self.core.copy_with_points(vec![b, c]), p)
+                || line_hit_test(&self.core.copy_with_points(vec![c, a]), p);
+        }
 
         let cp1 = edge_side_check(a, b, p);
         let cp2 = edge_side_check(b, c, p);
