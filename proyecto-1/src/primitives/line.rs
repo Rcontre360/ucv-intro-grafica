@@ -114,7 +114,7 @@ pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
         // if a line is a point then is impossible to select it.
         // What we do is create a box around this point of 10 pixels and check if the click is
         // within that box
-        return point.is_within_box(p1 + Point(10, 10), p1 - Point(10, 10));
+        return point.is_within_box(p1, p1, 10);
     }
 
     let delta = p2 - p1;

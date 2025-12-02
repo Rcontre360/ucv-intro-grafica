@@ -1,6 +1,10 @@
+use egui::Options;
 // this "serde" is a library for serialization and deserialization into JSON
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, Mul, Sub};
+use std::{
+    cmp::{max, min},
+    ops::{Add, Mul, Sub},
+};
 
 //here we have a "#[derive]" keyword. Basically implements other functionality into this object
 //for example, Clone allows this object to have the ".clone()" method, which makes a copy of it
@@ -44,12 +48,30 @@ impl Add for Point {
     }
 }
 
-// implements substraction for points
-impl Sub for Point {
+// implements substraction for points against scalar
+impl Add<i32> for Point {
     type Output = Point;
 
-    fn sub(self, other: Point) -> Point {
+    fn add(self, other: i32) -> Self::Output {
+        Point(self.0 + other, self.1 + other)
+    }
+}
+
+// implements substraction for points
+impl Sub<Point> for Point {
+    type Output = Point;
+
+    fn sub(self, other: Point) -> Self::Output {
         Point(self.0 - other.0, self.1 - other.1)
+    }
+}
+
+// implements substraction for points against scalar
+impl Sub<i32> for Point {
+    type Output = Point;
+
+    fn sub(self, other: i32) -> Self::Output {
+        Point(self.0 - other, self.1 - other)
     }
 }
 
@@ -95,18 +117,22 @@ impl Point {
     }
 
     /// checks if the current point (self) is within the box formed by p1 and p2
-    pub fn is_within_box(&self, p1: Point, p2: Point) -> bool {
-        let Point(x1, y1) = p1;
-        let Point(x2, y2) = p2;
+    pub fn is_within_box(&self, p1: Point, p2: Point, error: u32) -> bool {
+        let x1 = p1.0;
+        let y1 = p1.1;
+        let x2 = p2.0;
+        let y2 = p2.1;
 
-        let min_x = x1.min(x2);
-        let max_x = x1.max(x2);
-        let min_y = y1.min(y2);
-        let max_y = y1.max(y2);
+        let mut min_x = min(x1, x2);
+        let mut max_x = max(x1, x2);
+        let mut min_y = min(y1, y2);
+        let mut max_y = max(y1, y2);
 
-        let is_x_inside = self.0 >= min_x && self.0 <= max_x;
-        let is_y_inside = self.1 >= min_y && self.1 <= max_y;
+        min_x -= error as i32;
+        max_x += error as i32;
+        min_y -= error as i32;
+        max_y += error as i32;
 
-        is_x_inside && is_y_inside
+        self.0 >= min_x && self.0 <= max_x && self.1 >= min_y && self.1 <= max_y
     }
 }
