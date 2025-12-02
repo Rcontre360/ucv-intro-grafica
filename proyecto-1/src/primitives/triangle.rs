@@ -33,6 +33,8 @@ impl ShapeImpl for Triangle {
         draw_triangle(&self.core.copy_with_color(color), canvas);
     }
 
+    /// hit test for triangle. If its filled it checks if the point is within, if not it only
+    /// checks if it touches the borders
     fn hit_test(&self, p: Point) -> bool {
         if self.core.points.len() < 3 {
             return false;
