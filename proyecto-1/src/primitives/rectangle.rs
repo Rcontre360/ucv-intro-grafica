@@ -1,9 +1,11 @@
 use std::cmp::{max, min};
 
 use crate::canvas::Canvas;
-use crate::core::{Point, RGBA, ShapeCore, ShapeImpl};
+use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
 
 use super::line::line_hit_test; // To draw lines for the rectangle
+
+const HIT_TEST_THRESHOLD: u32 = 5;
 
 // rectangle object to hold the rectangle implementation
 pub struct Rectangle {
@@ -33,7 +35,7 @@ impl ShapeImpl for Rectangle {
     }
 
     /// simple hit test for rectangle just gets the square and checks if the point is within that
-    /// square
+    /// square if its filled. Or if its over the lines if its not filled
     fn hit_test(&self, point: Point) -> bool {
         let p1 = self.core.points[0];
         let p2 = self.core.points[1];
@@ -43,7 +45,16 @@ impl ShapeImpl for Rectangle {
             return line_hit_test(&self.core, point);
         }
 
-        return point.is_within_box(p1, p2);
+        // case when its filled||
+        if !self.core.fill_color.is_transparent() {
+            return point.is_within_box(p1, p2, 0);
+        }
+
+        // checking if the click is on the lines. we create a "box" surrounding each line
+        return point.is_within_box(p1, Point(p1.0, p2.1), HIT_TEST_THRESHOLD)
+            || point.is_within_box(p1, Point(p2.0, p1.1), HIT_TEST_THRESHOLD)
+            || point.is_within_box(p2, Point(p2.0, p1.1), HIT_TEST_THRESHOLD)
+            || point.is_within_box(p2, Point(p1.0, p2.1), HIT_TEST_THRESHOLD);
     }
 }
 

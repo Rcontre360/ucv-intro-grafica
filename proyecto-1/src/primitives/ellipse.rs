@@ -1,7 +1,9 @@
 use crate::canvas::Canvas;
-use crate::core::{Point, RGBA, ShapeCore, ShapeImpl, UpdateOp};
+use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
 
 use super::line::line_hit_test;
+
+const HIT_TEST_ERROR: i64 = 5;
 
 pub struct Ellipse {
     core: ShapeCore,
@@ -38,19 +40,33 @@ impl ShapeImpl for Ellipse {
     /// we get the formula bellow. We just multiply both sides by a^2 * b^2
     fn hit_test(&self, point: Point) -> bool {
         let (center, a, b) = get_ellipse(&self.core);
-
         // special case where the ellipse is completelly flat
         if a == 0 || b == 0 {
             return line_hit_test(&self.core, point);
         }
 
-        let delta = point - center;
-
-        let dx = delta.0 as i64;
-        let dy = delta.1 as i64;
-
-        (dx * dx) * (b * b) + (dy * dy) * (a * a) <= a * a * b * b
+        // basically if its transparent we check if its within a bigger ellipse and outside a
+        // smaller ellipse, that behaves like we are checking if the border is being clicked with a
+        // small error (intentional to avoid the case where we cant click because we cant hit the
+        // line exact pixels)
+        return if self.core.fill_color.is_transparent() {
+            is_within_ellipse(center, a + HIT_TEST_ERROR, b + HIT_TEST_ERROR, point)
+                && !is_within_ellipse(center, a - HIT_TEST_ERROR, b - HIT_TEST_ERROR, point)
+        } else {
+            is_within_ellipse(center, a, b, point)
+        };
     }
+}
+
+fn is_within_ellipse(center: Point, a: i64, b: i64, point: Point) -> bool {
+    let delta = point - center;
+
+    let dx = delta.0 as i64;
+    let dy = delta.1 as i64;
+
+    let position_calc = (dx * dx) * (b * b) + (dy * dy) * (a * a) - a * a * b * b;
+
+    position_calc <= 0
 }
 
 /// we draw an ellipse using an integer only algorithm. Same as the one used on homework 1 with the

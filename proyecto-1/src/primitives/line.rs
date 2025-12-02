@@ -2,7 +2,7 @@ use crate::canvas::Canvas;
 
 use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
 
-const LINE_DISTANCE_THRESHOLD: u64 = 100;
+const HIT_TEST_ERROR: u64 = 30;
 
 /// line object definition
 pub struct Line {
@@ -114,7 +114,7 @@ pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
         // if a line is a point then is impossible to select it.
         // What we do is create a box around this point of 10 pixels and check if the click is
         // within that box
-        return point.is_within_box(p1 + Point(10, 10), p1 - Point(10, 10));
+        return point.is_within_box(p1, p1, 10);
     }
 
     let delta = p2 - p1;
@@ -152,5 +152,5 @@ pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
     let dist_prev_y = delta_sqr * point.1 as u64 - closest_point.1 as u64;
 
     let distance = dist_prev_x * dist_prev_x + dist_prev_y * dist_prev_y;
-    return distance < LINE_DISTANCE_THRESHOLD * delta_sqr * delta_sqr;
+    return distance < HIT_TEST_ERROR * delta_sqr * delta_sqr;
 }

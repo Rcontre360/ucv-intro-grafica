@@ -1,6 +1,9 @@
-use super::line::draw_line;
+use std::mem::discriminant;
+
+use super::line::{draw_line, line_hit_test};
+use super::Line;
 use crate::canvas::Canvas;
-use crate::core::{Point, RGBA, ShapeCore, ShapeImpl, UpdateOp};
+use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
 
 /// detail factor is used to configure how much detail the bezier curve step t will have.
 const DETAIL_FACTOR: f32 = 0.03;
@@ -8,13 +11,21 @@ const DETAIL_FACTOR: f32 = 0.03;
 pub struct Bezier {
     core: ShapeCore,
     subdivide_t: f32,
+    // auxiliar lines to CHECK if the user is clicking the bezier curve
+    // these are updated each time the bezier curve is updated
+    // then we use these lines to DRAW the bezier curve
+    // This is way more efficient than drawing the shape on each render. We generate the shape only
+    // if its modified and draw the lines generated
+    // We ALSO store if we should draw the last line or not, used to avoid redrawing points
+    lines: Vec<(ShapeCore, bool)>,
 }
 
 impl ShapeImpl for Bezier {
     fn new(core: ShapeCore) -> Bezier {
         Bezier {
-            core,
+            core: core.clone(),
             subdivide_t: 0.5,
+            lines: Bezier::generate_lines(&core),
         }
     }
 
@@ -29,6 +40,18 @@ impl ShapeImpl for Bezier {
     fn update(&mut self, op: &UpdateOp) {
         self.update_basic(op);
 
+        match op {
+            // ignore these two operations
+            UpdateOp::ChangeColor(_)
+            | UpdateOp::ChangeFillColor(_)
+            | UpdateOp::UpdateSubdivide(_) => {}
+            // for every other operation update the lines since every other op changes the control
+            // points
+            _ => {
+                self.lines = Bezier::generate_lines(&self.core);
+            }
+        }
+
         // bezier is the only one that also implements degree_elevate and subdivide update
         match op {
             UpdateOp::DegreeElevate => {
@@ -42,11 +65,16 @@ impl ShapeImpl for Bezier {
     }
 
     fn draw<'a>(&self, canvas: &mut Canvas<'a>) {
-        draw_bezier(&self.core, canvas);
+        draw_bezier(&self.lines, canvas);
     }
 
     fn draw_with_color<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
-        draw_bezier(&self.core.copy_with_color(color), canvas);
+        let lines_w_color = self
+            .lines
+            .iter()
+            .map(|l| (l.0.copy_with_color(color), l.1))
+            .collect();
+        draw_bezier(&lines_w_color, canvas);
     }
 
     /// bezier on draw_selection also draws the subdivision point.
@@ -66,29 +94,20 @@ impl ShapeImpl for Bezier {
         self.draw_control_point(p, color1, canvas);
     }
 
-    /// on the bezier hit test we pick the biggest possible square
-    /// given the control points. Then we check if the point selected is within that square.
-    /// This was discussed as the selection method for bezier in class but there are more precise ways to
-    /// do it such as convex hull algorithms to get the convex polygon and then checking if the
-    /// point falls within that polygon. That method is slower but more precise
+    /// on the bezier hit test is a hit test over all the lines generated for the curve
+    /// is a bit expensive but is the most precise way we figured out now.
     fn hit_test(&self, point: Point) -> bool {
         if self.core.points.is_empty() {
             return false;
         }
 
-        let mut min_x = self.core.points[0].0;
-        let mut max_x = self.core.points[0].0;
-        let mut min_y = self.core.points[0].1;
-        let mut max_y = self.core.points[0].1;
-
-        for p in &self.core.points {
-            min_x = min_x.min(p.0);
-            max_x = max_x.max(p.0);
-            min_y = min_y.min(p.1);
-            max_y = max_y.max(p.1);
+        for l in &self.lines {
+            if line_hit_test(&l.0, point) {
+                return true;
+            }
         }
 
-        point.0 >= min_x && point.0 <= max_x && point.1 >= min_y && point.1 <= max_y
+        return false;
     }
 
     /// for subdivision we dont modify the current shape, we do that in the application state
@@ -145,32 +164,42 @@ impl Bezier {
         // from memory
         self.core.points = new_points;
     }
+
+    /// generates the lines that later we will draw, uses de_casteljau algorithm
+    fn generate_lines(core: &ShapeCore) -> Vec<(ShapeCore, bool)> {
+        let mut t = 0.0;
+        let mut prev_pts: Option<Point> = None;
+        let mut draw_last = false;
+        let mut result = vec![];
+        let detail = get_detail(&core);
+
+        while t <= 1.0 {
+            let p = de_casteljau(&core, t);
+            if let Some(prev) = prev_pts {
+                // since draw line must not draw the first point we sort the points backwards p first
+                // then prev
+                // that way we draw a line that is connected to the next one without overlapping
+                // basically given a,b,c,d points from the bezier curve we draw lines [a,b),[b,c),[c,d]
+                let line_core = core.copy_with_points(vec![p, prev]);
+                result.push((line_core, draw_last));
+            }
+
+            prev_pts = Some(p);
+            t += detail;
+            // our lines are drawn from a to b like this [a,b). the last point must be drawn, when this
+            // is true the full line is drawn [a,b]
+            draw_last = t + detail > 1.0;
+        }
+
+        return result;
+    }
 }
 
 /// draws a bezier curve given a shape core. This separation allows us to draw it with different
 /// colors if a bezier is selected
-fn draw_bezier(core: &ShapeCore, canvas: &mut Canvas) {
-    let mut t = 0.0;
-    let detail = get_detail(core);
-    let mut prev_pts: Option<Point> = None;
-    let mut draw_last = false;
-
-    while t <= 1.0 {
-        let p = de_casteljau(core, t);
-        if let Some(prev) = prev_pts {
-            // since draw line must not draw the first point we sort the points backwards p first
-            // then prev
-            // that way we draw a line that is connected to the next one without overlapping
-            // basically given a,b,c,d points from the bezier curve we draw lines [a,b),[b,c),[c,d]
-            let line_core = core.copy_with_points(vec![p, prev]);
-            draw_line(&line_core, canvas, draw_last);
-        }
-
-        prev_pts = Some(p);
-        t += detail;
-        // our lines are drawn from a to b like this [a,b). the last point must be drawn, when this
-        // is true the full line is drawn [a,b]
-        draw_last = t + detail > 1.0;
+fn draw_bezier(lines: &Vec<(ShapeCore, bool)>, canvas: &mut Canvas) {
+    for (l, draw_first) in lines {
+        draw_line(l, canvas, *draw_first);
     }
 }
 
