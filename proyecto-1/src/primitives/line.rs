@@ -2,7 +2,7 @@ use crate::canvas::Canvas;
 
 use crate::core::{Point, ShapeCore, ShapeImpl, RGBA};
 
-const HIT_TEST_ERROR: u64 = 100;
+const HIT_TEST_ERROR: u64 = 30;
 
 /// line object definition
 pub struct Line {
