@@ -73,23 +73,31 @@ fn main() -> Result<(), Error> {
             }
 
             if input.key_pressed(KeyCode::Enter) {
-                state.keyboard_update(KeyCode::Enter);
+                state.keyboard_update(KeyCode::Enter, true);
             }
 
             if input.key_pressed(KeyCode::Delete) {
-                state.keyboard_update(KeyCode::Delete);
+                state.keyboard_update(KeyCode::Delete, true);
             }
 
             if input.key_pressed(KeyCode::Backspace) {
-                state.keyboard_update(KeyCode::Backspace);
+                state.keyboard_update(KeyCode::Backspace, true);
             }
 
             if input.key_pressed(KeyCode::ShiftLeft) {
-                state.keyboard_update(KeyCode::ShiftLeft);
+                state.keyboard_update(KeyCode::ShiftLeft, true);
             }
 
             if input.key_pressed(KeyCode::ShiftRight) {
-                state.keyboard_update(KeyCode::ShiftRight);
+                state.keyboard_update(KeyCode::ShiftRight, true);
+            }
+
+            if input.key_released(KeyCode::ShiftLeft) {
+                state.keyboard_update(KeyCode::ShiftLeft, false);
+            }
+
+            if input.key_released(KeyCode::ShiftRight) {
+                state.keyboard_update(KeyCode::ShiftRight, false);
             }
 
             // mouse events on GUI. Avoids drawing while selecting gui buttons

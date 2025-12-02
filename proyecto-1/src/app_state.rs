@@ -1,4 +1,4 @@
-use std::cmp::min;
+use std::cmp::{max, min};
 
 use rfd::FileDialog;
 use winit::keyboard::KeyCode;
@@ -69,8 +69,8 @@ pub enum EventType {
     /// mouse event definition. has as argument the type, the mouse button (u8) and the point in
     /// screen where it happened
     Mouse(MouseEvent, u8, Point),
-    /// keyboard event
-    Keyboard(KeyCode),
+    /// keyboard event, bolean to know if its pressed or released
+    Keyboard(KeyCode, bool),
     /// gui event
     GUI(GUIEvent),
 }
@@ -124,6 +124,8 @@ pub struct AppState {
     /// ui_subdivision_t is the current "t" UI value for subdivision
     pub ui_subdivision_t: f32,
 
+    /// checks if shift is being pressed
+    shift_pressed: bool,
     /// draw state holds the shapes and what is rendered. Every object that should be saved to a
     /// file or that should be stored on the event queue is here
     draw_state: DrawState,
@@ -149,10 +151,11 @@ impl AppState {
             points_color: RGBA::new(255, 80, 80, 255),
             bezier_control_polygon_color: RGBA::new(255, 80, 80, 255),
             selection_color: RGBA::new(80, 80, 250, 255),
-            cur_shape: None,
-            selected: None,
             draw_state: DrawState::new(),
             ui_subdivision_t: 0.5,
+            shift_pressed: false,
+            cur_shape: None,
+            selected: None,
         }
     }
 
@@ -181,8 +184,8 @@ impl AppState {
     }
 
     /// handles keyboard update
-    pub fn keyboard_update(&mut self, key: KeyCode) {
-        self.update(EventType::Keyboard(key));
+    pub fn keyboard_update(&mut self, key: KeyCode, is_pressed: bool) {
+        self.update(EventType::Keyboard(key, is_pressed));
     }
 
     /// handles mouse update
@@ -248,8 +251,8 @@ impl AppState {
                 self.handle_figure_draw(event);
             }
             // only keyboard events
-            EventType::Keyboard(key_ev) => {
-                self.handle_keyboard_event(key_ev);
+            EventType::Keyboard(key_ev, is_pressed) => {
+                self.handle_keyboard_event(key_ev, is_pressed);
             }
         }
 
@@ -295,14 +298,18 @@ impl AppState {
     }
 
     ///handles keyboard events given the key pressed
-    fn handle_keyboard_event(&mut self, event: KeyCode) {
-        match event {
+    fn handle_keyboard_event(&mut self, event: KeyCode, is_pressed: bool) {
+        match (event, is_pressed) {
             // degree elevate for bezier. YES! you can elevate its degree with only enter
-            KeyCode::Enter => self.handle_degree_elevate(),
+            (KeyCode::Enter, true) => self.handle_degree_elevate(),
             // delete a shape with delete and backspace
-            KeyCode::Delete | KeyCode::Backspace => self.handle_delete_figure(),
+            (KeyCode::Delete | KeyCode::Backspace, true) => self.handle_delete_figure(),
             // we do that weird requirement where we transform ellipses and rectangles on shift
-            KeyCode::ShiftLeft | KeyCode::ShiftRight => self.handle_shift_drag(),
+            (KeyCode::ShiftLeft | KeyCode::ShiftRight, is_pressed) => {
+                if self.shift_pressed != is_pressed {
+                    self.shift_pressed = is_pressed;
+                }
+            }
             _ => {}
         }
     }
@@ -463,27 +470,6 @@ impl AppState {
         }
     }
 
-    /// Handles the "shift-drag" functionality, which transforms rectangles and ellipses into squares and circles.
-    fn handle_shift_drag(&mut self) {
-        if let Some(selected) = self.selected.as_ref() {
-            let obj = self.draw_state.get_object(selected.index);
-            let core = obj.get_core();
-
-            // if shape selected is one of these
-            if let Shape::Rectangle | Shape::Ellipse = core.shape_type {
-                // delta.x != delta.y happens, its not square
-                let delta = core.points[1] - core.points[0];
-                // we take the minimum size for the shape
-                let min = min(delta.0, delta.1);
-
-                let new_pnt = Point(core.points[0].0 + min, core.points[0].1 + min);
-
-                let op = UpdateOp::ControlPoint(1, new_pnt);
-                self.draw_state.update_shape(selected.index, op);
-            }
-        }
-    }
-
     /// Elevates the degree of the currently selected Bezier curve.
     fn handle_degree_elevate(&mut self) {
         if let Some(selected) = self.selected.as_ref() {
@@ -582,8 +568,31 @@ impl AppState {
     /// Updates the last control point of the shape currently being created.
     fn shape_update_last_point(&mut self, nxt: Point) {
         if let Some(cur) = self.cur_shape.as_mut() {
+            // next point will be given shift pressed and shape type or just the next one given by
+            // the cursor
+            let next_point = match (self.shift_pressed, cur.get_core().shape_type) {
+                (true, Shape::Rectangle | Shape::Ellipse) => {
+                    let core = cur.get_core();
+
+                    // if shape created is one of these
+                    // delta.x != delta.y happens, its not square
+                    let delta = nxt - core.points[0];
+                    // we do abs here to always pick the longest distance
+                    let mx = max(delta.0.abs(), delta.1.abs());
+                    let (sum_x, sum_y) = match (delta.0 > 0, delta.1 > 0) {
+                        (true, true) => (mx, mx),
+                        (true, false) => (mx, -mx),
+                        (false, false) => (-mx, -mx),
+                        (false, true) => (-mx, mx),
+                    };
+
+                    Point(core.points[0].0 + sum_x, core.points[0].1 + sum_y)
+                }
+                _ => nxt,
+            };
+
             let last_point = cur.get_core().points.len() - 1;
-            cur.update(&UpdateOp::ControlPoint(last_point, nxt));
+            cur.update(&UpdateOp::ControlPoint(last_point, next_point));
         }
     }
 
