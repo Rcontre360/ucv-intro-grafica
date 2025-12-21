@@ -44,33 +44,33 @@ The application is designed with a layered architecture to promote separation of
 
 ```mermaid
 graph TD
-    subgraph Outer Layer (Windowing, UI, and Rendering)
+    subgraph "Outer Layer (Windowing, UI, and Rendering)"
         A["main.rs, gui.rs"]
         style A fill:#f9f,stroke:#333,stroke-width:2px
     end
 
-    subgraph State Management Layer
+    subgraph "State Management Layer"
         B["app_state.rs"]
         C["draw_state.rs"]
         style B fill:#ccf,stroke:#333,stroke-width:2px
         style C fill:#ccf,stroke:#333,stroke-width:2px
     end
 
-    subgraph Primitives Layer (Concrete Shape Implementations)
+    subgraph "Primitives Layer (Concrete Shape Implementations)"
         D["line.rs, ellipse.rs, bezier.rs, etc."]
         style D fill:#cfc,stroke:#333,stroke-width:2px
     end
 
-    subgraph Core Layer (Abstract Interfaces & Data Structures)
+    subgraph "Core Layer (Abstract Interfaces & Data Structures)"
         E["core/mod.rs (ShapeImpl, ShapeCore, Point, RGBA)"]
         style E fill:#fcf,stroke:#333,stroke-width:2px
     end
 
-    A -- Manages --> B
-    B -- Manages --> C
-    B -- Creates/Manages --> D
-    C -- Stores --> D
-    D -- Implements --> E
+    A -- "Manages" --> B
+    B -- "Manages" --> C
+    B -- "Creates/Manages" --> D
+    C -- "Stores" --> D
+    D -- "Implements" --> E
 ```
 
 ### Layers Explained
