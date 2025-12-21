@@ -37,3 +37,54 @@ This project includes a PowerShell script (`build.ps1`) that automates the entir
     source prepare.sh
     cargo run --release
     ```
+
+## Architecture
+
+The application is designed with a layered architecture to promote separation of concerns, making it modular and easier to maintain. Each layer has a distinct responsibility, and dependencies flow from the outer layers to the inner layers.
+
+```mermaid
+graph TD
+    subgraph Outer Layer (Windowing, UI, and Rendering)
+        A["main.rs, gui.rs"]
+        style A fill:#f9f,stroke:#333,stroke-width:2px
+    end
+
+    subgraph State Management Layer
+        B["app_state.rs"]
+        C["draw_state.rs"]
+        style B fill:#ccf,stroke:#333,stroke-width:2px
+        style C fill:#ccf,stroke:#333,stroke-width:2px
+    end
+
+    subgraph Primitives Layer (Concrete Shape Implementations)
+        D["line.rs, ellipse.rs, bezier.rs, etc."]
+        style D fill:#cfc,stroke:#333,stroke-width:2px
+    end
+
+    subgraph Core Layer (Abstract Interfaces & Data Structures)
+        E["core/mod.rs (ShapeImpl, ShapeCore, Point, RGBA)"]
+        style E fill:#fcf,stroke:#333,stroke-width:2px
+    end
+
+    A -- Manages --> B
+    B -- Manages --> C
+    B -- Creates/Manages --> D
+    C -- Stores --> D
+    D -- Implements --> E
+```
+
+### Layers Explained
+
+1.  **Core Layer**: This is the innermost layer and the foundation of the application. It defines the abstract interfaces (`ShapeImpl` trait) and fundamental data structures (`ShapeCore`, `Point`, `RGBA`) that are used throughout the project. This layer has no dependencies on any other part of the application, making it highly reusable.
+
+2.  **Primitives Layer**: This layer contains the concrete implementations of the shapes defined in the Core Layer. Each primitive (`Line`, `Ellipse`, `Rectangle`, `Bezier`, etc.) implements the `ShapeImpl` trait, providing specific logic for drawing, hit-testing, and updating itself.
+
+3.  **State Management Layer**: This layer is responsible for managing the application's state.
+    *   `draw_state.rs`: Manages the canvas, including the list of shapes, background color, and the history for undo/redo operations. It is designed to be independent of any specific UI or rendering library.
+    *   `app_state.rs`: Orchestrates the overall application logic. It handles user input, manages the current drawing state (e.g., selected shape, colors), and acts as a bridge between the UI and the `draw_state`.
+
+4.  **Outer Layer**: This is the most external layer, responsible for windowing, user interface, and rendering.
+    *   `main.rs`: The entry point of the application. It initializes the window, handles the event loop (using `winit`), and manages the `pixels` buffer for rendering.
+    *   `gui.rs`: Manages the GUI using the `egui` library. It displays controls for the user to interact with the application and communicates user actions to the `app_state`.
+
+This layered approach ensures that the core drawing and state management logic is decoupled from the specific libraries used for the UI and rendering. For example, `winit`, `pixels`, and `egui` could be swapped out with other libraries with minimal changes to the inner layers.
