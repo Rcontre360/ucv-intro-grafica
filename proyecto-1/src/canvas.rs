@@ -26,6 +26,10 @@ impl<'a> Canvas<'a> {
     /// sets a pixel on the buffer. The left upper corner is the origin, x and y are checked to be
     /// inside the buffer boundaries.
     pub fn set_pixel(&mut self, x: i32, y: i32, color: RGBA) {
+        if x < 0 || y < 0 {
+            return;
+        }
+
         let index = (y as u32 * self.length + x as u32) as usize * 4;
 
         if index >= self.buffer.len() {
