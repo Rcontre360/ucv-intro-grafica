@@ -327,11 +327,12 @@ impl AppState {
             GUIEvent::BackgroundColor(c) => self.draw_state.change_background_color(c),
             GUIEvent::PasteShape(shape, new_point) => {
                 // for this we take the first point as ref for the new position
-                let delta = new_point - shape.points[0];
                 let mut full_shape = new_shape_from_core(shape);
+                let delta = new_point - full_shape.get_geometric_center();
                 full_shape.update(&UpdateOp::Move(delta));
 
                 self.draw_state.add_shape(full_shape);
+                self.selected = Some(ShapeSelected::new(self.draw_state.get_objects().len() - 1));
             }
             GUIEvent::SubdivisionValue(t) => {
                 // updates subdivide value if a shape is selected

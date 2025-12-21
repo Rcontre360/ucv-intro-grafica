@@ -108,6 +108,21 @@ pub trait ShapeImpl {
         }
     }
 
+    /// this method gets the geometric center of the shape given all its control points
+    /// this is used to get a reference when making the cut/copy paste of a shape
+    fn get_geometric_center(&self) -> Point {
+        let points = self.get_core().points;
+        let all_x = points.iter().map(|p| p.0 as f32);
+        let all_y = points.iter().map(|p| p.1 as f32);
+        let siz = all_x.len();
+
+        (
+            all_x.sum::<f32>() as f32 / siz as f32,
+            all_y.sum::<f32>() as f32 / siz as f32,
+        )
+            .into()
+    }
+
     /// this method draws how a shape should look when is selected. For most is just drawing the
     /// control points. Receives the color to use for the control points
     fn draw_selection_basic<'a>(&self, color: RGBA, canvas: &mut Canvas<'a>) {
