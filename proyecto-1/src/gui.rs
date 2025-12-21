@@ -251,7 +251,7 @@ impl TemplateApp {
 
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                     ui.add(egui::github_link_file!(
-                        "https://github.com/emilk/egui/blob/master/",
+                        "https://github.com/Rcontre360/ucv-intro-grafica/tree/main/proyecto-1",
                         "Source code."
                     ));
                 });
