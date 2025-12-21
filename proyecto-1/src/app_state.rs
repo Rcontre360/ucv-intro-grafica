@@ -407,6 +407,7 @@ impl AppState {
     /// clicks) we have to check which shape is being created before reacting to events
     fn handle_figure_draw(&mut self, event: EventType) {
         match self.current {
+            Shape::NoSelect => {}
             Shape::Triangle => match event {
                 EventType::Mouse(action, 0, point) => match action {
                     // triangle drawing reacts to 2 clicks

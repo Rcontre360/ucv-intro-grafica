@@ -18,6 +18,7 @@ pub use triangle::Triangle;
 /// given a shape core allows you to create a dynamic ShapeImpl stored on the Heap
 pub fn new_shape_from_core(core: ShapeCore) -> Box<dyn ShapeImpl> {
     match core.shape_type {
+        Shape::NoSelect => Box::new(Line::new(core)),
         Shape::Line => Box::new(Line::new(core)),
         Shape::Ellipse => Box::new(Ellipse::new(core)),
         Shape::Triangle => Box::new(Triangle::new(core)),

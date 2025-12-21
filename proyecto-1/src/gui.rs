@@ -50,6 +50,7 @@ impl UiPanel for ShapePanel {
                 .selected_text(app_state.current.to_string())
                 .show_ui(ui, |ui| {
                     let shapes = [
+                        Shape::NoSelect,
                         Shape::Line,
                         Shape::Ellipse,
                         Shape::Triangle,

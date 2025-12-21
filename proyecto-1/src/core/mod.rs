@@ -15,6 +15,8 @@ use std::fmt;
 /// shape is an enum that specifies the shape
 #[derive(Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Shape {
+    /// Shape to not draw anything
+    NoSelect,
     Line,
     Ellipse,
     Triangle,
@@ -28,6 +30,7 @@ pub enum Shape {
 impl fmt::Display for Shape {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Shape::NoSelect => write!(f, "None"),
             Shape::Line => write!(f, "Line"),
             Shape::Ellipse => write!(f, "Ellipse"),
             Shape::Triangle => write!(f, "Triangle"),
