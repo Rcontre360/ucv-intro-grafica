@@ -105,7 +105,6 @@ pub fn draw_line<'a>(core: &ShapeCore, canvas: &mut Canvas<'a>, draw_first: bool
 /// for the line hit test we just check if the given point is at certain distance from the line
 /// I use the vector to point formulation since it gives me the distance of a finite line
 /// (vector)
-/// I modified the original formula of point to vector to use ONLY INTEGER ARITHMETIC
 pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
     let p1 = core.points[0];
     let p2 = core.points[1];
@@ -118,15 +117,20 @@ pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
     }
 
     let delta = p2 - p1;
-    let delta_sqr = delta.dot(delta) as u64;
+    let delta_sqr = delta.dot(delta) as i64; // Use i64 for signed math safety
 
     let p_to_p1 = point - p1;
-    let n = p_to_p1.dot(delta);
+    let n = p_to_p1.dot(delta) as i64;
 
-    let closest_point = if n < 0 {
-        p1
-    } else if n as u64 > delta_sqr {
-        p2
+    // We handle the endpoints separately to avoid massive scaling overflows
+    if n < 0 {
+        // Closest point is p1
+        let d = point - p1;
+        return (d.dot(d) as i64) < (HIT_TEST_ERROR * HIT_TEST_ERROR) as i64;
+    } else if n > delta_sqr {
+        // Closest point is p2
+        let d = point - p2;
+        return (d.dot(d) as i64) < (HIT_TEST_ERROR * HIT_TEST_ERROR) as i64;
     } else {
         /* originally this should be:
         I changed this formula to use only integer arithmetic
@@ -145,12 +149,15 @@ pub fn line_hit_test(core: &ShapeCore, point: Point) -> bool {
         distance = dist_n / (delta_sqr*delta_sqr)
         */
 
-        (delta_sqr as i32) * p1 + n * delta
-    };
+        // to avoid the overflow in (delta_sqr * delta_sqr), we use the cross product property
+        // the squared distance from a point to a line segment (interior) is:
+        // dist^2 = |(p-p1) x (p2-p1)|^2 / |p2-p1|^2
 
-    let dist_prev_x = delta_sqr * point.0 as u64 - closest_point.0 as u64;
-    let dist_prev_y = delta_sqr * point.1 as u64 - closest_point.1 as u64;
+        let cross = (p_to_p1.0 as i64 * delta.1 as i64) - (p_to_p1.1 as i64 * delta.0 as i64);
+        let cross_sq = cross * cross;
 
-    let distance = dist_prev_x * dist_prev_x + dist_prev_y * dist_prev_y;
-    return distance < HIT_TEST_ERROR * delta_sqr * delta_sqr;
+        // final check: cross_sq / delta_sqr < error^2
+        // multiply both sides by delta_sqr to keep it integer-based
+        return cross_sq < (HIT_TEST_ERROR * HIT_TEST_ERROR) as i64 * delta_sqr;
+    }
 }
