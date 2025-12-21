@@ -25,7 +25,7 @@ pub enum MouseEvent {
 }
 
 /// These are user interface events definitions. They trigger actions on the app state
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub enum GUIEvent {
     /// change of shape type
     ShapeType(Shape),
@@ -43,6 +43,12 @@ pub enum GUIEvent {
     /// The toBack button was clicked. If its argument is true we move the shape all the way to
     /// the back
     ToBack(bool),
+    /// change of control polygon color
+    ControlPolygonColor(RGBA),
+    /// subdivision value changed
+    SubdivisionValue(f32),
+    /// paste from clipboard
+    PasteShape(ShapeCore, Point),
     /// save button clicked
     Save,
     /// load button clicked
@@ -51,10 +57,6 @@ pub enum GUIEvent {
     DegreeElevate,
     /// subdivide button clicked
     Subdivide,
-    /// change of control polygon color
-    ControlPolygonColor(RGBA),
-    /// subdivision value changed
-    SubdivisionValue(f32),
     /// clear button clicked
     Clear,
     /// undo button clicked
@@ -64,7 +66,7 @@ pub enum GUIEvent {
 }
 
 /// aggregates the different events that update the app state
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub enum EventType {
     /// mouse event definition. has as argument the type, the mouse button (u8) and the point in
     /// screen where it happened
@@ -119,11 +121,11 @@ pub struct AppState {
     pub current: Shape,
     /// cur_shape is the current shape we are drawing and not releasing yet
     pub cur_shape: Option<Box<dyn ShapeImpl>>,
-    /// selected is the current selected shape. see above
-    pub selected: Option<ShapeSelected>,
     /// ui_subdivision_t is the current "t" UI value for subdivision
     pub ui_subdivision_t: f32,
 
+    /// selected is the current selected shape. see above
+    selected: Option<ShapeSelected>,
     /// checks if shift is being pressed
     shift_pressed: bool,
     /// draw state holds the shapes and what is rendered. Every object that should be saved to a
@@ -160,10 +162,12 @@ impl AppState {
     }
 
     /// returns the shape type of the selected shape. useful for the UI
-    pub fn get_selected_shape_type(&self) -> Option<Shape> {
-        self.selected
+    pub fn get_selected_shape(&self) -> Option<&Box<dyn ShapeImpl>> {
+        let shap = self
+            .selected
             .as_ref()
-            .map(|s| self.draw_state.get_object(s.index).get_core().shape_type)
+            .map(|s| self.draw_state.get_object(s.index));
+        shap
     }
 
     /// returns all the color related fields on the UI
@@ -202,7 +206,7 @@ impl AppState {
     pub fn update(&mut self, event: EventType) -> CursorIcon {
         // this is a match. Is similar to a switch but handles more detail over the data
         // comparison
-        match event {
+        match event.clone() {
             // gui events only
             EventType::GUI(gui_ev) => {
                 self.handle_gui_event(gui_ev);
@@ -248,7 +252,7 @@ impl AppState {
                 }
 
                 // if we didnt return before it means that we are drawing a shape
-                self.handle_figure_draw(event);
+                self.handle_figure_draw(event.clone());
             }
             // only keyboard events
             EventType::Keyboard(key_ev, is_pressed) => {
@@ -321,8 +325,15 @@ impl AppState {
             GUIEvent::PointsColor(c) => self.points_color = c,
             GUIEvent::ControlPolygonColor(c) => self.bezier_control_polygon_color = c,
             GUIEvent::BackgroundColor(c) => self.draw_state.change_background_color(c),
-            GUIEvent::DegreeElevate => self.handle_degree_elevate(),
-            GUIEvent::Subdivide => self.handle_subdivide(),
+            GUIEvent::PasteShape(shape, new_point) => {
+                // for this we take the first point as ref for the new position
+                let mut full_shape = new_shape_from_core(shape);
+                let delta = new_point - full_shape.get_geometric_center();
+                full_shape.update(&UpdateOp::Move(delta));
+
+                self.draw_state.add_shape(full_shape);
+                self.selected = Some(ShapeSelected::new(self.draw_state.get_objects().len() - 1));
+            }
             GUIEvent::SubdivisionValue(t) => {
                 // updates subdivide value if a shape is selected
                 if let Some(selected) = self.selected.as_ref() {
@@ -331,8 +342,6 @@ impl AppState {
                     self.ui_subdivision_t = t;
                 }
             }
-            GUIEvent::Save => self.save_state(),
-            GUIEvent::Load => self.load_state(),
             // updates the border color if a shape is selected
             GUIEvent::BorderColor(c) => {
                 self.color = c;
@@ -368,6 +377,10 @@ impl AppState {
                     self.reorder_selected(target_index);
                 }
             }
+            GUIEvent::DegreeElevate => self.handle_degree_elevate(),
+            GUIEvent::Subdivide => self.handle_subdivide(),
+            GUIEvent::Save => self.save_state(),
+            GUIEvent::Load => self.load_state(),
             GUIEvent::Clear => {
                 self.draw_state.clear();
                 self.selected = None;
@@ -394,6 +407,7 @@ impl AppState {
     /// clicks) we have to check which shape is being created before reacting to events
     fn handle_figure_draw(&mut self, event: EventType) {
         match self.current {
+            Shape::NoSelect => {}
             Shape::Triangle => match event {
                 EventType::Mouse(action, 0, point) => match action {
                     // triangle drawing reacts to 2 clicks

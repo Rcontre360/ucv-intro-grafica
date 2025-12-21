@@ -133,6 +133,7 @@ public:
         }
     }
 
+<<<<<<< Updated upstream:tarea-2/src/EllipseRender.h
     // if we draw an ellipse and shrink "a" as much as possible (towards 0), the height of the ellipse doesnt change and everything looks ok.
     // BUT if we do the same with "b" weird things happen, draw an ellipse and shrink it on b and see how it stops having the same
     // width and seems to not fully form on a horizontal ellipse. 
@@ -169,6 +170,13 @@ public:
         setPixel(cn.x - p.x, cn.y + p.y, c);
         setPixel(cn.x - p.x, cn.y - p.y, c);
         setPixel(cn.x + p.x, cn.y - p.y, c);
+=======
+    void drawSymetric(Point center, Point p, RGBA c){
+        setPixel(center.x + p.x, center.y + p.y, c);
+        setPixel(center.x - p.x, center.y + p.y, c);
+        setPixel(center.x - p.x, center.y - p.y, c);
+        setPixel(center.x + p.x, center.y - p.y, c);
+>>>>>>> Stashed changes:tarea-1/src/EllipseRender.h
     }
 
     // the upgraded algorithm to only use +, - and simple comparisons inside our loops
@@ -180,8 +188,11 @@ public:
 
         int x = 0;
         int y = b;
+<<<<<<< Updated upstream:tarea-2/src/EllipseRender.h
         //vars to sum to mx and my to reduce sums inside loop
         int aux1 =4*b*b;
+=======
+>>>>>>> Stashed changes:tarea-1/src/EllipseRender.h
 
         ll d = 4*b*b - 4*a*a*b + a*a;
         ll m_x = 12*b*b; 
@@ -212,6 +223,7 @@ public:
         if (y <= 0)
             drawEdgeCase(e, x);
 
+<<<<<<< Updated upstream:tarea-2/src/EllipseRender.h
         //vars to sum to mx and my to reduce sums inside loop
         int aux2 = 8*a*a + 4*b*b;
         int const_d2 = 8*a*a;
@@ -223,6 +235,14 @@ public:
 
         while (y > 0){
 
+=======
+        m_y -= 8*a*a;
+        m_x -= 4*b*b;
+
+        d = b*b*(4*x*x+4*x+1) + a*a*(4*y*y-8*y+4) - 4*a*a*b*b;
+
+        while (y > 0){
+>>>>>>> Stashed changes:tarea-1/src/EllipseRender.h
             if (d < 0){
                 d += m_x - m_y + const_d2;
                 x++;

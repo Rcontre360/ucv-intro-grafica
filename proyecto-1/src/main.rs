@@ -1,6 +1,9 @@
 #![deny(clippy::all)]
 #![forbid(unsafe_code)]
 
+use core::ShapeCore;
+
+use arboard::Clipboard;
 use canvas::Canvas;
 use error_iter::ErrorIter as _;
 use log::error;
@@ -13,7 +16,7 @@ use winit::window::CursorIcon;
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-use crate::app_state::MouseEvent;
+use crate::app_state::{GUIEvent, MouseEvent};
 use crate::gui::Framework;
 
 mod app_state;
@@ -34,6 +37,8 @@ fn main() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
     let mut input = WinitInputHelper::new();
+    let mut clipboard = Clipboard::new().expect("Failed to initialize clipboard");
+
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         WindowBuilder::new()
@@ -64,6 +69,9 @@ fn main() -> Result<(), Error> {
         if input.update(&event) {
             let is_gui = framework.wants_pointer_input();
             let state = framework.get_state();
+            let control_pressed = input.key_held(KeyCode::ControlLeft)
+                || input.key_held(KeyCode::ControlRight)
+                || input.key_held(KeyCode::SuperLeft);
             // this is the mouse cursor. We update it from the state and then load it on the window
             let mut cursor_icon = CursorIcon::Default;
 
@@ -100,6 +108,21 @@ fn main() -> Result<(), Error> {
                 state.keyboard_update(KeyCode::ShiftRight, false);
             }
 
+            if control_pressed && input.key_pressed(KeyCode::KeyC) {
+                if let Some(shape) = state.get_selected_shape() {
+                    let shape_str = serde_json::to_string_pretty(&shape.get_core()).unwrap();
+                    clipboard.set_text(shape_str).unwrap();
+                }
+            }
+
+            if control_pressed && input.key_pressed(KeyCode::KeyX) {
+                if let Some(shape) = state.get_selected_shape() {
+                    let shape_str = serde_json::to_string_pretty(&shape.get_core()).unwrap();
+                    clipboard.set_text(shape_str).unwrap();
+                    state.keyboard_update(KeyCode::Delete, true);
+                }
+            }
+
             // mouse events on GUI. Avoids drawing while selecting gui buttons
             if !is_gui {
                 // here we update the app state with different mouse events
@@ -128,6 +151,18 @@ fn main() -> Result<(), Error> {
                 if input.mouse_released(0) {
                     let (x, y) = input.cursor().unwrap();
                     cursor_icon = state.mouse_update(MouseEvent::Release, 0, (x, y).into());
+                }
+
+                if control_pressed && input.key_pressed(KeyCode::KeyV) {
+                    let (x, y) = input.cursor().unwrap();
+                    if let Ok(text) = clipboard.get_text() {
+                        let core_str = serde_json::from_str::<ShapeCore>(&text);
+                        if let Ok(core) = core_str {
+                            state.gui_update(GUIEvent::PasteShape(core, (x, y).into()));
+                        } else {
+                            println!("this text is not a shape");
+                        }
+                    }
                 }
             }
             // Update the scale factor for the window size change

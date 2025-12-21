@@ -15,6 +15,8 @@ use std::fmt;
 /// shape is an enum that specifies the shape
 #[derive(Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Shape {
+    /// Shape to not draw anything
+    NoSelect,
     Line,
     Ellipse,
     Triangle,
@@ -28,6 +30,7 @@ pub enum Shape {
 impl fmt::Display for Shape {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Shape::NoSelect => write!(f, "None"),
             Shape::Line => write!(f, "Line"),
             Shape::Ellipse => write!(f, "Ellipse"),
             Shape::Triangle => write!(f, "Triangle"),
@@ -106,6 +109,21 @@ pub trait ShapeImpl {
             // there are other modification methods that should be implemented by a concrete object
             _ => {}
         }
+    }
+
+    /// this method gets the geometric center of the shape given all its control points
+    /// this is used to get a reference when making the cut/copy paste of a shape
+    fn get_geometric_center(&self) -> Point {
+        let points = self.get_core().points;
+        let all_x = points.iter().map(|p| p.0 as f32);
+        let all_y = points.iter().map(|p| p.1 as f32);
+        let siz = all_x.len();
+
+        (
+            all_x.sum::<f32>() as f32 / siz as f32,
+            all_y.sum::<f32>() as f32 / siz as f32,
+        )
+            .into()
     }
 
     /// this method draws how a shape should look when is selected. For most is just drawing the

@@ -1,7 +1,4 @@
-use std::mem::discriminant;
-
 use super::line::{draw_line, line_hit_test};
-use super::Line;
 use crate::canvas::Canvas;
 use crate::core::{Point, ShapeCore, ShapeImpl, UpdateOp, RGBA};
 
