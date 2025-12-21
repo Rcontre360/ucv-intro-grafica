@@ -132,7 +132,7 @@ impl UiPanel for ColorPanel {
 struct DepthPanel;
 impl UiPanel for DepthPanel {
     fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState) {
-        let is_shape_selected = app_state.selected.is_some();
+        let is_shape_selected = app_state.get_selected_shape().is_some();
         let depth_header = egui::CollapsingHeader::new("Depth")
             .default_open(false)
             .show(ui, |ui| {
@@ -179,7 +179,10 @@ impl UiPanel for DepthPanel {
 struct BezierPanel;
 impl UiPanel for BezierPanel {
     fn draw(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, app_state: &mut AppState) {
-        let is_bezier_selected = matches!(app_state.get_selected_shape_type(), Some(Shape::Bezier));
+        let selected = app_state.get_selected_shape();
+        let is_bezier_selected =
+            selected.is_some() && matches!(selected.unwrap().get_core().shape_type, Shape::Bezier);
+
         let bezier_header = egui::CollapsingHeader::new("Bezier Settings")
             .default_open(false)
             .show(ui, |ui| {
