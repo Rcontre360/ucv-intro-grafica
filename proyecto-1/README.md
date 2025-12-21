@@ -46,24 +46,24 @@ The application is designed with a layered architecture to promote separation of
 graph TD
     subgraph "Outer Layer (Windowing, UI, and Rendering)"
         A["main.rs, gui.rs"]
-        style A fill:#f9f,stroke:#333,stroke-width:2px
+        style A fill:#f9f,stroke:#333,stroke-width:2px,color:#000
     end
 
     subgraph "State Management Layer"
         B["app_state.rs"]
         C["draw_state.rs"]
-        style B fill:#ccf,stroke:#333,stroke-width:2px
-        style C fill:#ccf,stroke:#333,stroke-width:2px
+        style B fill:#ccf,stroke:#333,stroke-width:2px,color:#000
+        style C fill:#ccf,stroke:#333,stroke-width:2px,color:#000
     end
 
     subgraph "Primitives Layer (Concrete Shape Implementations)"
         D["line.rs, ellipse.rs, bezier.rs, etc."]
-        style D fill:#cfc,stroke:#333,stroke-width:2px
+        style D fill:#cfc,stroke:#333,stroke-width:2px,color:#000
     end
 
     subgraph "Core Layer (Abstract Interfaces & Data Structures)"
         E["core/mod.rs (ShapeImpl, ShapeCore, Point, RGBA)"]
-        style E fill:#fcf,stroke:#333,stroke-width:2px
+        style E fill:#fcf,stroke:#333,stroke-width:2px,color:#000
     end
 
     A -- "Manages" --> B
