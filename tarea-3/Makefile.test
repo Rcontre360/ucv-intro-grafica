@@ -1,0 +1,37 @@
+# Makefile for quick_select test
+
+# Compiler
+CC = g++
+
+# Compiler flags
+CFLAGS = -std=c++11 -Wall -I. -O3
+
+# Source files
+SRCS = test.cpp src/stb_libs.cpp
+
+# Object files (prefixed with build directory)
+OBJS = $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRCS))
+
+# Executable name
+TARGET = test_median
+
+# Build directory
+BUILD_DIR = build_test
+
+.PHONY: all clean run
+
+all: $(BUILD_DIR)/$(TARGET)
+
+$(BUILD_DIR)/$(TARGET): $(OBJS)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+run: $(BUILD_DIR)/$(TARGET)
+	./$(BUILD_DIR)/$(TARGET)
+
+clean:
+	rm -rf $(BUILD_DIR)

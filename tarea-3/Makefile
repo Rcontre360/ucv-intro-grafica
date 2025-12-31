@@ -4,7 +4,7 @@
 CC = g++
 
 # Compiler flags
-CFLAGS = -std=c++11 -Wall -I.
+CFLAGS = -std=c++11 -Wall -I. -O3
 
 # Source files
 SRCS = src/main.cpp src/stb_libs.cpp

@@ -7,115 +7,73 @@
 #include "lib/stb_image.h"
 #include "lib/stb_image_write.h"
 
-// Custom exception for out of bounds access
-class ImageBoundsError : public std::runtime_error {
-public:
-    ImageBoundsError(const std::string& message) : std::runtime_error(message) {}
-};
+using namespace std;
 
 class Image {
 public:
-    // Constructor to load an image from a file
-    Image(const std::string& filename) : self_allocated(false) {
+    // self allocate tells if we should allocate the image ourselves or not
+    Image(const string& filename) : self_allocated(false) {
+        // validate that is 8bits only
         if (stbi_is_16_bit(filename.c_str())) {
-            throw std::runtime_error("16-bit images are not supported. Only 8-bit per channel images are allowed.");
+            throw runtime_error("16-bit images are not supported. Only 8-bit per channel images are allowed.");
         }
-        data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
-        if (data == nullptr) {
-            throw std::runtime_error("Failed to load image: " + filename);
+
+        _data = stbi_load(filename.c_str(), &_width, &_height, &_channels, 0);
+
+        // no image there
+        if (_data == nullptr) {
+            throw runtime_error("Failed to load image: " + filename);
         }
     }
 
-    // Constructor to create a blank image
-    Image(int w, int h, int c = 3) : width(w), height(h), channels(c), self_allocated(true) {
+    Image(int w, int h, int c = 3) : _width(w), _height(h), _channels(c), self_allocated(true) {
         if (w <= 0 || h <= 0 || c <= 0) {
-            throw std::invalid_argument("Image dimensions and channels must be positive.");
+            throw invalid_argument("Image dimensions and _channels must be positive.");
         }
+
         size_t size = (size_t)w * h * c;
-        data = (unsigned char*)malloc(size);
-        if (data == nullptr) {
-            throw std::runtime_error("Failed to allocate memory for image.");
-        }
+        _data = (unsigned char*)malloc(size);
     }
 
-    // Destructor
     ~Image() {
-        if (data) {
+        if (_data) {
             if (self_allocated) {
-                free(data);
+                free(_data);
             } else {
-                stbi_image_free(data);
+                stbi_image_free(_data);
             }
         }
     }
 
-    // Copy constructor
-    Image(const Image& other) : width(other.width), height(other.height), channels(other.channels), self_allocated(true) {
-        size_t size = (size_t)width * height * channels;
-        data = (unsigned char*)malloc(size);
-        if (data == nullptr) {
-            throw std::runtime_error("Failed to allocate memory for image copy.");
+    int width() const { return _width; }
+    int height() const { return _height; }
+    int channels() const { return _channels; }
+
+    unsigned char get(int x, int y, int c) const {
+        if (x < 0 || x >= _width || y < 0 || y >= _height || c < 0 || c >= _channels) {
+            throw invalid_argument("Pixel coordinates or channel are out of bounds");
         }
-        memcpy(data, other.data, size);
+        return _data[(y * _width + x) * _channels + c];
     }
 
-    // Copy assignment operator
-    Image& operator=(const Image& other) {
-        if (this == &other) {
-            return *this;
+    void set(int x, int y, int c, unsigned char value) {
+        if (x < 0 || x >= _width || y < 0 || y >= _height || c < 0 || c >= _channels) {
+            throw invalid_argument("Pixel coordinates or channel are out of bounds");
         }
-
-        if (data) {
-            if (self_allocated) {
-                free(data);
-            } else {
-                stbi_image_free(data);
-            }
-        }
-
-        width = other.width;
-        height = other.height;
-        channels = other.channels;
-        self_allocated = true;
-        size_t size = (size_t)width * height * channels;
-        data = (unsigned char*)malloc(size);
-        if (data == nullptr) {
-            throw std::runtime_error("Failed to allocate memory for image assignment.");
-        }
-        memcpy(data, other.data, size);
-
-        return *this;
+        _data[(y * _width + x) * _channels + c] = value;
     }
 
-    // Save the image to a file
-    bool save(const std::string& filename) {
-        return stbi_write_png(filename.c_str(), width, height, channels, data, width * channels) != 0;
+    void save(const string& filename) {
+        if (stbi_write_png(filename.c_str(), _width, _height, _channels, _data, _width * _channels) == 0)
+            throw runtime_error("Pixel coordinates or channel are out of bounds");
     }
 
-    int getWidth() const { return width; }
-    int getHeight() const { return height; }
-    int getChannels() const { return channels; }
-    unsigned char* getData() const { return data; }
-
-    unsigned char getPixelValue(int x, int y, int c) const {
-        if (x < 0 || x >= width || y < 0 || y >= height || c < 0 || c >= channels) {
-            throw ImageBoundsError("Pixel coordinates or channel are out of bounds");
-        }
-        return data[(y * width + x) * channels + c];
-    }
-
-    void setPixelValue(int x, int y, int c, unsigned char value) {
-        if (x < 0 || x >= width || y < 0 || y >= height || c < 0 || c >= channels) {
-            throw ImageBoundsError("Pixel coordinates or channel are out of bounds");
-        }
-        data[(y * width + x) * channels + c] = value;
-    }
 
 private:
-    int width;
-    int height;
-    int channels;
-    unsigned char* data;
+    int _width;
+    int _height;
+    int _channels;
+    unsigned char* _data;
     bool self_allocated;
 };
 
