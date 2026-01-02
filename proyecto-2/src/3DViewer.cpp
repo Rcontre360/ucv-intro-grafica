@@ -64,8 +64,8 @@ bool C3DViewer::setup()
     // Setup shader
     if (!setupShader()) return false;
 
-    // Setup VAO y VBO para el tringulo
-    setupTriangle();
+    // Setup VAO y VBO para el pirmide
+    setupPyramid();
 
     glViewport(0, 0, width, height);
 
@@ -160,8 +160,8 @@ void C3DViewer::render()
 
     glBindVertexArray(m_vao);
 
-    // dibujo 1 tringulo por ahora...
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    // dibujo 1 pirmide por ahora...
+    glDrawArrays(GL_TRIANGLES, 0, 18);
 
     drawInterface();
 }
@@ -252,14 +252,37 @@ bool C3DViewer::checkCompileErrors(GLuint shader, const char* type)
     return true;
 }
 
-void C3DViewer::setupTriangle()
+void C3DViewer::setupPyramid()
 {
-    float vertices[] = 
-    {
-        // x      y      z     r     g     b 
-        -1.0f,  1.0f,  0.0f, 1.0f, 0.0f, 0.0f, 
-         1.0f,  1.0f,  0.0f, 0.0f, 1.0f, 0.0f, 
-         1.0f, -1.0f,  0.0f, 0.0f, 0.0f, 1.0f
+    float vertices[] = {
+        // positions          // colors
+        // base
+        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+
+        // face 1
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
+         0.0f,  0.5f,  0.0f,  0.0f, 1.0f, 0.0f,
+
+        // face 2
+         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+         0.0f,  0.5f,  0.0f,  0.0f, 0.0f, 1.0f,
+
+        // face 3
+         0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
+         0.0f,  0.5f,  0.0f,  1.0f, 1.0f, 0.0f,
+
+        // face 4
+        -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f,
+         0.0f,  0.5f,  0.0f,  0.0f, 1.0f, 1.0f
     };
 
     glGenVertexArrays(1, &m_vao);

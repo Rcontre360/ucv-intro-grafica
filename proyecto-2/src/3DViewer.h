@@ -42,7 +42,7 @@ private:
 
     bool checkCompileErrors(GLuint shader, const char* type);
 
-    void setupTriangle();
+    void setupPyramid();
 
     static void keyCallbackStatic(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -62,7 +62,7 @@ protected:
     bool mouseButtonsDown[3] = { false, false, false };
 
     // Camera
-    glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+    glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  5.0f);
     glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
