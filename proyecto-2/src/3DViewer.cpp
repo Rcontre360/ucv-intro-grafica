@@ -64,7 +64,7 @@ bool C3DViewer::setup()
     // Setup shader
     if (!setupShader()) return false;
 
-    // Setup VAO y VBO para el triángulo
+    // Setup VAO y VBO para el tringulo
     setupTriangle();
 
     glViewport(0, 0, width, height);
@@ -91,7 +91,7 @@ void C3DViewer::mainLoop()
         // color de borrado
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-        // borrando búferes
+        // borrando bferes
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         render();
@@ -122,7 +122,7 @@ void C3DViewer::onMouseButton(int button, int action, int mods)
         if (action == GLFW_PRESS)
         {
             mouseButtonsDown[button] = true;
-            // Obtener posición actual del cursor
+            // Obtener posicin actual del cursor
             std::cout << "Mouse button " << button << " pressed at position (" << xpos << ", " << ypos << ")\n";
         }
         else if (action == GLFW_RELEASE)
@@ -147,9 +147,20 @@ void C3DViewer::render()
     update();
 
     glUseProgram(m_shaderProgram);
+
+    // Create view matrix
+    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    GLint viewLoc = glGetUniformLocation(m_shaderProgram, "view");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    // Create projection matrix
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+    GLint projectionLoc = glGetUniformLocation(m_shaderProgram, "projection");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
     glBindVertexArray(m_vao);
 
-    // dibujo 1 triángulo por ahora...
+    // dibujo 1 tringulo por ahora...
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     drawInterface();
@@ -164,13 +175,13 @@ void C3DViewer::drawInterface()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Aquí colocas el código ImGui para el slider
-    ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Once); // Tamaño inicial 400x300, solo al crear ventana
+    // Aqu colocas el cdigo ImGui para el slider
+    ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Once); // Tamao inicial 400x300, solo al crear ventana
     ImGui::Begin("Control Panel");
     static int anyDummyValue = 50;
     if (ImGui::SliderInt("slider-demo", &anyDummyValue, 1, 100)) 
     {
-        // valor actualizado automáticamente en anyDummyValue
+        // valor actualizado automticamente en anyDummyValue
     }
     ImGui::End();
     ImGui::Render();
@@ -289,4 +300,3 @@ void C3DViewer::cursorPosCallbackStatic(GLFWwindow* window, double xpos, double 
     if (self) 
         self->onCursorPos(xpos, ypos);
 }
-
