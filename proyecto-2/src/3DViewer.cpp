@@ -11,8 +11,8 @@ C3DViewer::~C3DViewer()
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     
-    if (m_vbo) glDeleteBuffers(1, &m_vbo);
-    if (m_vao) glDeleteVertexArrays(1, &m_vao);
+    delete m_state;
+
     if (m_shaderProgram) glDeleteProgram(m_shaderProgram);
     if (m_window) glfwDestroyWindow(m_window);
     glfwTerminate();
@@ -36,7 +36,6 @@ bool C3DViewer::setup()
 
     glfwMakeContextCurrent(m_window);
 
-    // Inicializar glad
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) 
     {
         glfwDestroyWindow(m_window);
@@ -44,10 +43,12 @@ bool C3DViewer::setup()
         return false;
     }
     
+    glEnable(GL_DEPTH_TEST);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Opcional
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui::StyleColorsDark();
 
@@ -61,11 +62,10 @@ bool C3DViewer::setup()
             ptr->resize(w, h);
     });
 
-    // Setup shader
     if (!setupShader()) return false;
 
-    // Setup VAO y VBO para el pirmide
-    setupPyramid();
+    // Create the state manager, which will in turn create our objects
+    m_state = new State();
 
     glViewport(0, 0, width, height);
 
@@ -79,7 +79,10 @@ bool C3DViewer::setup()
 
 void C3DViewer::update()
 {
-
+    if (m_state)
+    {
+        m_state->update();
+    }
 }
 
 void C3DViewer::mainLoop() 
@@ -87,11 +90,9 @@ void C3DViewer::mainLoop()
     while (!glfwWindowShouldClose(m_window)) 
     {
         glfwPollEvents();
+        update();
 
-        // color de borrado
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-
-        // borrando bferes
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         render();
@@ -102,104 +103,67 @@ void C3DViewer::mainLoop()
 
 void C3DViewer::onKey(int key, int scancode, int action, int mods) 
 {
-
     if (action == GLFW_PRESS)
     {
-        std::cout << "Key " << key << " pressed\n";
         if (key == GLFW_KEY_ESCAPE)
             glfwSetWindowShouldClose(m_window, GLFW_TRUE);
     }
-    else if (action == GLFW_RELEASE)
-        std::cout << "Key " << key << " released\n";
 }
 
 void C3DViewer::onMouseButton(int button, int action, int mods) 
 {
-    if (button >= 0 && button < 3)
-    {
-        double xpos, ypos;
-        glfwGetCursorPos(m_window, &xpos, &ypos);
-        if (action == GLFW_PRESS)
-        {
-            mouseButtonsDown[button] = true;
-            // Obtener posicin actual del cursor
-            std::cout << "Mouse button " << button << " pressed at position (" << xpos << ", " << ypos << ")\n";
-        }
-        else if (action == GLFW_RELEASE)
-        {
-
-            mouseButtonsDown[button] = false;
-            std::cout << "Mouse button " << button << " released at position (" << xpos << ", " << ypos << ")\n";
-        }
-    }
+    // ...
 }
 
 void C3DViewer::onCursorPos(double xpos, double ypos) 
 {
-    if (mouseButtonsDown[0] || mouseButtonsDown[1] || mouseButtonsDown[2]) 
-    {
-        std::cout << "Mouse move at (" << xpos << ", " << ypos << ")\n";
-    }
+    // ...
 }
 
 void C3DViewer::render() 
 {
-    update();
-
     glUseProgram(m_shaderProgram);
 
-    // Create view matrix
+    // Create and set view and projection matrices
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     GLint viewLoc = glGetUniformLocation(m_shaderProgram, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-    // Create projection matrix
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
     GLint projectionLoc = glGetUniformLocation(m_shaderProgram, "projection");
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    glBindVertexArray(m_vao);
-
-    // dibujo 1 pirmide por ahora...
-    glDrawArrays(GL_TRIANGLES, 0, 18);
+    // Tell the state manager to draw all its objects
+    if (m_state)
+    {
+        m_state->draw(m_shaderProgram);
+    }
 
     drawInterface();
 }
 
 void C3DViewer::drawInterface()
 {
-    double currentTime = glfwGetTime();
-    double deltaTime = currentTime - lastTime;
-
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Aqu colocas el cdigo ImGui para el slider
-    ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Once); // Tamao inicial 400x300, solo al crear ventana
+    ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Once);
     ImGui::Begin("Control Panel");
     static int anyDummyValue = 50;
     if (ImGui::SliderInt("slider-demo", &anyDummyValue, 1, 100)) 
     {
-        // valor actualizado automticamente en anyDummyValue
+        // ...
     }
     ImGui::End();
     ImGui::Render();
-    // Rendirizar ImGui con OpenGL
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    if (deltaTime >= 1.0) 
-    {
-        lastTime = currentTime;
-    }
 }
 
 void C3DViewer::resize(int new_width, int new_height) 
 {
     width = new_width;
     height = new_height;
-
-    // actualizamos el viewport cada vez que haya un resize
     glViewport(0, 0, width, height);
 }
 
@@ -252,74 +216,24 @@ bool C3DViewer::checkCompileErrors(GLuint shader, const char* type)
     return true;
 }
 
-void C3DViewer::setupPyramid()
-{
-    float vertices[] = {
-        // positions          // colors
-        // base
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-
-        // face 1
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
-         0.0f,  0.5f,  0.0f,  0.0f, 1.0f, 0.0f,
-
-        // face 2
-         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-         0.0f,  0.5f,  0.0f,  0.0f, 0.0f, 1.0f,
-
-        // face 3
-         0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-         0.0f,  0.5f,  0.0f,  1.0f, 1.0f, 0.0f,
-
-        // face 4
-        -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f,
-         0.0f,  0.5f,  0.0f,  0.0f, 1.0f, 1.0f
-    };
-
-    glGenVertexArrays(1, &m_vao);
-    glGenBuffers(1, &m_vbo);
-
-    glBindVertexArray(m_vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-}
-
+// Static callbacks
 void C3DViewer::keyCallbackStatic(GLFWwindow* window, int key, int scancode, int action, int mods) 
 {
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
     C3DViewer* self = (C3DViewer*)glfwGetWindowUserPointer(window);
-    if (self) 
-        self->onKey(key, scancode, action, mods);
+    if (self) self->onKey(key, scancode, action, mods);
 }
 
 void C3DViewer::mouseButtonCallbackStatic(GLFWwindow* window, int button, int action, int mods) 
 {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
     C3DViewer* self = (C3DViewer*)glfwGetWindowUserPointer(window);
-    if (self)
-        self->onMouseButton(button, action, mods);
+    if (self) self->onMouseButton(button, action, mods);
 }
 
 void C3DViewer::cursorPosCallbackStatic(GLFWwindow* window, double xpos, double ypos) 
 {
     ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
     C3DViewer* self = (C3DViewer*)glfwGetWindowUserPointer(window);
-    if (self) 
-        self->onCursorPos(xpos, ypos);
+    if (self) self->onCursorPos(xpos, ypos);
 }
