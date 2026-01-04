@@ -98,12 +98,18 @@ public:
         }
     }
 
+    void rescaleAllShapes(float factor)
+    {
+        for (Submesh* obj : shapes) {
+            obj->scale(glm::vec3((float)(factor / oldScale)));
+        }
+        oldScale = factor;
+    }
+
     void rotateObject(float angleX, float angleY)
     {
         if (shapes.empty()) return;
-        cout << "ROTATE OBJECT" << endl;
 
-        // Calculate the center of the entire object (bounding box center)
         glm::vec3 min_bound(numeric_limits<float>::max());
         glm::vec3 max_bound(numeric_limits<float>::lowest());
 
@@ -140,6 +146,7 @@ public:
 
 private:
     tinyobj::attrib_t m_loaded_attrib;
+    float oldScale = 1.0;
 
     void center_shape()
     {

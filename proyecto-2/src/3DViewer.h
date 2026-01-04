@@ -203,10 +203,13 @@ private:
             }
         }
 
-        static int anyDummyValue = 50;
-        if (ImGui::SliderInt("slider-demo", &anyDummyValue, 1, 100)) 
+        static int scaleValue = 50; // Initial value for 1.0 scale
+        if (ImGui::SliderInt("Scale", &scaleValue, 10, 200)) 
         {
-            // ...
+            if (appState) {
+                float scaleFactor = static_cast<float>(scaleValue) / 50.0f; // Map 50 to 1.0, 1 to 0.02, 100 to 2.0
+                appState->rescaleAllShapes(scaleFactor);
+            }
         }
         ImGui::End();
         ImGui::Render();
