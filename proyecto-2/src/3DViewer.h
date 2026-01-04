@@ -38,6 +38,7 @@ private:
     virtual void drawInterface();
 
     void resize(int new_width, int new_height);
+    void handleMouseRotation(double deltaX, double deltaY);
 
     bool setupShader();
 
@@ -58,6 +59,9 @@ protected:
     GLuint m_shaderProgram = 0;
     double lastTime = 0.0;
     bool mouseButtonsDown[3] = { false, false, false };
+    double m_lastMouseX = 0.0;
+    double m_lastMouseY = 0.0;
+    bool m_rightMouseDown = false;
 
     // Camera
     glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  0.0f);

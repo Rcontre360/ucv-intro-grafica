@@ -6,7 +6,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
 
-C3DViewer::C3DViewer()
+C3DViewer::C3DViewer() : m_lastMouseX(0.0), m_lastMouseY(0.0)
 {
 }
 
@@ -117,12 +117,47 @@ void C3DViewer::onKey(int key, int scancode, int action, int mods)
 
 void C3DViewer::onMouseButton(int button, int action, int mods) 
 {
-    // ...
+    std::cout << "onMouseButton called. Button: " << button << ", Action: " << action << std::endl;
+    ImGui_ImplGlfw_MouseButtonCallback(m_window, button, action, mods);
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT)
+    {
+        if (action == GLFW_PRESS)
+        {
+            m_rightMouseDown = true;
+            glfwGetCursorPos(m_window, &m_lastMouseX, &m_lastMouseY); // Get current mouse pos when button pressed
+        }
+        else if (action == GLFW_RELEASE)
+        {
+            m_rightMouseDown = false;
+        }
+    }
 }
 
 void C3DViewer::onCursorPos(double xpos, double ypos) 
 {
-    // ...
+    ImGui_ImplGlfw_CursorPosCallback(m_window, xpos, ypos);
+
+    if (m_rightMouseDown)
+    {
+        double deltaX = xpos - m_lastMouseX;
+        double deltaY = ypos - m_lastMouseY;
+        handleMouseRotation(deltaX, deltaY);
+        m_lastMouseX = xpos;
+        m_lastMouseY = ypos;
+    }
+}
+
+void C3DViewer::handleMouseRotation(double deltaX, double deltaY)
+{
+    if (!m_state) return;
+
+    float sensitivity = 0.2f; 
+    float rotationAmountY = -deltaX * sensitivity; // Y-axis rotation (yaw)
+    float rotationAmountX = -deltaY * sensitivity; // X-axis rotation (pitch)
+
+    // Call a new State method to rotate the object
+    // m_state->rotateObject(rotationAmountX, rotationAmountY); // This will be implemented in State class
 }
 
 void C3DViewer::render() 
@@ -248,6 +283,7 @@ void C3DViewer::keyCallbackStatic(GLFWwindow* window, int key, int scancode, int
 
 void C3DViewer::mouseButtonCallbackStatic(GLFWwindow* window, int button, int action, int mods) 
 {
+    std::cout << "mouseButtonCallbackStatic called. Button: " << button << ", Action: " << action << std::endl;
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
     C3DViewer* self = (C3DViewer*)glfwGetWindowUserPointer(window);
     if (self) self->onMouseButton(button, action, mods);

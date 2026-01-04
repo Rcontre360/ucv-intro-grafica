@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <GLFW/glfw3.h>
 
-#include "shape.h"
+#include "submesh.h"
 #include "tinyobjloader.h"
 
 using namespace std;
