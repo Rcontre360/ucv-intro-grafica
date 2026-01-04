@@ -8,12 +8,15 @@
 class Submesh 
 {
 public:
+    // Transformation matrix
     glm::mat4 transform;
 
+    // OpenGL buffer IDs
     GLuint vao = 0;
     GLuint vbo = 0;
     int vertexCount = 0;
 
+    // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
     Submesh(float* vertices, size_t verticesSize, int count) 
         : transform(glm::mat4(1.0f)), vertexCount(count)
     {
@@ -25,15 +28,18 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
 
+        // Position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
+        // Color attribute
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
-        glBindVertexArray(0); 
+        glBindVertexArray(0); // Unbind
     }
 
+    // Destructor: Cleans up OpenGL buffers.
     ~Submesh()
     {
         if (vbo) glDeleteBuffers(1, &vbo);

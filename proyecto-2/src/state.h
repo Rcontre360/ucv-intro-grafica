@@ -16,13 +16,13 @@ using namespace std;
 class State
 {
 public:
-    vector<Shape*> shapes;
+    vector<Submesh*> shapes;
 
     State(){}
 
     ~State()
     {
-        for (Shape* obj : shapes) {
+        for (Submesh* obj : shapes) {
             delete obj;
         }
         shapes.clear();
@@ -33,7 +33,7 @@ public:
 
     void draw(GLuint shaderProgram)
     {
-        for (Shape* obj : shapes) {
+        for (Submesh* obj : shapes) {
             obj->draw(shaderProgram);
         }
     }
@@ -50,7 +50,7 @@ public:
             throw runtime_error(warn + err);
         }
 
-        for (Shape* obj : shapes) {
+        for (Submesh* obj : shapes) {
             delete obj;
         }
 
@@ -67,9 +67,9 @@ public:
 
                 for (size_t v = 0; v < fv; v++) {
                     tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-                    vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
-                    vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
-                    vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
+                    vertices.push_back(info.vertices[3 * idx.vertex_index + 0]);
+                    vertices.push_back(info.vertices[3 * idx.vertex_index + 1]);
+                    vertices.push_back(info.vertices[3 * idx.vertex_index + 2]);
                     int material_id = shape.mesh.material_ids[f];
 
                     if (material_id < 0 || materials.empty()) {
@@ -86,7 +86,7 @@ public:
             }
 
             if (!vertices.empty()) {
-                Shape* new_shape = new Shape(vertices.data(), vertices.size() * sizeof(float), vertex_count);
+                Submesh* new_shape = new Submesh(vertices.data(), vertices.size() * sizeof(float), vertex_count);
                 shapes.push_back(new_shape); 
             }
         }
@@ -133,7 +133,7 @@ private:
         
         glm::mat4 normalization_matrix = to_scene * scale * to_origin;
 
-        for (Shape* shape : shapes) {
+        for (Submesh* shape : shapes) {
             shape->setTransform(normalization_matrix);
         }
     }
