@@ -1,87 +1,140 @@
 #pragma once
 
 #include <vector>
-#include "object.h"
+#include <string>
+#include <iostream>
+#include <stdexcept>
+#include <limits>
+#include <algorithm>
+#include <GLFW/glfw3.h>
 
-/*
- * Manages the entire application state, including all scene objects.
- * This class is responsible for creating, updating, and drawing objects.
- * It will also expose methods for the UI to interact with the scene.
- */
+#include "shape.h"
+#include "tinyobjloader.h"
+
+using namespace std;
+
 class State
 {
 public:
-    std::vector<Object*> m_objects;
+    vector<Shape*> shapes;
 
-    // Constructor: Initializes the state and creates the initial objects.
-    State()
-    {
-        // Define pyramid vertices
-        float pyramidVertices[] = {
-            // positions          // colors
-            // base
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-            // face 1
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
-             0.0f,  0.5f,  0.0f,  0.0f, 1.0f, 0.0f,
-            // face 2
-             0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-             0.0f,  0.5f,  0.0f,  0.0f, 0.0f, 1.0f,
-            // face 3
-             0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-             0.0f,  0.5f,  0.0f,  1.0f, 1.0f, 0.0f,
-            // face 4
-            -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f,
-             0.0f,  0.5f,  0.0f,  0.0f, 1.0f, 1.0f
-        };
-        
-        // Create the pyramid object and add it to our list of objects
-        Object* pyramid = new Object(pyramidVertices, sizeof(pyramidVertices), 18);
-        m_objects.push_back(pyramid);
-    }
+    State(){}
 
-    // Destructor: Cleans up all managed objects.
     ~State()
     {
-        for (Object* obj : m_objects)
-        {
+        for (Shape* obj : shapes) {
             delete obj;
         }
-        m_objects.clear();
+        shapes.clear();
     }
 
-    // Updates the state of all objects (e.g., for animation).
     void update()
-    {
-        // Animate the first object in the list (our pyramid)
-        if (!m_objects.empty())
-        {
-            glm::mat4 model = glm::mat4(1.0f);
-            float x_offset = sin(glfwGetTime()); // Oscillates between -1 and 1
-            model = glm::translate(model, glm::vec3(x_offset, 0.0f, -3.0f));
-            m_objects[0]->setTransform(model);
-        }
-    }
+    {}
 
-    // Draws all objects managed by the state.
     void draw(GLuint shaderProgram)
     {
-        for (Object* obj : m_objects)
-        {
+        for (Shape* obj : shapes) {
             obj->draw(shaderProgram);
         }
     }
 
-    // --- UI-related functions would go here ---
-    // Example:
-    // void changeColorOfSelectedObject(glm::vec3 newColor) { ... }
+    void load_object(const string& path)
+    {
+        tinyobj::attrib_t info;
+        vector<tinyobj::shape_t> _shapes;
+        vector<tinyobj::material_t> materials;
+        string warn, err;
+        string basedir = path.substr(0, path.find_last_of("/\\") + 1);
+
+        if (!tinyobj::LoadObj(&info, &_shapes, &materials, &warn, &err, path.c_str(), basedir.c_str())) {
+            throw runtime_error(warn + err);
+        }
+
+        for (Shape* obj : shapes) {
+            delete obj;
+        }
+
+        shapes.clear();
+        m_loaded_attrib = info;
+
+        for (const auto& shape : _shapes) {
+            vector<float> vertices;
+            int vertex_count = 0;
+            size_t index_offset = 0;
+
+            for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+                int fv = shape.mesh.num_face_vertices[f];
+
+                for (size_t v = 0; v < fv; v++) {
+                    tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                    vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
+                    vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
+                    vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
+                    int material_id = shape.mesh.material_ids[f];
+
+                    if (material_id < 0 || materials.empty()) {
+                        vertices.push_back(0.7f); vertices.push_back(0.7f); vertices.push_back(0.7f);
+                    } else {
+                        vertices.push_back(materials[material_id].diffuse[0]);
+                        vertices.push_back(materials[material_id].diffuse[1]);
+                        vertices.push_back(materials[material_id].diffuse[2]);
+                    }
+                }
+
+                index_offset += fv;
+                vertex_count += fv;
+            }
+
+            if (!vertices.empty()) {
+                Shape* new_shape = new Shape(vertices.data(), vertices.size() * sizeof(float), vertex_count);
+                shapes.push_back(new_shape); 
+            }
+        }
+
+        center_shape();
+    }
+
+    void rescale_shape(size_t shape_index, float factor)
+    {
+        if (shape_index < shapes.size()) {
+            shapes[shape_index]->scale(glm::vec3(factor));
+        }
+    }
+
+private:
+    tinyobj::attrib_t m_loaded_attrib;
+
+    void center_shape()
+    {
+        if (shapes.empty() || m_loaded_attrib.vertices.empty()) {
+            return;
+        }
+
+        glm::vec3 min_bound(numeric_limits<float>::max());
+        glm::vec3 max_bound(numeric_limits<float>::lowest());
+
+        for (size_t i = 0; i < m_loaded_attrib.vertices.size(); i += 3) {
+            min_bound.x = min(min_bound.x, m_loaded_attrib.vertices[i + 0]);
+            min_bound.y = min(min_bound.y, m_loaded_attrib.vertices[i + 1]);
+            min_bound.z = min(min_bound.z, m_loaded_attrib.vertices[i + 2]);
+            max_bound.x = max(max_bound.x, m_loaded_attrib.vertices[i + 0]);
+            max_bound.y = max(max_bound.y, m_loaded_attrib.vertices[i + 1]);
+            max_bound.z = max(max_bound.z, m_loaded_attrib.vertices[i + 2]);
+        }
+
+        glm::vec3 center = (max_bound + min_bound) / 2.0f;
+        glm::vec3 size = max_bound - min_bound;
+        float max_dim = max({size.x, size.y, size.z});
+        float scale_factor = 1.0f / max_dim;
+
+        glm::mat4 to_origin = glm::translate(glm::mat4(1.0f), -center);
+        glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(scale_factor));
+        glm::mat4 to_scene = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
+        
+        glm::mat4 normalization_matrix = to_scene * scale * to_origin;
+
+        for (Shape* shape : shapes) {
+            shape->setTransform(normalization_matrix);
+        }
+    }
 };

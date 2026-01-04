@@ -1,5 +1,10 @@
 #include "3DViewer.h"
+#include "state.h"
 #include <iostream>
+#include "portable-file-dialogs.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tinyobjloader.h"
 
 C3DViewer::C3DViewer()
 {
@@ -150,6 +155,23 @@ void C3DViewer::drawInterface()
 
     ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Once);
     ImGui::Begin("Control Panel");
+    
+    if (ImGui::Button("Load Model"))
+    {
+        auto selection = pfd::open_file("Choose OBJ file", ".", { "OBJ Files (.obj)", "*.obj" }).result();
+        if (!selection.empty())
+        {
+            std::cout << "Selected file: " << selection[0] << std::endl;
+            if (m_state) {
+                try {
+                    m_state->load_object(selection[0]);
+                } catch (const std::exception& e) {
+                    std::cerr << "Error loading object: " << e.what() << std::endl;
+                }
+            }
+        }
+    }
+
     static int anyDummyValue = 50;
     if (ImGui::SliderInt("slider-demo", &anyDummyValue, 1, 100)) 
     {
