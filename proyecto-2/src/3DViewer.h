@@ -118,10 +118,18 @@ public:
 private:
     void onKey(int key, int scancode, int action, int mods) 
     {
-        if (action == GLFW_PRESS)
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) // Handle both press and hold
         {
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+            if (key == GLFW_KEY_UP)
+                cameraPos += m_cameraSpeed * cameraFront;
+            if (key == GLFW_KEY_DOWN)
+                cameraPos -= m_cameraSpeed * cameraFront;
+            if (key == GLFW_KEY_LEFT)
+                cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * m_cameraSpeed;
+            if (key == GLFW_KEY_RIGHT)
+                cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * m_cameraSpeed;
         }
     }
 
@@ -192,7 +200,6 @@ private:
             auto selection = pfd::open_file("Choose OBJ file", ".", { "OBJ Files (.obj)", "*.obj" }).result();
             if (!selection.empty())
             {
-                cout << "Selected file: " << selection[0] << endl;
                 if (appState) {
                     try {
                         appState->load_object(selection[0]);
@@ -314,6 +321,7 @@ protected:
     int height = 480;
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
+    float m_cameraSpeed = 0.05f; // Default camera movement speed
 
     glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  0.0f);
     glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
