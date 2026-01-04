@@ -105,4 +105,12 @@ public:
     void resetTransform() { 
         transform = glm::mat4(1.0f); 
     }
+
+    void rotateAroundPoint(float angle, const glm::vec3& axis, const glm::vec3& pivot) {
+        // Translate to pivot, rotate, then translate back
+        transform = glm::translate(glm::mat4(1.0f), pivot) * 
+                    glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis) * 
+                    glm::translate(glm::mat4(1.0f), -pivot) * 
+                    transform;
+    }
 };

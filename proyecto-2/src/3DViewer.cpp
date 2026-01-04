@@ -6,6 +6,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
 
+using namespace std;
+
 C3DViewer::C3DViewer() : m_lastMouseX(0.0), m_lastMouseY(0.0)
 {
 }
@@ -120,7 +122,7 @@ void C3DViewer::onMouseButton(int button, int action, int mods)
     std::cout << "onMouseButton called. Button: " << button << ", Action: " << action << std::endl;
     ImGui_ImplGlfw_MouseButtonCallback(m_window, button, action, mods);
 
-    if (button == GLFW_MOUSE_BUTTON_RIGHT)
+    if (button == GLFW_MOUSE_BUTTON_LEFT)
     {
         if (action == GLFW_PRESS)
         {
@@ -153,11 +155,11 @@ void C3DViewer::handleMouseRotation(double deltaX, double deltaY)
     if (!m_state) return;
 
     float sensitivity = 0.2f; 
-    float rotationAmountY = -deltaX * sensitivity; // Y-axis rotation (yaw)
-    float rotationAmountX = -deltaY * sensitivity; // X-axis rotation (pitch)
+    float rotationAmountY = deltaX * sensitivity; // Y-axis rotation (yaw)
+    float rotationAmountX = deltaY * sensitivity; // X-axis rotation (pitch)
 
     // Call a new State method to rotate the object
-    // m_state->rotateObject(rotationAmountX, rotationAmountY); // This will be implemented in State class
+    m_state->rotateObject(rotationAmountX, rotationAmountY);
 }
 
 void C3DViewer::render() 
