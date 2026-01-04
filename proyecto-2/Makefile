@@ -7,7 +7,7 @@ LDFLAGS = -L/usr/lib/x86_64-linux-gnu
 LDLIBS = -lglfw -ldl -lGL -lX11 -lpthread -lXrandr -lXinerama -lXcursor -lXfixes -lXi
 
 # Source files
-SRCS = src/main.cpp src/3DViewer.cpp src/glad.c include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
+SRCS = src/main.cpp src/glad.c include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
 
 # Object files
 OBJS = $(patsubst src/%.cpp,build/%.o,$(filter src/%.cpp,$(SRCS)))

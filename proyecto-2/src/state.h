@@ -28,9 +28,6 @@ public:
         shapes.clear();
     }
 
-    void update()
-    {}
-
     void draw(GLuint shaderProgram)
     {
         for (Submesh* obj : shapes) {
