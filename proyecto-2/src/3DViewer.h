@@ -142,6 +142,10 @@ private:
     void onMouseButton(int button, int action, int mods) 
     {
         ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.WantCaptureMouse) {
+            return;
+        }
 
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
@@ -174,7 +178,7 @@ private:
             if (action == GLFW_PRESS)
             {
                 mouseButtonsDown[1] = true;
-                glfwGetCursorPos(window, &mousePos.first, &mousePos.second); // Get current mouse pos when button pressed
+                glfwGetCursorPos(window, &mousePos.first, &mousePos.second); 
             }
             else if (action == GLFW_RELEASE)
             {
@@ -186,23 +190,28 @@ private:
     void onCursorPos(double xpos, double ypos) 
     {
         ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
-
-        if (mouseButtonsDown[1]) // Check for right mouse button for rotation
-        {
-            double deltaX = xpos - mousePos.first;
-            double deltaY = ypos - mousePos.second;
-
-            handleRotation(deltaX, deltaY);
-
-            mousePos = {xpos,ypos};
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.WantCaptureMouse) {
+            mousePos = {xpos, ypos}; // Update position to prevent jumps
+            return;
         }
+
+        double deltaX = xpos - mousePos.first;
+        double deltaY = ypos - mousePos.second;
+
+        if (mouseButtonsDown[1]){
+            handleRotation(deltaX, deltaY);
+        } else if (mouseButtonsDown[0]){
+            handleTranslation(deltaX, -deltaY);
+        }
+        
+        mousePos = {xpos,ypos};
     }
 
     void render() 
     {
-        // --- Picking Pass ---
         glBindFramebuffer(GL_FRAMEBUFFER, pickingFBO);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Clear with black (ID 0)
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
@@ -295,8 +304,7 @@ private:
         glViewport(0, 0, width, height);
     }
 
-    void handleRotation(double deltaX, double deltaY)
-    {
+    void handleRotation(double deltaX, double deltaY){
         if (!appState) return;
 
         float sensitivity = 0.2f; 
@@ -304,6 +312,21 @@ private:
         float rotationAmountX = deltaY * sensitivity;
 
         appState->rotateObject(rotationAmountX, rotationAmountY);
+    }
+
+    void handleTranslation(double deltaX, double deltaY){
+        if (!appState || appState->shapes.empty()) return;
+
+        glm::vec3 objectWorldPos = glm::vec3(appState->shapes[0]->getTransform()[3]);
+        float distance = glm::distance(cameraPos, objectWorldPos);
+
+        float sensitivity = 0.03f; 
+        float moveFactor = (1.0f + distance) * sensitivity;
+
+        glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
+        glm::vec3 translationVector = (cameraRight * (float)deltaX * moveFactor) + (cameraUp * (float)deltaY * moveFactor);
+
+        appState->translateObject(translationVector.x, translationVector.y, translationVector.z);
     }
 
     bool setupShader() 

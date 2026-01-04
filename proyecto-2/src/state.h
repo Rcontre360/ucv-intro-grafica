@@ -106,6 +106,17 @@ public:
         oldScale = factor;
     }
 
+    void translateObject(float deltaX, float deltaY, float deltaZ)
+    {
+        if (shapes.empty()) return;
+
+        glm::vec3 moveTo = glm::vec3(deltaX, deltaY, deltaZ); 
+
+        for (Submesh* obj : shapes) {
+            obj->translate(moveTo); 
+        }
+    }
+
     void rotateObject(float angleX, float angleY)
     {
         if (shapes.empty()) return;
