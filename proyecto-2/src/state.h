@@ -28,10 +28,10 @@ public:
         shapes.clear();
     }
 
-    void draw(GLuint shaderProgram)
+    void draw(GLuint shaderProgram, int selectedSubmeshIndex)
     {
-        for (Submesh* obj : shapes) {
-            obj->draw(shaderProgram);
+        for (size_t i = 0; i < shapes.size(); ++i) {
+            shapes[i]->draw(shaderProgram, (int)i == selectedSubmeshIndex);
         }
     }
 
@@ -52,7 +52,7 @@ public:
         }
 
         shapes.clear();
-        m_loaded_attrib = info;
+        loaded_attrib = info;
 
         for (const auto& shape : _shapes) {
             vector<float> vertices;
@@ -145,25 +145,25 @@ public:
     }
 
 private:
-    tinyobj::attrib_t m_loaded_attrib;
+    tinyobj::attrib_t loaded_attrib;
     float oldScale = 1.0;
 
     void center_shape()
     {
-        if (shapes.empty() || m_loaded_attrib.vertices.empty()) {
+        if (shapes.empty() || loaded_attrib.vertices.empty()) {
             return;
         }
 
         glm::vec3 min_bound(numeric_limits<float>::max());
         glm::vec3 max_bound(numeric_limits<float>::lowest());
 
-        for (size_t i = 0; i < m_loaded_attrib.vertices.size(); i += 3) {
-            min_bound.x = min(min_bound.x, m_loaded_attrib.vertices[i + 0]);
-            min_bound.y = min(min_bound.y, m_loaded_attrib.vertices[i + 1]);
-            min_bound.z = min(min_bound.z, m_loaded_attrib.vertices[i + 2]);
-            max_bound.x = max(max_bound.x, m_loaded_attrib.vertices[i + 0]);
-            max_bound.y = max(max_bound.y, m_loaded_attrib.vertices[i + 1]);
-            max_bound.z = max(max_bound.z, m_loaded_attrib.vertices[i + 2]);
+        for (size_t i = 0; i < loaded_attrib.vertices.size(); i += 3) {
+            min_bound.x = min(min_bound.x, loaded_attrib.vertices[i + 0]);
+            min_bound.y = min(min_bound.y, loaded_attrib.vertices[i + 1]);
+            min_bound.z = min(min_bound.z, loaded_attrib.vertices[i + 2]);
+            max_bound.x = max(max_bound.x, loaded_attrib.vertices[i + 0]);
+            max_bound.y = max(max_bound.y, loaded_attrib.vertices[i + 1]);
+            max_bound.z = max(max_bound.z, loaded_attrib.vertices[i + 2]);
         }
 
         glm::vec3 center = (max_bound + min_bound) / 2.0f;

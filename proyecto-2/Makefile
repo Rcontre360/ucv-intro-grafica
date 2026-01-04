@@ -10,10 +10,9 @@ LDLIBS = -lglfw -ldl -lGL -lX11 -lpthread -lXrandr -lXinerama -lXcursor -lXfixes
 SRCS = src/main.cpp src/glad.c include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
 
 # Object files
-OBJS = $(patsubst src/%.cpp,build/%.o,$(filter src/%.cpp,$(SRCS)))
-OBJS += $(patsubst src/%.c,build/%.o,$(filter src/%.c,$(SRCS)))
-OBJS += $(patsubst include/imgui/%.cpp,build/imgui/%.o,$(filter include/imgui/%.cpp,$(SRCS)))
-OBJS += $(patsubst include/imgui/backends/%.cpp,build/imgui/backends/%.o,$(filter include/imgui/backends/%.cpp,$(SRCS)))
+MAIN_OBJS = build/main.o build/glad.o
+IMGUI_OBJS = build/imgui/imgui.o build/imgui/imgui_demo.o build/imgui/imgui_draw.o build/imgui/imgui_tables.o build/imgui/imgui_widgets.o build/imgui/backends/imgui_impl_glfw.o build/imgui/backends/imgui_impl_opengl3.o
+OBJS = $(MAIN_OBJS) $(IMGUI_OBJS)
 
 # Directories
 DIRS = build build/imgui build/imgui/backends
@@ -28,23 +27,23 @@ all: build
 build: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(LDFLAGS) -o $(TARGET) $(sort $(OBJS)) $(LDLIBS)
+	@mkdir -p build
+	$(CXX) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LDLIBS)
 
-$(OBJS): | $(DIRS)
-
-$(DIRS):
-	mkdir -p $(DIRS)
-
-build/%.o: src/%.cpp
+build/main.o: src/main.cpp src/3DViewer.h
+	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-build/%.o: src/%.c
+build/glad.o: src/glad.c
+	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 build/imgui/%.o: include/imgui/%.cpp
+	@mkdir -p build/imgui
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 build/imgui/backends/%.o: include/imgui/backends/%.cpp
+	@mkdir -p build/imgui/backends
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:

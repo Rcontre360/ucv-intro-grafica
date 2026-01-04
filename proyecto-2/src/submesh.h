@@ -66,12 +66,15 @@ public:
     }
 
     // Draws the submesh using the provided shader program.
-    void draw(GLuint shaderProgram)
+    void draw(GLuint shaderProgram, bool isSelected)
     {
         // Get the location of the "model" uniform in the shader program
         GLint model = glGetUniformLocation(shaderProgram, "model");
         // Pass the transformation matrix to the shader's "model" uniform
         glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
+
+        GLint isSelectedLoc = glGetUniformLocation(shaderProgram, "isSelected");
+        glUniform1i(isSelectedLoc, isSelected);
 
         // Bind the VAO that contains the buffer and attribute configurations for this submesh
         glBindVertexArray(vao);
