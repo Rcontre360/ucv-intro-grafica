@@ -117,36 +117,19 @@ public:
         }
     }
 
+    void translateSubmesh(int index, const glm::vec3& offset)
+    {
+        if (index >= 0 && index < shapes.size()) {
+            shapes[index]->translate(offset);
+        }
+    }
+
     void rotateObject(float angleX, float angleY)
     {
         if (shapes.empty()) return;
 
         glm::vec3 min_bound(numeric_limits<float>::max());
         glm::vec3 max_bound(numeric_limits<float>::lowest());
-
-        for (Submesh* obj : shapes) {
-            // Assuming Submesh has a way to get its local bounding box or transformed vertices
-            // For simplicity, we'll use the initial loaded attrib for center calculation
-            // A more robust solution would involve transforming each submesh's bounding box
-            // and then finding the overall bounding box.
-            // For now, we'll reuse the center_shape logic for the pivot.
-        }
-        
-        // Recalculate center based on current transformed positions if needed,
-        // but for rotation around its own center, the initial center is usually fine
-        // as the pivot for rotation.
-        // For now, let's assume the object is centered at (0,0,0) after normalization
-        // and we rotate around that. If not, we need to calculate the current world center.
-        
-        // Since the PDF states "Rotate the object on its own center", and we normalized it to (0,0,0)
-        // and then translated to (0,0,-3), the effective center for rotation is (0,0,-3).
-        // However, if submeshes are translated individually, this needs to be dynamic.
-        // For now, let's assume rotation around the origin (0,0,0) for simplicity,
-        // and then apply the object's overall translation.
-        // A more correct approach would be to calculate the current world-space center of the object.
-
-        // Let's use the center calculated during normalization as the pivot for now.
-        // This assumes the object's "own center" is its geometric center.
         glm::vec3 pivot = glm::vec3(0.0f, 0.0f, -3.0f); // Assuming this is the object's center after initial setup
 
         for (Submesh* obj : shapes) {

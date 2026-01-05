@@ -202,7 +202,7 @@ private:
         if (mouseButtonsDown[1]){
             handleRotation(deltaX, deltaY);
         } else if (mouseButtonsDown[0]){
-            handleTranslation(deltaX, -deltaY);
+            handleTranslation(deltaX, -deltaY, selectedSubmeshIndex);
         }
         
         mousePos = {xpos,ypos};
@@ -314,10 +314,10 @@ private:
         appState->rotateObject(rotationAmountX, rotationAmountY);
     }
 
-    void handleTranslation(double deltaX, double deltaY){
-        if (!appState || appState->shapes.empty()) return;
+    void handleTranslation(double deltaX, double deltaY, int submeshIndex){
+        if (!appState || appState->shapes.empty() || submeshIndex < 0) return;
 
-        glm::vec3 objectWorldPos = glm::vec3(appState->shapes[0]->getTransform()[3]);
+        glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
         float distance = glm::distance(cameraPos, objectWorldPos);
 
         float sensitivity = 0.03f; 
@@ -326,7 +326,7 @@ private:
         glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
         glm::vec3 translationVector = (cameraRight * (float)deltaX * moveFactor) + (cameraUp * (float)deltaY * moveFactor);
 
-        appState->translateObject(translationVector.x, translationVector.y, translationVector.z);
+        appState->translateSubmesh(submeshIndex, translationVector);
     }
 
     bool setupShader() 
