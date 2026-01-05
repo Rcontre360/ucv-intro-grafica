@@ -15,6 +15,7 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include "state.h"
+#include "camera.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
@@ -129,13 +130,13 @@ private:
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             if (key == GLFW_KEY_UP)
-                cameraPos += cameraSpeed * cameraFront;
+                camera.process_keyboard(FORWARD, 0.1f);
             if (key == GLFW_KEY_DOWN)
-                cameraPos -= cameraSpeed * cameraFront;
+                camera.process_keyboard(BACKWARD, 0.1f);
             if (key == GLFW_KEY_LEFT)
-                cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+                camera.process_keyboard(LEFT, 0.1f);
             if (key == GLFW_KEY_RIGHT)
-                cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+                camera.process_keyboard(RIGHT, 0.1f);
         }
     }
 
@@ -217,7 +218,7 @@ private:
 
         glUseProgram(pickingShaderProgram);
 
-        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 view = camera.get_view_matrix();
         GLint viewLoc = glGetUniformLocation(pickingShaderProgram, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -244,7 +245,7 @@ private:
 
         glUseProgram(shaderProgram);
 
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        view = camera.get_view_matrix();
         viewLoc = glGetUniformLocation(shaderProgram, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -318,13 +319,12 @@ private:
         if (!appState || appState->shapes.empty() || submeshIndex < 0) return;
 
         glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
-        float distance = glm::distance(cameraPos, objectWorldPos);
+        float distance = glm::distance(camera.position, objectWorldPos);
 
         float sensitivity = 0.03f; 
         float moveFactor = (1.0f + distance) * sensitivity;
 
-        glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
-        glm::vec3 translationVector = (cameraRight * (float)deltaX * moveFactor) + (cameraUp * (float)deltaY * moveFactor);
+        glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
 
         appState->translateSubmesh(submeshIndex, translationVector);
     }
@@ -467,12 +467,12 @@ protected:
     GLFWwindow* window = nullptr;
     State* appState = nullptr;
     GLuint shaderProgram = 0;
+    Camera camera;
 
     int width = 720;
     int height = 480;
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
-    float cameraSpeed = 0.05f; // Default camera movement speed
     int selectedSubmeshIndex = -1; // -1 means no submesh is selected
 
     // Picking FBO and related textures/renderbuffers
@@ -481,15 +481,13 @@ protected:
     GLuint pickingDepthStencilRBO = 0;
     GLuint pickingShaderProgram = 0;
 
-    glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  0.0f);
-    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
-
     const char* vertexShaderSrc = R"glsl(
         #version 330 core
         layout(location = 0) in vec3 aPos;
         layout(location = 1) in vec3 aColor;
+        layout(location = 2) in vec2 aTexCoord;
         out vec3 vColor;
+        out vec2 vTexCoord;
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
@@ -497,19 +495,27 @@ protected:
         {
             gl_Position = projection * view * model * vec4(aPos, 1.0);
             vColor = aColor;
+            vTexCoord = aTexCoord;
         }
     )glsl";
 
     const char* fragmentShaderSrc = R"glsl(
         #version 330 core
         in vec3 vColor;
+        in vec2 vTexCoord;
         out vec4 FragColor;
         uniform int isSelected;
+        uniform bool uHasTexture;
+        uniform sampler2D uTexture;
         void main() {
             if (isSelected == 1) {
                 FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for selected
             } else {
-                FragColor = vec4(vColor, 1.0);
+                if (uHasTexture) {
+                    FragColor = texture(uTexture, vTexCoord);
+                } else {
+                    FragColor = vec4(vColor, 1.0);
+                }
             }
         }
     )glsl";

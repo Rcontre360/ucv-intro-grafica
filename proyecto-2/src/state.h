@@ -10,6 +10,7 @@
 
 #include "submesh.h"
 #include "tinyobjloader.h"
+#include "file_loader.h"
 
 using namespace std;
 
@@ -37,56 +38,14 @@ public:
 
     void load_object(const string& path)
     {
-        tinyobj::attrib_t info;
-        vector<tinyobj::shape_t> _shapes;
-        vector<tinyobj::material_t> materials;
-        string warn, err;
-        string basedir = path.substr(0, path.find_last_of("/\\") + 1);
-
-        if (!tinyobj::LoadObj(&info, &_shapes, &materials, &warn, &err, path.c_str(), basedir.c_str())) {
-            throw runtime_error(warn + err);
-        }
-
         for (Submesh* obj : shapes) {
             delete obj;
         }
-
         shapes.clear();
-        loaded_attrib = info;
 
-        for (const auto& shape : _shapes) {
-            vector<float> vertices;
-            int vertex_count = 0;
-            size_t index_offset = 0;
-
-            for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-                int fv = shape.mesh.num_face_vertices[f];
-
-                for (size_t v = 0; v < fv; v++) {
-                    tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-                    vertices.push_back(info.vertices[3 * idx.vertex_index + 0]);
-                    vertices.push_back(info.vertices[3 * idx.vertex_index + 1]);
-                    vertices.push_back(info.vertices[3 * idx.vertex_index + 2]);
-                    int material_id = shape.mesh.material_ids[f];
-
-                    if (material_id < 0 || materials.empty()) {
-                        vertices.push_back(0.7f); vertices.push_back(0.7f); vertices.push_back(0.7f);
-                    } else {
-                        vertices.push_back(materials[material_id].diffuse[0]);
-                        vertices.push_back(materials[material_id].diffuse[1]);
-                        vertices.push_back(materials[material_id].diffuse[2]);
-                    }
-                }
-
-                index_offset += fv;
-                vertex_count += fv;
-            }
-
-            if (!vertices.empty()) {
-                Submesh* new_shape = new Submesh(vertices.data(), vertices.size() * sizeof(float), vertex_count);
-                shapes.push_back(new_shape); 
-            }
-        }
+        LoadedObject loaded = FileLoader::load_object(path);
+        shapes = loaded.shapes;
+        loaded_attrib = loaded.attrib;
 
         center_shape();
     }

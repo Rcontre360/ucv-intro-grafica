@@ -7,10 +7,10 @@ LDFLAGS = -L/usr/lib/x86_64-linux-gnu
 LDLIBS = -lglfw -ldl -lGL -lX11 -lpthread -lXrandr -lXinerama -lXcursor -lXfixes -lXi
 
 # Source files
-SRCS = src/main.cpp src/glad.c include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
+SRCS = src/main.cpp src/glad.c src/stb_image.cpp include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
 
 # Object files
-MAIN_OBJS = build/main.o build/glad.o
+MAIN_OBJS = build/main.o build/glad.o build/stb_image.o
 IMGUI_OBJS = build/imgui/imgui.o build/imgui/imgui_demo.o build/imgui/imgui_draw.o build/imgui/imgui_tables.o build/imgui/imgui_widgets.o build/imgui/backends/imgui_impl_glfw.o build/imgui/backends/imgui_impl_opengl3.o
 OBJS = $(MAIN_OBJS) $(IMGUI_OBJS)
 
@@ -35,6 +35,10 @@ build/main.o: src/main.cpp src/3DViewer.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 build/glad.o: src/glad.c
+	@mkdir -p build
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+build/stb_image.o: src/stb_image.cpp
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

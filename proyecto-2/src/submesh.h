@@ -15,73 +15,64 @@ public:
     GLuint vao = 0;
     GLuint vbo = 0;
     int vertexCount = 0;
+    GLuint texture_id = 0;
+    bool has_texture = false;
 
     // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
-    Submesh(float* vertices, size_t verticesSize, int count) 
-        : transform(glm::mat4(1.0f)), vertexCount(count)
+    Submesh(float* vertices, size_t verticesSize, int count, GLuint tex_id = 0) 
+        : transform(glm::mat4(1.0f)), vertexCount(count), texture_id(tex_id)
     {
-        // Generate a Vertex Array Object (VAO) and a Vertex Buffer Object (VBO)
-        // VAO stores the configuration of how to read vertex data from VBOs.
-        // VBO stores the actual vertex data (positions, colors, etc.) in GPU memory.
+        has_texture = (texture_id != 0);
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
 
-        // Bind the VAO first, then bind and set vertex buffers, and then configure vertex attributes.
         glBindVertexArray(vao);
 
-        // Bind the VBO and upload the vertex data to it.
-        // GL_STATIC_DRAW indicates that the data will not change often.
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
 
-        // Configure the position attribute (layout location 0 in the shader)
-        // 0: attribute location in shader
-        // 3: number of components per vertex attribute (x, y, z)
-        // GL_FLOAT: type of data
-        // GL_FALSE: don't normalize
-        // 6 * sizeof(float): stride (distance between consecutive vertex attributes - 3 for pos + 3 for color)
-        // (void*)0: offset of the first component of the first vertex
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0); // Enable the vertex attribute
+        // Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
-        // Configure the color attribute (layout location 1 in the shader)
-        // 1: attribute location in shader
-        // 3: number of components per vertex attribute (r, g, b)
-        // GL_FLOAT: type of data
-        // GL_FALSE: don't normalize
-        // 6 * sizeof(float): stride (distance between consecutive vertex attributes - 3 for pos + 3 for color)
-        // (void*)(3 * sizeof(float)): offset of the first color component (after 3 position floats)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1); // Enable the vertex attribute
+        // Color attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
 
-        glBindVertexArray(0); // Unbind the VAO to prevent accidental modification
+        // Texture coordinate attribute
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+
+        glBindVertexArray(0);
     }
 
     // Destructor: Cleans up OpenGL buffers.
     ~Submesh()
     {
-        // Delete the VBO and VAO from GPU memory
         if (vbo) glDeleteBuffers(1, &vbo);
         if (vao) glDeleteVertexArrays(1, &vao);
+        if (has_texture && texture_id) glDeleteTextures(1, &texture_id);
     }
 
     // Draws the submesh using the provided shader program.
     void draw(GLuint shaderProgram, bool isSelected)
     {
-        // Get the location of the "model" uniform in the shader program
         GLint model = glGetUniformLocation(shaderProgram, "model");
-        // Pass the transformation matrix to the shader's "model" uniform
         glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
 
         GLint isSelectedLoc = glGetUniformLocation(shaderProgram, "isSelected");
         glUniform1i(isSelectedLoc, isSelected);
 
-        // Bind the VAO that contains the buffer and attribute configurations for this submesh
+        GLint hasTextureLoc = glGetUniformLocation(shaderProgram, "uHasTexture");
+        glUniform1i(hasTextureLoc, has_texture);
+
+        if (has_texture) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture_id);
+            glUniform1i(glGetUniformLocation(shaderProgram, "uTexture"), 0);
+        }
+
         glBindVertexArray(vao);
-        // Draw the triangles. 
-        // GL_TRIANGLES: specifies that the vertices are interpreted as individual triangles.
-        // 0: starting index in the enabled arrays.
-        // vertexCount: number of vertices to be rendered.
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
 
