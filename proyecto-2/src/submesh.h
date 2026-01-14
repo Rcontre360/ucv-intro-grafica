@@ -55,7 +55,7 @@ public:
     }
 
     // Draws the submesh using the provided shader program.
-    void draw(GLuint shaderProgram, bool isSelected)
+    void draw(GLuint shaderProgram, bool isSelected, bool show_vertices, float* vertex_color, float point_size)
     {
         GLint model = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
@@ -72,8 +72,20 @@ public:
             glUniform1i(glGetUniformLocation(shaderProgram, "uTexture"), 0);
         }
 
+        GLint renderPointsLoc = glGetUniformLocation(shaderProgram, "u_render_points");
+        glUniform1i(renderPointsLoc, 0);
+
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+
+        if (show_vertices && vertex_color) {
+            glUniform1i(renderPointsLoc, 1);
+            GLint vColorLoc = glGetUniformLocation(shaderProgram, "vertexColor");
+            glUniform3fv(vColorLoc, 1, vertex_color);
+            GLint pointSizeLoc = glGetUniformLocation(shaderProgram, "u_point_size");
+            glUniform1f(pointSizeLoc, point_size);
+            glDrawArrays(GL_POINTS, 0, vertexCount);
+        }
     }
 
     void translate(const glm::vec3& offset) { 

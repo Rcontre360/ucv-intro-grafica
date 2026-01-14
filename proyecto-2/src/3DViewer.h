@@ -56,6 +56,7 @@ public:
         }
         
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_PROGRAM_POINT_SIZE);
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -232,7 +233,7 @@ private:
             {
                 GLint objectIdLoc = glGetUniformLocation(pickingShaderProgram, "objectId");
                 glUniform1i(objectIdLoc, i + 1); // +1 to avoid ID 0 (black)
-                appState->shapes[i]->draw(pickingShaderProgram, false);
+                appState->shapes[i]->draw(pickingShaderProgram, false, false, nullptr, 0.0f);
             }
         }
 
@@ -255,7 +256,7 @@ private:
 
         if (appState)
         {
-            appState->draw(shaderProgram, selectedSubmeshIndex);
+            appState->draw(shaderProgram, selectedSubmeshIndex, show_vertices, vertex_color, point_size);
         }
 
         drawInterface();
@@ -293,6 +294,11 @@ private:
                 appState->rescaleAllShapes(scaleFactor);
             }
         }
+
+        ImGui::Checkbox("Show Vertices", &show_vertices);
+        ImGui::ColorEdit3("Vertex Color", vertex_color);
+        ImGui::SliderFloat("Point Size", &point_size, 1.0f, 20.0f);
+
         ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -474,6 +480,9 @@ protected:
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
     int selectedSubmeshIndex = -1; // -1 means no submesh is selected
+    bool show_vertices = false;
+    float vertex_color[3] = { 1.0f, 1.0f, 1.0f };
+    float point_size = 5.0f;
 
     // Picking FBO and related textures/renderbuffers
     GLuint pickingFBO = 0;
@@ -491,11 +500,16 @@ protected:
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
+        uniform bool u_render_points;
+        uniform float u_point_size;
         void main() 
         {
             gl_Position = projection * view * model * vec4(aPos, 1.0);
             vColor = aColor;
             vTexCoord = aTexCoord;
+            if (u_render_points) {
+                gl_PointSize = u_point_size;
+            }
         }
     )glsl";
 
@@ -507,8 +521,12 @@ protected:
         uniform int isSelected;
         uniform bool uHasTexture;
         uniform sampler2D uTexture;
+        uniform bool u_render_points;
+        uniform vec3 vertexColor;
         void main() {
-            if (isSelected == 1) {
+            if (u_render_points) {
+                FragColor = vec4(vertexColor, 1.0);
+            } else if (isSelected == 1) {
                 FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for selected
             } else {
                 if (uHasTexture) {
