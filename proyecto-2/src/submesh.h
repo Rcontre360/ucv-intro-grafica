@@ -4,6 +4,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
+#include <algorithm>
+#include <limits>
 
 struct DrawConfig {
     GLuint shaderProgram;
@@ -28,12 +31,32 @@ public:
     int vertexCount = 0;
     GLuint texture_id = 0;
     bool has_texture = false;
+    float override_color[3] = { 1.0f, 1.0f, 1.0f };
+    glm::vec3 min_bound;
+    glm::vec3 max_bound;
+    bool show_bounding_box = false;
+    float bounding_box_color[3] = { 1.0f, 0.0f, 1.0f };
+    GLuint bbox_vao = 0, bbox_vbo = 0;
 
     // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
     Submesh(float* vertices, size_t verticesSize, int count, GLuint tex_id = 0) 
         : transform(glm::mat4(1.0f)), vertexCount(count), texture_id(tex_id)
     {
         has_texture = (texture_id != 0);
+        min_bound = glm::vec3(std::numeric_limits<float>::max());
+        max_bound = glm::vec3(std::numeric_limits<float>::lowest());
+        for (int i = 0; i < count; ++i) {
+            float x = vertices[i * 11 + 0];
+            float y = vertices[i * 11 + 1];
+            float z = vertices[i * 11 + 2];
+            min_bound.x = std::min(min_bound.x, x);
+            min_bound.y = std::min(min_bound.y, y);
+            min_bound.z = std::min(min_bound.z, z);
+            max_bound.x = std::max(max_bound.x, x);
+            max_bound.y = std::max(max_bound.y, y);
+            max_bound.z = std::max(max_bound.z, z);
+        }
+
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
 
@@ -59,6 +82,8 @@ public:
         glEnableVertexAttribArray(3);
 
         glBindVertexArray(0);
+
+        setup_bounding_box();
     }
 
     // Destructor: Cleans up OpenGL buffers.
@@ -66,6 +91,8 @@ public:
     {
         if (vbo) glDeleteBuffers(1, &vbo);
         if (vao) glDeleteVertexArrays(1, &vao);
+        if (bbox_vbo) glDeleteBuffers(1, &bbox_vbo);
+        if (bbox_vao) glDeleteVertexArrays(1, &bbox_vao);
         if (has_texture && texture_id) glDeleteTextures(1, &texture_id);
     }
 
@@ -85,6 +112,11 @@ public:
 
         GLint isSelectedLoc = glGetUniformLocation(config.shaderProgram, "isSelected");
         glUniform1i(isSelectedLoc, config.isSelected);
+
+        if (config.isSelected) {
+            GLint overrideColorLoc = glGetUniformLocation(config.shaderProgram, "u_override_color");
+            glUniform3fv(overrideColorLoc, 1, override_color);
+        }
 
         GLint hasTextureLoc = glGetUniformLocation(config.shaderProgram, "uHasTexture");
         glUniform1i(hasTextureLoc, has_texture);
@@ -114,6 +146,22 @@ public:
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDrawArrays(GL_TRIANGLES, 0, vertexCount);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glUniform1i(isWireframeLoc, 0);
+        }
+
+        if (config.isSelected && show_bounding_box) {
+            glUniform1i(isWireframeLoc, 1);
+            GLint wColorLoc = glGetUniformLocation(config.shaderProgram, "u_wireframe_color");
+            glUniform3fv(wColorLoc, 1, bounding_box_color);
+
+            glEnable(GL_POLYGON_OFFSET_LINE);
+            glPolygonOffset(-1.0, -1.0);
+
+            glBindVertexArray(bbox_vao);
+            glDrawArrays(GL_LINES, 0, 24);
+            glBindVertexArray(0);
+
+            glDisable(GL_POLYGON_OFFSET_LINE);
             glUniform1i(isWireframeLoc, 0);
         }
 
@@ -156,5 +204,45 @@ public:
                     glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis) * 
                     glm::translate(glm::mat4(1.0f), -pivot) * 
                     transform;
+    }
+
+private:
+    void setup_bounding_box() {
+        float vertices[] = {
+            min_bound.x, min_bound.y, min_bound.z,
+            max_bound.x, min_bound.y, min_bound.z,
+            max_bound.x, max_bound.y, min_bound.z,
+            min_bound.x, max_bound.y, min_bound.z,
+            min_bound.x, min_bound.y, max_bound.z,
+            max_bound.x, min_bound.y, max_bound.z,
+            max_bound.x, max_bound.y, max_bound.z,
+            min_bound.x, max_bound.y, max_bound.z
+        };
+
+        unsigned int indices[] = {
+            0, 1, 1, 2, 2, 3, 3, 0,
+            4, 5, 5, 6, 6, 7, 7, 4,
+            0, 4, 1, 5, 2, 6, 3, 7
+        };
+        
+        float line_vertices[24 * 3];
+        for(int i = 0; i < 24; ++i) {
+            line_vertices[i*3+0] = vertices[indices[i]*3+0];
+            line_vertices[i*3+1] = vertices[indices[i]*3+1];
+            line_vertices[i*3+2] = vertices[indices[i]*3+2];
+        }
+
+        glGenVertexArrays(1, &bbox_vao);
+        glGenBuffers(1, &bbox_vbo);
+
+        glBindVertexArray(bbox_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, bbox_vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+        
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
     }
 };

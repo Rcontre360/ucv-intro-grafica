@@ -313,6 +313,30 @@ private:
         }
 
         ImGui::End();
+
+        if (selectedSubmeshIndex != -1 && appState && selectedSubmeshIndex < appState->shapes.size())
+        {
+            ImGui::Begin("Selected Submesh Controls");
+
+            Submesh* selected_submesh = appState->shapes[selectedSubmeshIndex];
+
+            if (ImGui::Button("Delete Submesh"))
+            {
+                appState->delete_submesh(selectedSubmeshIndex);
+                selectedSubmeshIndex = -1; 
+            }
+            else
+            {
+                ImGui::ColorEdit3("Submesh Color", selected_submesh->override_color);
+
+                ImGui::Separator();
+
+                ImGui::Checkbox("Show Bounding Box", &selected_submesh->show_bounding_box);
+                ImGui::ColorEdit3("Bounding Box Color", selected_submesh->bounding_box_color);
+            }
+            ImGui::End();
+        }
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -539,13 +563,14 @@ protected:
         uniform vec3 vertexColor;
         uniform bool u_is_wireframe;
         uniform vec3 u_wireframe_color;
+        uniform vec3 u_override_color;
         void main() {
-            if (u_is_wireframe) {
+            if (isSelected == 1) {
+                FragColor = vec4(u_override_color, 1.0);
+            } else if (u_is_wireframe) {
                 FragColor = vec4(u_wireframe_color, 1.0);
             } else if (u_render_points) {
                 FragColor = vec4(vertexColor, 1.0);
-            } else if (isSelected == 1) {
-                FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for selected
             } else {
                 if (uHasTexture) {
                     FragColor = texture(uTexture, vTexCoord);

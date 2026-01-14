@@ -25,6 +25,8 @@ public:
     float wireframe_color[3] = { 1.0f, 1.0f, 1.0f };
     bool show_fill = true;
     bool line_antialiasing = false;
+    float global_bounding_box_color[3] = { 0.0f, 1.0f, 0.0f };
+    GLuint global_bbox_vao = 0, global_bbox_vbo = 0;
 
     State(){}
 
@@ -34,6 +36,15 @@ public:
             delete obj;
         }
         shapes.clear();
+    }
+
+
+    void delete_submesh(int index)
+    {
+        if (index >= 0 && index < shapes.size()) {
+            delete shapes[index];
+            shapes.erase(shapes.begin() + index);
+        }
     }
 
     void draw(GLuint shaderProgram, int selectedSubmeshIndex)
