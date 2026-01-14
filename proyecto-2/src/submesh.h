@@ -55,7 +55,7 @@ public:
     }
 
     // Draws the submesh using the provided shader program.
-    void draw(GLuint shaderProgram, bool isSelected, bool show_vertices, float* vertex_color, float point_size)
+    void draw(GLuint shaderProgram, bool isSelected, bool show_vertices, float* vertex_color, float point_size, bool show_wireframe, float* wireframe_color)
     {
         GLint model = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
@@ -74,9 +74,23 @@ public:
 
         GLint renderPointsLoc = glGetUniformLocation(shaderProgram, "u_render_points");
         glUniform1i(renderPointsLoc, 0);
+        
+        GLint isWireframeLoc = glGetUniformLocation(shaderProgram, "u_is_wireframe");
+        glUniform1i(isWireframeLoc, 0);
 
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+
+        if (show_wireframe && wireframe_color) {
+            glUniform1i(isWireframeLoc, 1);
+            GLint wColorLoc = glGetUniformLocation(shaderProgram, "u_wireframe_color");
+            glUniform3fv(wColorLoc, 1, wireframe_color);
+            
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glUniform1i(isWireframeLoc, 0);
+        }
 
         if (show_vertices && vertex_color) {
             glUniform1i(renderPointsLoc, 1);

@@ -29,10 +29,10 @@ public:
         shapes.clear();
     }
 
-    void draw(GLuint shaderProgram, int selectedSubmeshIndex, bool show_vertices, float* vertex_color, float point_size)
+    void draw(GLuint shaderProgram, int selectedSubmeshIndex, bool show_vertices, float* vertex_color, float point_size, bool show_wireframe, float* wireframe_color)
     {
         for (size_t i = 0; i < shapes.size(); ++i) {
-            shapes[i]->draw(shaderProgram, (int)i == selectedSubmeshIndex, show_vertices, vertex_color, point_size);
+            shapes[i]->draw(shaderProgram, (int)i == selectedSubmeshIndex, show_vertices, vertex_color, point_size, show_wireframe, wireframe_color);
         }
     }
 

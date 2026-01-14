@@ -233,7 +233,7 @@ private:
             {
                 GLint objectIdLoc = glGetUniformLocation(pickingShaderProgram, "objectId");
                 glUniform1i(objectIdLoc, i + 1); // +1 to avoid ID 0 (black)
-                appState->shapes[i]->draw(pickingShaderProgram, false, false, nullptr, 0.0f);
+                appState->shapes[i]->draw(pickingShaderProgram, false, false, nullptr, 0.0f, false, nullptr);
             }
         }
 
@@ -256,7 +256,7 @@ private:
 
         if (appState)
         {
-            appState->draw(shaderProgram, selectedSubmeshIndex, show_vertices, vertex_color, point_size);
+            appState->draw(shaderProgram, selectedSubmeshIndex, show_vertices, vertex_color, point_size, show_wireframe, wireframe_color);
         }
 
         drawInterface();
@@ -298,6 +298,9 @@ private:
         ImGui::Checkbox("Show Vertices", &show_vertices);
         ImGui::ColorEdit3("Vertex Color", vertex_color);
         ImGui::SliderFloat("Point Size", &point_size, 1.0f, 20.0f);
+
+        ImGui::Checkbox("Show Wireframe", &show_wireframe);
+        ImGui::ColorEdit3("Wireframe Color", wireframe_color);
 
         ImGui::End();
         ImGui::Render();
@@ -483,6 +486,8 @@ protected:
     bool show_vertices = false;
     float vertex_color[3] = { 1.0f, 1.0f, 1.0f };
     float point_size = 5.0f;
+    bool show_wireframe = false;
+    float wireframe_color[3] = { 1.0f, 1.0f, 1.0f };
 
     // Picking FBO and related textures/renderbuffers
     GLuint pickingFBO = 0;
@@ -523,8 +528,12 @@ protected:
         uniform sampler2D uTexture;
         uniform bool u_render_points;
         uniform vec3 vertexColor;
+        uniform bool u_is_wireframe;
+        uniform vec3 u_wireframe_color;
         void main() {
-            if (u_render_points) {
+            if (u_is_wireframe) {
+                FragColor = vec4(u_wireframe_color, 1.0);
+            } else if (u_render_points) {
                 FragColor = vec4(vertexColor, 1.0);
             } else if (isSelected == 1) {
                 FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for selected
