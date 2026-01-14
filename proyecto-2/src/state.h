@@ -18,6 +18,13 @@ class State
 {
 public:
     vector<Submesh*> shapes;
+    bool show_vertices = false;
+    float vertex_color[3] = { 1.0f, 1.0f, 1.0f };
+    float point_size = 5.0f;
+    bool show_wireframe = false;
+    float wireframe_color[3] = { 1.0f, 1.0f, 1.0f };
+    bool show_fill = true;
+    bool line_antialiasing = false;
 
     State(){}
 
@@ -29,10 +36,20 @@ public:
         shapes.clear();
     }
 
-    void draw(GLuint shaderProgram, int selectedSubmeshIndex, bool show_vertices, float* vertex_color, float point_size, bool show_wireframe, float* wireframe_color)
+    void draw(GLuint shaderProgram, int selectedSubmeshIndex)
     {
+        DrawConfig config;
+        config.shaderProgram = shaderProgram;
+        config.show_vertices = show_vertices;
+        config.vertex_color = vertex_color;
+        config.point_size = point_size;
+        config.show_wireframe = show_wireframe;
+        config.wireframe_color = wireframe_color;
+        config.show_fill = show_fill;
+
         for (size_t i = 0; i < shapes.size(); ++i) {
-            shapes[i]->draw(shaderProgram, (int)i == selectedSubmeshIndex, show_vertices, vertex_color, point_size, show_wireframe, wireframe_color);
+            config.isSelected = ((int)i == selectedSubmeshIndex);
+            shapes[i]->draw(config);
         }
     }
 

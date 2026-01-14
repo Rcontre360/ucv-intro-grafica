@@ -60,6 +60,36 @@ public:
 
         loaded_object.attrib = info;
 
+        bool has_normals = !info.normals.empty();
+        vector<glm::vec3> calculated_normals;
+
+        if (!has_normals) {
+            calculated_normals.resize(info.vertices.size() / 3, glm::vec3(0.0f));
+            for (const auto& shape : _shapes) {
+                for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
+                    int fv = shape.mesh.num_face_vertices[f];
+                    if (fv != 3) continue; // Only process triangles
+
+                    tinyobj::index_t idx0 = shape.mesh.indices[f * 3 + 0];
+                    tinyobj::index_t idx1 = shape.mesh.indices[f * 3 + 1];
+                    tinyobj::index_t idx2 = shape.mesh.indices[f * 3 + 2];
+
+                    glm::vec3 v0(info.vertices[3 * idx0.vertex_index + 0], info.vertices[3 * idx0.vertex_index + 1], info.vertices[3 * idx0.vertex_index + 2]);
+                    glm::vec3 v1(info.vertices[3 * idx1.vertex_index + 0], info.vertices[3 * idx1.vertex_index + 1], info.vertices[3 * idx1.vertex_index + 2]);
+                    glm::vec3 v2(info.vertices[3 * idx2.vertex_index + 0], info.vertices[3 * idx2.vertex_index + 1], info.vertices[3 * idx2.vertex_index + 2]);
+
+                    glm::vec3 face_normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+                    calculated_normals[idx0.vertex_index] += face_normal;
+                    calculated_normals[idx1.vertex_index] += face_normal;
+                    calculated_normals[idx2.vertex_index] += face_normal;
+                }
+            }
+            for (auto& normal : calculated_normals) {
+                normal = glm::normalize(normal);
+            }
+        }
+
         for (const auto& shape : _shapes) {
             vector<float> vertices;
             int vertex_count = 0;
@@ -71,26 +101,38 @@ public:
 
                 for (size_t v = 0; v < fv; v++) {
                     tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                    
+                    // Position
                     vertices.push_back(info.vertices[3 * idx.vertex_index + 0]);
                     vertices.push_back(info.vertices[3 * idx.vertex_index + 1]);
                     vertices.push_back(info.vertices[3 * idx.vertex_index + 2]);
-                    
-                    int material_id = shape.mesh.material_ids[f];
 
+                    // Normal
+                    if (has_normals) {
+                        vertices.push_back(info.normals[3 * idx.normal_index + 0]);
+                        vertices.push_back(info.normals[3 * idx.normal_index + 1]);
+                        vertices.push_back(info.normals[3 * idx.normal_index + 2]);
+                    } else {
+                        vertices.push_back(calculated_normals[idx.vertex_index].x);
+                        vertices.push_back(calculated_normals[idx.vertex_index].y);
+                        vertices.push_back(calculated_normals[idx.vertex_index].z);
+                    }
+                    
+                    // Color
+                    int material_id = shape.mesh.material_ids[f];
                     if (material_id < 0 || materials.empty()) {
                         vertices.push_back(0.7f); vertices.push_back(0.7f); vertices.push_back(0.7f);
                     } else {
                         vertices.push_back(materials[material_id].diffuse[0]);
                         vertices.push_back(materials[material_id].diffuse[1]);
                         vertices.push_back(materials[material_id].diffuse[2]);
-                        if (!materials[material_id].diffuse_texname.empty()) {
-                            if (texture_id == 0) {
-                                string texture_path = basedir + materials[material_id].diffuse_texname;
-                                texture_id = load_texture(texture_path);
-                            }
+                        if (!materials[material_id].diffuse_texname.empty() && texture_id == 0) {
+                            string texture_path = basedir + materials[material_id].diffuse_texname;
+                            texture_id = load_texture(texture_path);
                         }
                     }
 
+                    // Texture Coordinate
                     if (idx.texcoord_index >= 0) {
                         vertices.push_back(info.texcoords[2 * idx.texcoord_index + 0]);
                         vertices.push_back(info.texcoords[2 * idx.texcoord_index + 1]);
@@ -99,7 +141,6 @@ public:
                         vertices.push_back(0.0f);
                     }
                 }
-
                 index_offset += fv;
                 vertex_count += fv;
             }

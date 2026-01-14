@@ -97,6 +97,13 @@ public:
         {
             glfwPollEvents();
 
+            if (appState && appState->line_antialiasing) {
+                glEnable(GL_LINE_SMOOTH);
+                glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+            } else {
+                glDisable(GL_LINE_SMOOTH);
+            }
+
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -233,7 +240,7 @@ private:
             {
                 GLint objectIdLoc = glGetUniformLocation(pickingShaderProgram, "objectId");
                 glUniform1i(objectIdLoc, i + 1); // +1 to avoid ID 0 (black)
-                appState->shapes[i]->draw(pickingShaderProgram, false, false, nullptr, 0.0f, false, nullptr);
+                appState->shapes[i]->draw_for_picking(pickingShaderProgram);
             }
         }
 
@@ -256,7 +263,7 @@ private:
 
         if (appState)
         {
-            appState->draw(shaderProgram, selectedSubmeshIndex, show_vertices, vertex_color, point_size, show_wireframe, wireframe_color);
+            appState->draw(shaderProgram, selectedSubmeshIndex);
         }
 
         drawInterface();
@@ -295,12 +302,15 @@ private:
             }
         }
 
-        ImGui::Checkbox("Show Vertices", &show_vertices);
-        ImGui::ColorEdit3("Vertex Color", vertex_color);
-        ImGui::SliderFloat("Point Size", &point_size, 1.0f, 20.0f);
-
-        ImGui::Checkbox("Show Wireframe", &show_wireframe);
-        ImGui::ColorEdit3("Wireframe Color", wireframe_color);
+        if (appState) {
+            ImGui::Checkbox("Show Vertices", &appState->show_vertices);
+            ImGui::ColorEdit3("Vertex Color", appState->vertex_color);
+            ImGui::SliderFloat("Point Size", &appState->point_size, 1.0f, 20.0f);
+            ImGui::Checkbox("Show Fill", &appState->show_fill);
+            ImGui::Checkbox("Show Wireframe", &appState->show_wireframe);
+            ImGui::ColorEdit3("Wireframe Color", appState->wireframe_color);
+            ImGui::Checkbox("Line Antialiasing", &appState->line_antialiasing);
+        }
 
         ImGui::End();
         ImGui::Render();
@@ -483,11 +493,6 @@ protected:
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
     int selectedSubmeshIndex = -1; // -1 means no submesh is selected
-    bool show_vertices = false;
-    float vertex_color[3] = { 1.0f, 1.0f, 1.0f };
-    float point_size = 5.0f;
-    bool show_wireframe = false;
-    float wireframe_color[3] = { 1.0f, 1.0f, 1.0f };
 
     // Picking FBO and related textures/renderbuffers
     GLuint pickingFBO = 0;
@@ -498,8 +503,10 @@ protected:
     const char* vertexShaderSrc = R"glsl(
         #version 330 core
         layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aColor;
-        layout(location = 2) in vec2 aTexCoord;
+        layout(location = 1) in vec3 aNormal;
+        layout(location = 2) in vec3 aColor;
+        layout(location = 3) in vec2 aTexCoord;
+        out vec3 vNormal;
         out vec3 vColor;
         out vec2 vTexCoord;
         uniform mat4 model;
@@ -510,6 +517,7 @@ protected:
         void main() 
         {
             gl_Position = projection * view * model * vec4(aPos, 1.0);
+            vNormal = aNormal;
             vColor = aColor;
             vTexCoord = aTexCoord;
             if (u_render_points) {
@@ -520,6 +528,7 @@ protected:
 
     const char* fragmentShaderSrc = R"glsl(
         #version 330 core
+        in vec3 vNormal;
         in vec3 vColor;
         in vec2 vTexCoord;
         out vec4 FragColor;

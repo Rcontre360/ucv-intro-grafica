@@ -5,6 +5,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+struct DrawConfig {
+    GLuint shaderProgram;
+    bool isSelected;
+    bool show_vertices;
+    float* vertex_color;
+    float point_size;
+    bool show_wireframe;
+    float* wireframe_color;
+    bool show_fill;
+};
+
 class Submesh 
 {
 public:
@@ -32,16 +43,20 @@ public:
         glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
 
         // Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
-        // Color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        // Normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
-        // Texture coordinate attribute
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        // Color attribute
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));
         glEnableVertexAttribArray(2);
+
+        // Texture coordinate attribute
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(9 * sizeof(float)));
+        glEnableVertexAttribArray(3);
 
         glBindVertexArray(0);
     }
@@ -54,37 +69,47 @@ public:
         if (has_texture && texture_id) glDeleteTextures(1, &texture_id);
     }
 
-    // Draws the submesh using the provided shader program.
-    void draw(GLuint shaderProgram, bool isSelected, bool show_vertices, float* vertex_color, float point_size, bool show_wireframe, float* wireframe_color)
+    void draw_for_picking(GLuint shaderProgram)
     {
         GLint model = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+    }
 
-        GLint isSelectedLoc = glGetUniformLocation(shaderProgram, "isSelected");
-        glUniform1i(isSelectedLoc, isSelected);
+    // Draws the submesh using the provided shader program.
+    void draw(const DrawConfig& config)
+    {
+        GLint model = glGetUniformLocation(config.shaderProgram, "model");
+        glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
 
-        GLint hasTextureLoc = glGetUniformLocation(shaderProgram, "uHasTexture");
+        GLint isSelectedLoc = glGetUniformLocation(config.shaderProgram, "isSelected");
+        glUniform1i(isSelectedLoc, config.isSelected);
+
+        GLint hasTextureLoc = glGetUniformLocation(config.shaderProgram, "uHasTexture");
         glUniform1i(hasTextureLoc, has_texture);
 
         if (has_texture) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture_id);
-            glUniform1i(glGetUniformLocation(shaderProgram, "uTexture"), 0);
+            glUniform1i(glGetUniformLocation(config.shaderProgram, "uTexture"), 0);
         }
 
-        GLint renderPointsLoc = glGetUniformLocation(shaderProgram, "u_render_points");
+        GLint renderPointsLoc = glGetUniformLocation(config.shaderProgram, "u_render_points");
         glUniform1i(renderPointsLoc, 0);
         
-        GLint isWireframeLoc = glGetUniformLocation(shaderProgram, "u_is_wireframe");
+        GLint isWireframeLoc = glGetUniformLocation(config.shaderProgram, "u_is_wireframe");
         glUniform1i(isWireframeLoc, 0);
 
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+        if (config.show_fill) {
+            glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+        }
 
-        if (show_wireframe && wireframe_color) {
+        if (config.show_wireframe && config.wireframe_color) {
             glUniform1i(isWireframeLoc, 1);
-            GLint wColorLoc = glGetUniformLocation(shaderProgram, "u_wireframe_color");
-            glUniform3fv(wColorLoc, 1, wireframe_color);
+            GLint wColorLoc = glGetUniformLocation(config.shaderProgram, "u_wireframe_color");
+            glUniform3fv(wColorLoc, 1, config.wireframe_color);
             
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDrawArrays(GL_TRIANGLES, 0, vertexCount);
@@ -92,12 +117,12 @@ public:
             glUniform1i(isWireframeLoc, 0);
         }
 
-        if (show_vertices && vertex_color) {
+        if (config.show_vertices && config.vertex_color) {
             glUniform1i(renderPointsLoc, 1);
-            GLint vColorLoc = glGetUniformLocation(shaderProgram, "vertexColor");
-            glUniform3fv(vColorLoc, 1, vertex_color);
-            GLint pointSizeLoc = glGetUniformLocation(shaderProgram, "u_point_size");
-            glUniform1f(pointSizeLoc, point_size);
+            GLint vColorLoc = glGetUniformLocation(config.shaderProgram, "vertexColor");
+            glUniform3fv(vColorLoc, 1, config.vertex_color);
+            GLint pointSizeLoc = glGetUniformLocation(config.shaderProgram, "u_point_size");
+            glUniform1f(pointSizeLoc, config.point_size);
             glDrawArrays(GL_POINTS, 0, vertexCount);
         }
     }
