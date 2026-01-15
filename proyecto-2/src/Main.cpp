@@ -1,4 +1,4 @@
-#include "3DViewer.h"
+#include "C3DViewer.h"
 #include <iostream>
 
 

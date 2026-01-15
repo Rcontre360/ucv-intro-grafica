@@ -7,7 +7,7 @@ LDFLAGS = -L/usr/lib/x86_64-linux-gnu
 LDLIBS = -lglfw -ldl -lGL -lX11 -lpthread -lXrandr -lXinerama -lXcursor -lXfixes -lXi
 
 # Source files
-SRCS = src/main.cpp src/glad.c src/stb_image.cpp include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
+SRCS = src/Main.cpp src/glad.c src/stb_image.cpp include/imgui/imgui.cpp include/imgui/imgui_demo.cpp include/imgui/imgui_draw.cpp include/imgui/imgui_tables.cpp include/imgui/imgui_widgets.cpp include/imgui/backends/imgui_impl_glfw.cpp include/imgui/backends/imgui_impl_opengl3.cpp
 
 # Object files
 MAIN_OBJS = build/main.o build/glad.o build/stb_image.o
@@ -30,7 +30,7 @@ $(TARGET): $(OBJS)
 	@mkdir -p build
 	$(CXX) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LDLIBS)
 
-build/main.o: src/main.cpp src/3DViewer.h
+build/main.o: src/Main.cpp src/C3DViewer.h
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

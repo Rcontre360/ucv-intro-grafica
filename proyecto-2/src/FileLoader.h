@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include "submesh.h"
+#include "Submesh.h"
 #include "tinyobjloader.h"
 #include "stb/stb_image.h"
 
@@ -17,10 +17,10 @@ struct LoadedObject {
 
 class FileLoader {
 public:
-    static GLuint load_texture(const std::string& path) {
-        GLuint texture_id;
-        glGenTextures(1, &texture_id);
-        glBindTexture(GL_TEXTURE_2D, texture_id);
+    static GLuint loadTexture(const std::string& path) {
+        GLuint textureId;
+        glGenTextures(1, &textureId);
+        glBindTexture(GL_TEXTURE_2D, textureId);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -43,11 +43,11 @@ public:
         }
         stbi_image_free(data);
 
-        return texture_id;
+        return textureId;
     }
 
-    static LoadedObject load_object(const std::string& path) {
-        LoadedObject loaded_object;
+    static LoadedObject loadObject(const std::string& path) {
+        LoadedObject loadedObject;
         tinyobj::attrib_t info;
         vector<tinyobj::shape_t> _shapes;
         vector<tinyobj::material_t> materials;
@@ -58,13 +58,13 @@ public:
             throw std::runtime_error(warn + err);
         }
 
-        loaded_object.attrib = info;
+        loadedObject.attrib = info;
 
-        bool has_normals = !info.normals.empty();
-        vector<glm::vec3> calculated_normals;
+        bool hasNormals = !info.normals.empty();
+        vector<glm::vec3> calculatedNormals;
 
-        if (!has_normals) {
-            calculated_normals.resize(info.vertices.size() / 3, glm::vec3(0.0f));
+        if (!hasNormals) {
+            calculatedNormals.resize(info.vertices.size() / 3, glm::vec3(0.0f));
             for (const auto& shape : _shapes) {
                 for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
                     int fv = shape.mesh.num_face_vertices[f];
@@ -78,29 +78,29 @@ public:
                     glm::vec3 v1(info.vertices[3 * idx1.vertex_index + 0], info.vertices[3 * idx1.vertex_index + 1], info.vertices[3 * idx1.vertex_index + 2]);
                     glm::vec3 v2(info.vertices[3 * idx2.vertex_index + 0], info.vertices[3 * idx2.vertex_index + 1], info.vertices[3 * idx2.vertex_index + 2]);
 
-                    glm::vec3 face_normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+                    glm::vec3 faceNormal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
 
-                    calculated_normals[idx0.vertex_index] += face_normal;
-                    calculated_normals[idx1.vertex_index] += face_normal;
-                    calculated_normals[idx2.vertex_index] += face_normal;
+                    calculatedNormals[idx0.vertex_index] += faceNormal;
+                    calculatedNormals[idx1.vertex_index] += faceNormal;
+                    calculatedNormals[idx2.vertex_index] += faceNormal;
                 }
             }
-            for (auto& normal : calculated_normals) {
+            for (auto& normal : calculatedNormals) {
                 normal = glm::normalize(normal);
             }
         }
 
         for (const auto& shape : _shapes) {
             vector<float> vertices;
-            int vertex_count = 0;
-            size_t index_offset = 0;
-            GLuint texture_id = 0;
+            int vertexCount = 0;
+            size_t indexOffset = 0;
+            GLuint textureId = 0;
 
             for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
                 int fv = shape.mesh.num_face_vertices[f];
 
                 for (size_t v = 0; v < fv; v++) {
-                    tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                    tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
                     
                     // Position
                     vertices.push_back(info.vertices[3 * idx.vertex_index + 0]);
@@ -108,27 +108,27 @@ public:
                     vertices.push_back(info.vertices[3 * idx.vertex_index + 2]);
 
                     // Normal
-                    if (has_normals) {
+                    if (hasNormals) {
                         vertices.push_back(info.normals[3 * idx.normal_index + 0]);
                         vertices.push_back(info.normals[3 * idx.normal_index + 1]);
                         vertices.push_back(info.normals[3 * idx.normal_index + 2]);
                     } else {
-                        vertices.push_back(calculated_normals[idx.vertex_index].x);
-                        vertices.push_back(calculated_normals[idx.vertex_index].y);
-                        vertices.push_back(calculated_normals[idx.vertex_index].z);
+                        vertices.push_back(calculatedNormals[idx.vertex_index].x);
+                        vertices.push_back(calculatedNormals[idx.vertex_index].y);
+                        vertices.push_back(calculatedNormals[idx.vertex_index].z);
                     }
                     
                     // Color
-                    int material_id = shape.mesh.material_ids[f];
-                    if (material_id < 0 || materials.empty()) {
+                    int materialId = shape.mesh.material_ids[f];
+                    if (materialId < 0 || materials.empty()) {
                         vertices.push_back(0.7f); vertices.push_back(0.7f); vertices.push_back(0.7f);
                     } else {
-                        vertices.push_back(materials[material_id].diffuse[0]);
-                        vertices.push_back(materials[material_id].diffuse[1]);
-                        vertices.push_back(materials[material_id].diffuse[2]);
-                        if (!materials[material_id].diffuse_texname.empty() && texture_id == 0) {
-                            string texture_path = basedir + materials[material_id].diffuse_texname;
-                            texture_id = load_texture(texture_path);
+                        vertices.push_back(materials[materialId].diffuse[0]);
+                        vertices.push_back(materials[materialId].diffuse[1]);
+                        vertices.push_back(materials[materialId].diffuse[2]);
+                        if (!materials[materialId].diffuse_texname.empty() && textureId == 0) {
+                            string texturePath = basedir + materials[materialId].diffuse_texname;
+                            textureId = loadTexture(texturePath);
                         }
                     }
 
@@ -141,15 +141,15 @@ public:
                         vertices.push_back(0.0f);
                     }
                 }
-                index_offset += fv;
-                vertex_count += fv;
+                indexOffset += fv;
+                vertexCount += fv;
             }
 
             if (!vertices.empty()) {
-                Submesh* new_shape = new Submesh(vertices.data(), vertices.size() * sizeof(float), vertex_count, texture_id);
-                loaded_object.shapes.push_back(new_shape); 
+                Submesh* newShape = new Submesh(vertices.data(), vertices.size() * sizeof(float), vertexCount, textureId);
+                loadedObject.shapes.push_back(newShape); 
             }
         }
-        return loaded_object;
+        return loadedObject;
     }
 };

@@ -7,16 +7,17 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
+#include "GLUtils.h"
 
 struct DrawConfig {
     GLuint shaderProgram;
     bool isSelected;
-    bool show_vertices;
-    float* vertex_color;
-    float point_size;
-    bool show_wireframe;
-    float* wireframe_color;
-    bool show_fill;
+    bool showVertices;
+    float* vertexColor;
+    float pointSize;
+    bool showWireframe;
+    float* wireframeColor;
+    bool showFill;
 };
 
 class Submesh 
@@ -29,32 +30,32 @@ public:
     GLuint vao = 0;
     GLuint vbo = 0;
     int vertexCount = 0;
-    GLuint texture_id = 0;
-    bool has_texture = false;
-    float override_color[3] = { 1.0f, 1.0f, 1.0f };
-    glm::vec3 min_bound;
-    glm::vec3 max_bound;
-    bool show_bounding_box = false;
-    float bounding_box_color[3] = { 1.0f, 0.0f, 1.0f };
-    GLuint bbox_vao = 0, bbox_vbo = 0;
+    GLuint textureId = 0;
+    bool hasTexture = false;
+    float overrideColor[3] = { 1.0f, 1.0f, 1.0f };
+    glm::vec3 minBound;
+    glm::vec3 maxBound;
+    bool showBoundingBox = false;
+    float boundingBoxColor[3] = { 1.0f, 0.0f, 1.0f };
+    GLuint bboxVao = 0, bboxVbo = 0;
 
     // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
     Submesh(float* vertices, size_t verticesSize, int count, GLuint tex_id = 0) 
-        : transform(glm::mat4(1.0f)), vertexCount(count), texture_id(tex_id)
+        : transform(glm::mat4(1.0f)), vertexCount(count), textureId(tex_id)
     {
-        has_texture = (texture_id != 0);
-        min_bound = glm::vec3(std::numeric_limits<float>::max());
-        max_bound = glm::vec3(std::numeric_limits<float>::lowest());
+        hasTexture = (textureId != 0);
+        minBound = glm::vec3(std::numeric_limits<float>::max());
+        maxBound = glm::vec3(std::numeric_limits<float>::lowest());
         for (int i = 0; i < count; ++i) {
             float x = vertices[i * 11 + 0];
             float y = vertices[i * 11 + 1];
             float z = vertices[i * 11 + 2];
-            min_bound.x = std::min(min_bound.x, x);
-            min_bound.y = std::min(min_bound.y, y);
-            min_bound.z = std::min(min_bound.z, z);
-            max_bound.x = std::max(max_bound.x, x);
-            max_bound.y = std::max(max_bound.y, y);
-            max_bound.z = std::max(max_bound.z, z);
+            minBound.x = std::min(minBound.x, x);
+            minBound.y = std::min(minBound.y, y);
+            minBound.z = std::min(minBound.z, z);
+            maxBound.x = std::max(maxBound.x, x);
+            maxBound.y = std::max(maxBound.y, y);
+            maxBound.z = std::max(maxBound.z, z);
         }
 
         glGenVertexArrays(1, &vao);
@@ -83,7 +84,7 @@ public:
 
         glBindVertexArray(0);
 
-        setup_bounding_box();
+        setupBoundingBox();
     }
 
     // Destructor: Cleans up OpenGL buffers.
@@ -91,15 +92,14 @@ public:
     {
         if (vbo) glDeleteBuffers(1, &vbo);
         if (vao) glDeleteVertexArrays(1, &vao);
-        if (bbox_vbo) glDeleteBuffers(1, &bbox_vbo);
-        if (bbox_vao) glDeleteVertexArrays(1, &bbox_vao);
-        if (has_texture && texture_id) glDeleteTextures(1, &texture_id);
+        if (bboxVbo) glDeleteBuffers(1, &bboxVbo);
+        if (bboxVao) glDeleteVertexArrays(1, &bboxVao);
+        if (hasTexture && textureId) glDeleteTextures(1, &textureId);
     }
 
-    void draw_for_picking(GLuint shaderProgram)
+    void drawForPicking(GLuint shaderProgram)
     {
-        GLint model = glGetUniformLocation(shaderProgram, "model");
-        glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
+        setGpuVariable(shaderProgram, "model", transform);
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
@@ -107,70 +107,53 @@ public:
     // Draws the submesh using the provided shader program.
     void draw(const DrawConfig& config)
     {
-        GLint model = glGetUniformLocation(config.shaderProgram, "model");
-        glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(transform));
+        setGpuVariable(config.shaderProgram, "model", transform);
 
-        GLint isSelectedLoc = glGetUniformLocation(config.shaderProgram, "isSelected");
-        glUniform1i(isSelectedLoc, config.isSelected);
+        setGpuVariable(config.shaderProgram, "uHasTexture", hasTexture);
 
-        if (config.isSelected) {
-            GLint overrideColorLoc = glGetUniformLocation(config.shaderProgram, "u_override_color");
-            glUniform3fv(overrideColorLoc, 1, override_color);
-        }
-
-        GLint hasTextureLoc = glGetUniformLocation(config.shaderProgram, "uHasTexture");
-        glUniform1i(hasTextureLoc, has_texture);
-
-        if (has_texture) {
+        if (hasTexture) {
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, texture_id);
-            glUniform1i(glGetUniformLocation(config.shaderProgram, "uTexture"), 0);
+            glBindTexture(GL_TEXTURE_2D, textureId);
+            setGpuVariable(config.shaderProgram, "uTexture", 0);
         }
 
-        GLint renderPointsLoc = glGetUniformLocation(config.shaderProgram, "u_render_points");
-        glUniform1i(renderPointsLoc, 0);
-        
-        GLint isWireframeLoc = glGetUniformLocation(config.shaderProgram, "u_is_wireframe");
-        glUniform1i(isWireframeLoc, 0);
+        setGpuVariable(config.shaderProgram, "u_render_points", 0);
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
 
         glBindVertexArray(vao);
-        if (config.show_fill) {
+        if (config.showFill) {
             glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         }
 
-        if (config.show_wireframe && config.wireframe_color) {
-            glUniform1i(isWireframeLoc, 1);
-            GLint wColorLoc = glGetUniformLocation(config.shaderProgram, "u_wireframe_color");
-            glUniform3fv(wColorLoc, 1, config.wireframe_color);
+        if (config.showWireframe && config.wireframeColor) {
+            setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
+            setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(config.wireframeColor));
             
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDrawArrays(GL_TRIANGLES, 0, vertexCount);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glUniform1i(isWireframeLoc, 0);
+            setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
         }
 
-        if (config.isSelected && show_bounding_box) {
-            glUniform1i(isWireframeLoc, 1);
-            GLint wColorLoc = glGetUniformLocation(config.shaderProgram, "u_wireframe_color");
-            glUniform3fv(wColorLoc, 1, bounding_box_color);
+        if (showBoundingBox) {
+            setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
+            setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(boundingBoxColor));
 
             glEnable(GL_POLYGON_OFFSET_LINE);
             glPolygonOffset(-1.0, -1.0);
 
-            glBindVertexArray(bbox_vao);
+            glBindVertexArray(bboxVao);
             glDrawArrays(GL_LINES, 0, 24);
             glBindVertexArray(0);
 
             glDisable(GL_POLYGON_OFFSET_LINE);
-            glUniform1i(isWireframeLoc, 0);
+            setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
         }
 
-        if (config.show_vertices && config.vertex_color) {
-            glUniform1i(renderPointsLoc, 1);
-            GLint vColorLoc = glGetUniformLocation(config.shaderProgram, "vertexColor");
-            glUniform3fv(vColorLoc, 1, config.vertex_color);
-            GLint pointSizeLoc = glGetUniformLocation(config.shaderProgram, "u_point_size");
-            glUniform1f(pointSizeLoc, config.point_size);
+        if (config.showVertices && config.vertexColor) {
+            setGpuVariable(config.shaderProgram, "u_render_points", 1);
+            setGpuVariable(config.shaderProgram, "vertexColor", glm::make_vec3(config.vertexColor));
+            setGpuVariable(config.shaderProgram, "u_point_size", config.pointSize);
             glDrawArrays(GL_POINTS, 0, vertexCount);
         }
     }
@@ -207,16 +190,16 @@ public:
     }
 
 private:
-    void setup_bounding_box() {
+    void setupBoundingBox() {
         float vertices[] = {
-            min_bound.x, min_bound.y, min_bound.z,
-            max_bound.x, min_bound.y, min_bound.z,
-            max_bound.x, max_bound.y, min_bound.z,
-            min_bound.x, max_bound.y, min_bound.z,
-            min_bound.x, min_bound.y, max_bound.z,
-            max_bound.x, min_bound.y, max_bound.z,
-            max_bound.x, max_bound.y, max_bound.z,
-            min_bound.x, max_bound.y, max_bound.z
+            minBound.x, minBound.y, minBound.z,
+            maxBound.x, minBound.y, minBound.z,
+            maxBound.x, maxBound.y, minBound.z,
+            minBound.x, maxBound.y, minBound.z,
+            minBound.x, minBound.y, maxBound.z,
+            maxBound.x, minBound.y, maxBound.z,
+            maxBound.x, maxBound.y, maxBound.z,
+            minBound.x, maxBound.y, maxBound.z
         };
 
         unsigned int indices[] = {
@@ -232,11 +215,11 @@ private:
             line_vertices[i*3+2] = vertices[indices[i]*3+2];
         }
 
-        glGenVertexArrays(1, &bbox_vao);
-        glGenBuffers(1, &bbox_vbo);
+        glGenVertexArrays(1, &bboxVao);
+        glGenBuffers(1, &bboxVbo);
 
-        glBindVertexArray(bbox_vao);
-        glBindBuffer(GL_ARRAY_BUFFER, bbox_vbo);
+        glBindVertexArray(bboxVao);
+        glBindBuffer(GL_ARRAY_BUFFER, bboxVbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
         
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);

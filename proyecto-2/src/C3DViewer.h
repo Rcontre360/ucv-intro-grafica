@@ -14,8 +14,9 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
-#include "state.h"
-#include "camera.h"
+#include "State.h"
+#include "Camera.h"
+#include "GLUtils.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
@@ -75,9 +76,9 @@ public:
                 ptr->resize(w, h);
         });
 
-        if (!setupShader()) return false;
-        if (!setupPickingShader()) return false;
-        if (!setupPickingFBO()) return false;
+        setupDefaultShader();
+        setupPickingShader();
+        setupPickingFBO(); 
 
         appState = new State();
 
@@ -97,16 +98,14 @@ public:
         {
             glfwPollEvents();
 
-            if (appState && appState->line_antialiasing) {
+            if (appState && appState->lineAntialiasing) {
                 glEnable(GL_LINE_SMOOTH);
                 glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
             } else {
                 glDisable(GL_LINE_SMOOTH);
             }
 
-            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+            clear(0.3f);
             render();
 
             glfwSwapBuffers(window);
@@ -138,13 +137,13 @@ private:
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             if (key == GLFW_KEY_UP)
-                camera.process_keyboard(FORWARD, 0.1f);
+                camera.processKeyboard(FORWARD, 0.1f);
             if (key == GLFW_KEY_DOWN)
-                camera.process_keyboard(BACKWARD, 0.1f);
+                camera.processKeyboard(BACKWARD, 0.1f);
             if (key == GLFW_KEY_LEFT)
-                camera.process_keyboard(LEFT, 0.1f);
+                camera.processKeyboard(LEFT, 0.1f);
             if (key == GLFW_KEY_RIGHT)
-                camera.process_keyboard(RIGHT, 0.1f);
+                camera.processKeyboard(RIGHT, 0.1f);
         }
     }
 
@@ -166,9 +165,15 @@ private:
                 glm::vec3 pickedColor = readPixelColor(mousePos.first, mousePos.second);
 
                 int pickedID = static_cast<int>(pickedColor.x) + static_cast<int>(pickedColor.y) * 256 + static_cast<int>(pickedColor.z) * 256 * 256;
+
+                if (selectedSubmeshIndex != -1 && selectedSubmeshIndex < appState->shapes.size()) {
+                    appState->shapes[selectedSubmeshIndex]->showBoundingBox = false;
+                }
+
                 if (pickedID > 0 && appState && pickedID <= appState->shapes.size())
                 {
                     selectedSubmeshIndex = pickedID - 1; // Adjust for +1 offset in shader
+                    appState->shapes[selectedSubmeshIndex]->showBoundingBox = true;
                     std::cout << "Selected submesh index: " << selectedSubmeshIndex << std::endl;
                 }
                 else
@@ -220,46 +225,16 @@ private:
     void render() 
     {
         glBindFramebuffer(GL_FRAMEBUFFER, pickingFBO);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-
-        glUseProgram(pickingShaderProgram);
-
-        glm::mat4 view = camera.get_view_matrix();
-        GLint viewLoc = glGetUniformLocation(pickingShaderProgram, "view");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-        GLint projectionLoc = glGetUniformLocation(pickingShaderProgram, "projection");
-        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        prepareRendering(pickingShaderProgram, 0.0f);
 
         if (appState)
         {
-            for (size_t i = 0; i < appState->shapes.size(); ++i)
-            {
-                GLint objectIdLoc = glGetUniformLocation(pickingShaderProgram, "objectId");
-                glUniform1i(objectIdLoc, i + 1); // +1 to avoid ID 0 (black)
-                appState->shapes[i]->draw_for_picking(pickingShaderProgram);
-            }
+            appState->drawPicking(pickingShaderProgram);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0); // Bind default framebuffer
         
-        // --- Regular Rendering Pass ---
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-
-        glUseProgram(shaderProgram);
-
-        view = camera.get_view_matrix();
-        viewLoc = glGetUniformLocation(shaderProgram, "view");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
-        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-        projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        prepareRendering(shaderProgram, 0.1f);
 
         if (appState)
         {
@@ -267,6 +242,20 @@ private:
         }
 
         drawInterface();
+    }
+
+    void prepareRendering(GLuint program, float clearColor)
+    {
+        clear(clearColor);
+        glEnable(GL_DEPTH_TEST);
+
+        glUseProgram(program);
+
+        glm::mat4 view = camera.getViewMatrix();
+        setGpuVariable(program, "view", view);
+
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+        setGpuVariable(program, "projection", projection);
     }
 
     void drawInterface()
@@ -285,7 +274,7 @@ private:
             {
                 if (appState) {
                     try {
-                        appState->load_object(selection[0]);
+                        appState->loadObject(selection[0]);
                     } catch (const exception& e) {
                         cerr << "Error loading object: " << e.what() << endl;
                     }
@@ -303,13 +292,13 @@ private:
         }
 
         if (appState) {
-            ImGui::Checkbox("Show Vertices", &appState->show_vertices);
-            ImGui::ColorEdit3("Vertex Color", appState->vertex_color);
-            ImGui::SliderFloat("Point Size", &appState->point_size, 1.0f, 20.0f);
-            ImGui::Checkbox("Show Fill", &appState->show_fill);
-            ImGui::Checkbox("Show Wireframe", &appState->show_wireframe);
-            ImGui::ColorEdit3("Wireframe Color", appState->wireframe_color);
-            ImGui::Checkbox("Line Antialiasing", &appState->line_antialiasing);
+            ImGui::Checkbox("Show Vertices", &appState->showVertices);
+            ImGui::ColorEdit3("Vertex Color", appState->vertexColor);
+            ImGui::SliderFloat("Point Size", &appState->pointSize, 1.0f, 20.0f);
+            ImGui::Checkbox("Show Fill", &appState->showFill);
+            ImGui::Checkbox("Show Wireframe", &appState->showWireframe);
+            ImGui::ColorEdit3("Wireframe Color", appState->wireframeColor);
+            ImGui::Checkbox("Line Antialiasing", &appState->lineAntialiasing);
         }
 
         ImGui::End();
@@ -318,21 +307,16 @@ private:
         {
             ImGui::Begin("Selected Submesh Controls");
 
-            Submesh* selected_submesh = appState->shapes[selectedSubmeshIndex];
+            Submesh* selectedSubmesh = appState->shapes[selectedSubmeshIndex];
 
             if (ImGui::Button("Delete Submesh"))
             {
-                appState->delete_submesh(selectedSubmeshIndex);
+                appState->deleteSubmesh(selectedSubmeshIndex);
                 selectedSubmeshIndex = -1; 
             }
             else
             {
-                ImGui::ColorEdit3("Submesh Color", selected_submesh->override_color);
-
-                ImGui::Separator();
-
-                ImGui::Checkbox("Show Bounding Box", &selected_submesh->show_bounding_box);
-                ImGui::ColorEdit3("Bounding Box Color", selected_submesh->bounding_box_color);
+                ImGui::ColorEdit3("Bounding Box Color", selectedSubmesh->boundingBoxColor);
             }
             ImGui::End();
         }
@@ -341,10 +325,10 @@ private:
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
-    void resize(int new_width, int new_height) 
+    void resize(int newWidth, int newHeight) 
     {
-        width = new_width;
-        height = new_height;
+        width = newWidth;
+        height = newHeight;
         glViewport(0, 0, width, height);
     }
 
@@ -372,27 +356,25 @@ private:
         appState->translateSubmesh(submeshIndex, translationVector);
     }
 
-    bool setupShader() 
+    GLuint setupShader(const char* name, const char* src, const GLenum type) {
+        GLuint shader = glCreateShader(type);
+        glShaderSource(shader, 1, &src, nullptr);
+        glCompileShader(shader);
+        if (!checkCompileErrors(shader, name)) 
+            throw invalid_argument("set: out of bounds");
+
+        return shader;
+    }
+
+    void setupDefaultShader() 
     {
-        GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertexShader, 1, &vertexShaderSrc, nullptr);
-        glCompileShader(vertexShader);
-        if (!checkCompileErrors(vertexShader, "VERTEX")) return false;
+        GLuint vertexShader = setupShader("VERTEX", vertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint fragmentShader = setupShader("FRAGMENT", fragmentShaderSrc,GL_FRAGMENT_SHADER);
 
-        GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragmentShader, 1, &fragmentShaderSrc, nullptr);
-        glCompileShader(fragmentShader);
-        if (!checkCompileErrors(fragmentShader, "FRAGMENT")) return false;
-
-        shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram, vertexShader);
-        glAttachShader(shaderProgram, fragmentShader);
-        glLinkProgram(shaderProgram);
-        if (!checkCompileErrors(shaderProgram, "PROGRAM")) return false;
+        shaderProgram = setupShaderProgram(vertexShader,fragmentShader, "PROGRAM");
 
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
-        return true;
     }
 
     bool setupPickingFBO()
@@ -405,8 +387,8 @@ private:
         glGenTextures(1, &pickingTexture);
         glBindTexture(GL_TEXTURE_2D, pickingTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pickingTexture, 0);
 
         // Create a renderbuffer object for depth and stencil attachment
@@ -426,27 +408,27 @@ private:
         return true;
     }
 
-    bool setupPickingShader()
+    GLuint setupShaderProgram(GLuint vertexShader, GLuint fragmentShader, const char* name){
+        GLuint program = glCreateProgram();
+        glAttachShader(program, vertexShader);
+        glAttachShader(program, fragmentShader);
+        glLinkProgram(program);
+
+        if (!checkCompileErrors(program, name)) 
+            throw runtime_error("error compiling shader program");
+
+        return program;
+    }
+
+    void setupPickingShader()
     {
-        GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertexShader, 1, &pickingVertexShaderSrc, nullptr);
-        glCompileShader(vertexShader);
-        if (!checkCompileErrors(vertexShader, "PICKING_VERTEX")) return false;
+        GLuint vertexShader = setupShader("PICKING_VERTEX",pickingVertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint fragmentShader = setupShader("PICKING_FRAGMENT",pickingFragmentShaderSrc, GL_FRAGMENT_SHADER);
 
-        GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragmentShader, 1, &pickingFragmentShaderSrc, nullptr);
-        glCompileShader(fragmentShader);
-        if (!checkCompileErrors(fragmentShader, "PICKING_FRAGMENT")) return false;
-
-        pickingShaderProgram = glCreateProgram();
-        glAttachShader(pickingShaderProgram, vertexShader);
-        glAttachShader(pickingShaderProgram, fragmentShader);
-        glLinkProgram(pickingShaderProgram);
-        if (!checkCompileErrors(pickingShaderProgram, "PICKING_PROGRAM")) return false;
+        pickingShaderProgram = setupShaderProgram(vertexShader,fragmentShader, "PICKING_PROGRAM");
 
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
-        return true;
     }
 
     bool checkCompileErrors(GLuint shader, const char* type) 
@@ -482,6 +464,11 @@ private:
         glReadPixels(static_cast<int>(xpos), height - 1 - static_cast<int>(ypos), 1, 1, GL_RGB, GL_UNSIGNED_BYTE, data);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return glm::vec3(data[0], data[1], data[2]);
+    }
+
+    void clear(float color){
+        glClearColor(color, color, color, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
@@ -556,27 +543,21 @@ protected:
         in vec3 vColor;
         in vec2 vTexCoord;
         out vec4 FragColor;
-        uniform int isSelected;
         uniform bool uHasTexture;
         uniform sampler2D uTexture;
         uniform bool u_render_points;
         uniform vec3 vertexColor;
         uniform bool u_is_wireframe;
         uniform vec3 u_wireframe_color;
-        uniform vec3 u_override_color;
         void main() {
-            if (isSelected == 1) {
-                FragColor = vec4(u_override_color, 1.0);
-            } else if (u_is_wireframe) {
+            if (u_is_wireframe) {
                 FragColor = vec4(u_wireframe_color, 1.0);
             } else if (u_render_points) {
                 FragColor = vec4(vertexColor, 1.0);
+            } else if (uHasTexture) {
+                FragColor = texture(uTexture, vTexCoord);
             } else {
-                if (uHasTexture) {
-                    FragColor = texture(uTexture, vTexCoord);
-                } else {
-                    FragColor = vec4(vColor, 1.0);
-                }
+                FragColor = vec4(vColor, 1.0);
             }
         }
     )glsl";

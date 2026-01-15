@@ -8,9 +8,10 @@
 #include <algorithm>
 #include <GLFW/glfw3.h>
 
-#include "submesh.h"
+#include "Submesh.h"
 #include "tinyobjloader.h"
-#include "file_loader.h"
+#include "FileLoader.h"
+#include "GLUtils.h"
 
 using namespace std;
 
@@ -18,15 +19,15 @@ class State
 {
 public:
     vector<Submesh*> shapes;
-    bool show_vertices = false;
-    float vertex_color[3] = { 1.0f, 1.0f, 1.0f };
-    float point_size = 5.0f;
-    bool show_wireframe = false;
-    float wireframe_color[3] = { 1.0f, 1.0f, 1.0f };
-    bool show_fill = true;
-    bool line_antialiasing = false;
-    float global_bounding_box_color[3] = { 0.0f, 1.0f, 0.0f };
-    GLuint global_bbox_vao = 0, global_bbox_vbo = 0;
+    bool showVertices = false;
+    float vertexColor[3] = { 1.0f, 1.0f, 1.0f };
+    float pointSize = 5.0f;
+    bool showWireframe = false;
+    float wireframeColor[3] = { 1.0f, 1.0f, 1.0f };
+    bool showFill = true;
+    bool lineAntialiasing = false;
+    float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
+    GLuint globalBboxVao = 0, globalBboxVbo = 0;
 
     State(){}
 
@@ -39,7 +40,7 @@ public:
     }
 
 
-    void delete_submesh(int index)
+    void deleteSubmesh(int index)
     {
         if (index >= 0 && index < shapes.size()) {
             delete shapes[index];
@@ -51,12 +52,12 @@ public:
     {
         DrawConfig config;
         config.shaderProgram = shaderProgram;
-        config.show_vertices = show_vertices;
-        config.vertex_color = vertex_color;
-        config.point_size = point_size;
-        config.show_wireframe = show_wireframe;
-        config.wireframe_color = wireframe_color;
-        config.show_fill = show_fill;
+        config.showVertices = showVertices;
+        config.vertexColor = vertexColor;
+        config.pointSize = pointSize;
+        config.showWireframe = showWireframe;
+        config.wireframeColor = wireframeColor;
+        config.showFill = showFill;
 
         for (size_t i = 0; i < shapes.size(); ++i) {
             config.isSelected = ((int)i == selectedSubmeshIndex);
@@ -64,21 +65,30 @@ public:
         }
     }
 
-    void load_object(const string& path)
+    void drawPicking(GLuint pickingShaderProgram)
+    {
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            setGpuVariable(pickingShaderProgram, "objectId", (int)(i + 1));
+            shapes[i]->drawForPicking(pickingShaderProgram);
+        }
+    }
+
+    void loadObject(const string& path)
     {
         for (Submesh* obj : shapes) {
             delete obj;
         }
         shapes.clear();
 
-        LoadedObject loaded = FileLoader::load_object(path);
+        LoadedObject loaded = FileLoader::loadObject(path);
         shapes = loaded.shapes;
-        loaded_attrib = loaded.attrib;
+        loadedAttrib = loaded.attrib;
 
-        center_shape();
+        centerShape();
     }
 
-    void rescale_shape(size_t shape_index, float factor)
+    void rescaleShape(size_t shape_index, float factor)
     {
         if (shape_index < shapes.size()) {
             shapes[shape_index]->scale(glm::vec3(factor));
@@ -126,40 +136,40 @@ public:
     }
 
 private:
-    tinyobj::attrib_t loaded_attrib;
+    tinyobj::attrib_t loadedAttrib;
     float oldScale = 1.0;
 
-    void center_shape()
+    void centerShape()
     {
-        if (shapes.empty() || loaded_attrib.vertices.empty()) {
+        if (shapes.empty() || loadedAttrib.vertices.empty()) {
             return;
         }
 
-        glm::vec3 min_bound(numeric_limits<float>::max());
-        glm::vec3 max_bound(numeric_limits<float>::lowest());
+        glm::vec3 minBound(numeric_limits<float>::max());
+        glm::vec3 maxBound(numeric_limits<float>::lowest());
 
-        for (size_t i = 0; i < loaded_attrib.vertices.size(); i += 3) {
-            min_bound.x = min(min_bound.x, loaded_attrib.vertices[i + 0]);
-            min_bound.y = min(min_bound.y, loaded_attrib.vertices[i + 1]);
-            min_bound.z = min(min_bound.z, loaded_attrib.vertices[i + 2]);
-            max_bound.x = max(max_bound.x, loaded_attrib.vertices[i + 0]);
-            max_bound.y = max(max_bound.y, loaded_attrib.vertices[i + 1]);
-            max_bound.z = max(max_bound.z, loaded_attrib.vertices[i + 2]);
+        for (size_t i = 0; i < loadedAttrib.vertices.size(); i += 3) {
+            minBound.x = min(minBound.x, loadedAttrib.vertices[i + 0]);
+            minBound.y = min(minBound.y, loadedAttrib.vertices[i + 1]);
+            minBound.z = min(minBound.z, loadedAttrib.vertices[i + 2]);
+            maxBound.x = max(maxBound.x, loadedAttrib.vertices[i + 0]);
+            maxBound.y = max(maxBound.y, loadedAttrib.vertices[i + 1]);
+            maxBound.z = max(maxBound.z, loadedAttrib.vertices[i + 2]);
         }
 
-        glm::vec3 center = (max_bound + min_bound) / 2.0f;
-        glm::vec3 size = max_bound - min_bound;
-        float max_dim = max({size.x, size.y, size.z});
-        float scale_factor = 1.0f / max_dim;
+        glm::vec3 center = (maxBound + minBound) / 2.0f;
+        glm::vec3 size = maxBound - minBound;
+        float maxDim = max({size.x, size.y, size.z});
+        float scaleFactor = 1.0f / maxDim;
 
-        glm::mat4 to_origin = glm::translate(glm::mat4(1.0f), -center);
-        glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(scale_factor));
-        glm::mat4 to_scene = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
+        glm::mat4 toOrigin = glm::translate(glm::mat4(1.0f), -center);
+        glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(scaleFactor));
+        glm::mat4 toScene = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
         
-        glm::mat4 normalization_matrix = to_scene * scale * to_origin;
+        glm::mat4 normalizationMatrix = toScene * scale * toOrigin;
 
         for (Submesh* shape : shapes) {
-            shape->setTransform(normalization_matrix);
+            shape->setTransform(normalizationMatrix);
         }
     }
 };
