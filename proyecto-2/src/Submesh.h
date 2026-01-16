@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <limits>
 #include "GLUtils.h"
+#include "Vertex.h"
+
+using namespace std;
 
 struct DrawConfig {
     GLuint shaderProgram;
@@ -40,23 +43,22 @@ public:
     GLuint bboxVao = 0, bboxVbo = 0;
 
     // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
-    Submesh(float* vertices, size_t verticesSize, int count, GLuint tex_id = 0) 
-        : transform(glm::mat4(1.0f)), vertexCount(count), textureId(tex_id)
+    Submesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) 
+        : transform(glm::mat4(1.0f)), vertexCount(vertices.size()), textureId(textureId)
     {
         hasTexture = (textureId != 0);
         minBound = glm::vec3(std::numeric_limits<float>::max());
         maxBound = glm::vec3(std::numeric_limits<float>::lowest());
-        for (int i = 0; i < count; ++i) {
-            float x = vertices[i * 11 + 0];
-            float y = vertices[i * 11 + 1];
-            float z = vertices[i * 11 + 2];
-            minBound.x = std::min(minBound.x, x);
-            minBound.y = std::min(minBound.y, y);
-            minBound.z = std::min(minBound.z, z);
-            maxBound.x = std::max(maxBound.x, x);
-            maxBound.y = std::max(maxBound.y, y);
-            maxBound.z = std::max(maxBound.z, z);
+        for (const auto& vertex : vertices) {
+            minBound.x = std::min(minBound.x, vertex.position.x);
+            minBound.y = std::min(minBound.y, vertex.position.y);
+            minBound.z = std::min(minBound.z, vertex.position.z);
+            maxBound.x = std::max(maxBound.x, vertex.position.x);
+            maxBound.y = std::max(maxBound.y, vertex.position.y);
+            maxBound.z = std::max(maxBound.z, vertex.position.z);
         }
+
+        std::vector<float> flatVertices = Vertex::flatten(vertices);
 
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
@@ -64,7 +66,7 @@ public:
         glBindVertexArray(vao);
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, flatVertices.size() * sizeof(float), flatVertices.data(), GL_STATIC_DRAW);
 
         // Position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
@@ -156,6 +158,12 @@ public:
             setGpuVariable(config.shaderProgram, "u_point_size", config.pointSize);
             glDrawArrays(GL_POINTS, 0, vertexCount);
         }
+    }
+
+    void drawNormals()
+    {
+        glBindVertexArray(vao);
+        glDrawArrays(GL_POINTS, 0, vertexCount);
     }
 
     void translate(const glm::vec3& offset) { 

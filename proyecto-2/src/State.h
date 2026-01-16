@@ -28,6 +28,9 @@ public:
     bool lineAntialiasing = false;
     float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
     GLuint globalBboxVao = 0, globalBboxVbo = 0;
+    bool showNormals = false;
+    float normalLength = 0.1f;
+    float normalColor[3] = { 1.0f, 1.0f, 0.0f };
 
     State(){}
 
@@ -71,6 +74,16 @@ public:
         {
             setGpuVariable(pickingShaderProgram, "objectId", (int)(i + 1));
             shapes[i]->drawForPicking(pickingShaderProgram);
+        }
+    }
+
+    void drawNormals(GLuint normalShaderProgram)
+    {
+        setGpuVariable(normalShaderProgram, "normalLength", normalLength);
+        setGpuVariable(normalShaderProgram, "normalColor", glm::make_vec3(normalColor));
+        for (Submesh* shape : shapes) {
+            setGpuVariable(normalShaderProgram, "model", shape->transform);
+            shape->drawNormals();
         }
     }
 

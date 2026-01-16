@@ -78,6 +78,7 @@ public:
 
         setupDefaultShader();
         setupPickingShader();
+        setupNormalShader();
         setupPickingFBO(); 
 
         appState = new State();
@@ -122,6 +123,7 @@ public:
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
         if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
+        if (normalShaderProgram) glDeleteProgram(normalShaderProgram);
         if (pickingTexture) glDeleteTextures(1, &pickingTexture);
         if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
         if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
@@ -232,14 +234,21 @@ private:
             appState->drawPicking(pickingShaderProgram);
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0); // Bind default framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
         prepareRendering(shaderProgram, 0.1f);
 
         if (appState)
         {
             appState->draw(shaderProgram, selectedSubmeshIndex);
-        }
+                            if (appState->showNormals) {
+                                glUseProgram(normalShaderProgram);
+                                glm::mat4 view = camera.getViewMatrix();
+                                setGpuVariable(normalShaderProgram, "view", view);
+                                glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+                                setGpuVariable(normalShaderProgram, "projection", projection);
+                                appState->drawNormals(normalShaderProgram);
+                            }        }
 
         drawInterface();
     }
@@ -282,11 +291,11 @@ private:
             }
         }
 
-        static int scaleValue = 50; // Initial value for 1.0 scale
+        static int scaleValue = 50;
         if (ImGui::SliderInt("Scale", &scaleValue, 10, 200)) 
         {
             if (appState) {
-                float scaleFactor = static_cast<float>(scaleValue) / 50.0f; // Map 50 to 1.0, 1 to 0.02, 100 to 2.0
+                float scaleFactor = static_cast<float>(scaleValue) / 50.0f;
                 appState->rescaleAllShapes(scaleFactor);
             }
         }
@@ -299,6 +308,10 @@ private:
             ImGui::Checkbox("Show Wireframe", &appState->showWireframe);
             ImGui::ColorEdit3("Wireframe Color", appState->wireframeColor);
             ImGui::Checkbox("Line Antialiasing", &appState->lineAntialiasing);
+            ImGui::Separator();
+            ImGui::Checkbox("Show Normals", &appState->showNormals);
+            ImGui::SliderFloat("Normal Length", &appState->normalLength, 0.01f, 1.0f);
+            ImGui::ColorEdit3("Normal Color", appState->normalColor);
         }
 
         ImGui::End();
@@ -379,11 +392,9 @@ private:
 
     bool setupPickingFBO()
     {
-        // Generate FBO
         glGenFramebuffers(1, &pickingFBO);
         glBindFramebuffer(GL_FRAMEBUFFER, pickingFBO);
 
-        // Create a texture for rendering the object IDs
         glGenTextures(1, &pickingTexture);
         glBindTexture(GL_TEXTURE_2D, pickingTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -391,27 +402,28 @@ private:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pickingTexture, 0);
 
-        // Create a renderbuffer object for depth and stencil attachment
         glGenRenderbuffers(1, &pickingDepthStencilRBO);
         glBindRenderbuffer(GL_RENDERBUFFER, pickingDepthStencilRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, pickingDepthStencilRBO);
 
-        // Check if framebuffer is complete
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             fprintf(stderr, "ERROR::FRAMEBUFFER:: Picking Framebuffer is not complete!\n");
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             return false;
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return true;
     }
 
-    GLuint setupShaderProgram(GLuint vertexShader, GLuint fragmentShader, const char* name){
+    GLuint setupShaderProgram(GLuint vertexShader, GLuint fragmentShader, const char* name, GLuint geometryShader = 0){
         GLuint program = glCreateProgram();
         glAttachShader(program, vertexShader);
         glAttachShader(program, fragmentShader);
+        if (geometryShader) {
+            glAttachShader(program, geometryShader);
+        }
         glLinkProgram(program);
 
         if (!checkCompileErrors(program, name)) 
@@ -428,6 +440,19 @@ private:
         pickingShaderProgram = setupShaderProgram(vertexShader,fragmentShader, "PICKING_PROGRAM");
 
         glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+    }
+
+    void setupNormalShader()
+    {
+        GLuint vertexShader = setupShader("NORMAL_VERTEX", normalVertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint geometryShader = setupShader("NORMAL_GEOMETRY", normalGeometryShaderSrc, GL_GEOMETRY_SHADER);
+        GLuint fragmentShader = setupShader("NORMAL_FRAGMENT", normalFragmentShaderSrc, GL_FRAGMENT_SHADER);
+
+        normalShaderProgram = setupShaderProgram(vertexShader, fragmentShader, "NORMAL_PROGRAM", geometryShader);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(geometryShader);
         glDeleteShader(fragmentShader);
     }
 
@@ -460,7 +485,7 @@ private:
     glm::vec3 readPixelColor(double xpos, double ypos)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, pickingFBO);
-        unsigned char data[3]; // RGB
+        unsigned char data[3];
         glReadPixels(static_cast<int>(xpos), height - 1 - static_cast<int>(ypos), 1, 1, GL_RGB, GL_UNSIGNED_BYTE, data);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return glm::vec3(data[0], data[1], data[2]);
@@ -503,13 +528,13 @@ protected:
     int height = 480;
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
-    int selectedSubmeshIndex = -1; // -1 means no submesh is selected
+    int selectedSubmeshIndex = -1;
 
-    // Picking FBO and related textures/renderbuffers
     GLuint pickingFBO = 0;
     GLuint pickingTexture = 0;
     GLuint pickingDepthStencilRBO = 0;
     GLuint pickingShaderProgram = 0;
+    GLuint normalShaderProgram = 0;
 
     const char* vertexShaderSrc = R"glsl(
         #version 330 core
@@ -580,13 +605,66 @@ protected:
         uniform int objectId;
         void main()
         {
-            // Encode objectId into color components
             FragColor = vec4(
                 float((objectId >> 0) & 0xFF) / 255.0f,
                 float((objectId >> 8) & 0xFF) / 255.0f,
                 float((objectId >> 16) & 0xFF) / 255.0f,
                 1.0f
             );
+        }
+    )glsl";
+
+    const char* normalVertexShaderSrc = R"glsl(
+        #version 330 core
+        layout (location = 0) in vec3 aPos;
+        layout (location = 1) in vec3 aNormal;
+
+        out VS_OUT {
+            vec3 normal;
+        } vs_out;
+
+        void main()
+        {
+            gl_Position = vec4(aPos, 1.0);
+            vs_out.normal = aNormal;
+        }
+    )glsl";
+
+    const char* normalGeometryShaderSrc = R"glsl(
+        #version 330 core
+        layout (points) in;
+        layout (line_strip, max_vertices = 2) out;
+
+        in VS_OUT {
+            vec3 normal;
+        } gs_in[];
+
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
+        uniform float normalLength;
+
+        void main() {
+            mat4 pvm = projection * view * model;
+
+            gl_Position = pvm * gl_in[0].gl_Position;
+            EmitVertex();
+
+            gl_Position = pvm * vec4(gl_in[0].gl_Position.xyz + gs_in[0].normal * normalLength, 1.0);
+            EmitVertex();
+
+            EndPrimitive();
+        }
+    )glsl";
+
+    const char* normalFragmentShaderSrc = R"glsl(
+        #version 330 core
+        out vec4 FragColor;
+        uniform vec3 normalColor;
+
+        void main()
+        {
+            FragColor = vec4(normalColor, 1.0);
         }
     )glsl";
 };
