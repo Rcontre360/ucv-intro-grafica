@@ -110,53 +110,21 @@ public:
     void draw(const DrawConfig& config)
     {
         setGpuVariable(config.shaderProgram, "model", transform);
-
-        setGpuVariable(config.shaderProgram, "uHasTexture", hasTexture);
-
-        if (hasTexture) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, textureId);
-            setGpuVariable(config.shaderProgram, "uTexture", 0);
-        }
-
-        setGpuVariable(config.shaderProgram, "u_render_points", 0);
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
-
-        glBindVertexArray(vao);
+        
         if (config.showFill) {
-            glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+            drawFill(config);
         }
 
         if (config.showWireframe && config.wireframeColor) {
-            setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
-            setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(config.wireframeColor));
-            
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+            drawWireframe(config);
         }
 
         if (showBoundingBox) {
-            setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
-            setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(boundingBoxColor));
-
-            glEnable(GL_POLYGON_OFFSET_LINE);
-            glPolygonOffset(-1.0, -1.0);
-
-            glBindVertexArray(bboxVao);
-            glDrawArrays(GL_LINES, 0, 24);
-            glBindVertexArray(0);
-
-            glDisable(GL_POLYGON_OFFSET_LINE);
-            setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+            drawBoundingBox(config);
         }
 
         if (config.showVertices && config.vertexColor) {
-            setGpuVariable(config.shaderProgram, "u_render_points", 1);
-            setGpuVariable(config.shaderProgram, "vertexColor", glm::make_vec3(config.vertexColor));
-            setGpuVariable(config.shaderProgram, "u_point_size", config.pointSize);
-            glDrawArrays(GL_POINTS, 0, vertexCount);
+            drawVertices(config);
         }
     }
 
@@ -198,6 +166,49 @@ public:
     }
 
 private:
+    void drawFill(const DrawConfig& config) {
+        setGpuVariable(config.shaderProgram, "uHasTexture", hasTexture);
+        if (hasTexture) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, textureId);
+            setGpuVariable(config.shaderProgram, "uTexture", 0);
+        }
+        setGpuVariable(config.shaderProgram, "u_render_points", 0);
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+    }
+
+    void drawWireframe(const DrawConfig& config) {
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
+        setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(config.wireframeColor));
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+    }
+
+    void drawBoundingBox(const DrawConfig& config) {
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
+        setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(boundingBoxColor));
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1.0, -1.0);
+        glBindVertexArray(bboxVao);
+        glDrawArrays(GL_LINES, 0, 24);
+        glBindVertexArray(0);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+    }
+
+    void drawVertices(const DrawConfig& config) {
+        setGpuVariable(config.shaderProgram, "u_render_points", 1);
+        setGpuVariable(config.shaderProgram, "vertexColor", glm::make_vec3(config.vertexColor));
+        setGpuVariable(config.shaderProgram, "u_point_size", config.pointSize);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_POINTS, 0, vertexCount);
+    }
+
     void setupBoundingBox() {
         float vertices[] = {
             minBound.x, minBound.y, minBound.z,
