@@ -46,7 +46,7 @@ public:
     float boundingBoxColor[3] = { 1.0f, 0.0f, 1.0f };
     GLuint bboxVao = 0, bboxVbo = 0;
     GLuint normalLinesVao = 0, normalLinesVbo = 0;
-    int normalLinesVertexCount = 0;
+    int normalCount = 0;
 
     // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
     Submesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) 
@@ -222,7 +222,7 @@ private:
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);
         glBindVertexArray(normalLinesVao);
-        glDrawArrays(GL_LINES, 0, normalLinesVertexCount);
+        glDrawArrays(GL_LINES, 0, normalCount);
         glBindVertexArray(0);
         glDisable(GL_POLYGON_OFFSET_LINE);
         setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
@@ -268,23 +268,23 @@ private:
     }
 
     void setupNormals(const std::vector<Vertex>& vertices) {
-        std::vector<float> normal_line_vertices;
+        std::vector<float> lines;
         for (const auto& vertex : vertices) {
-            normal_line_vertices.push_back(vertex.position.x);
-            normal_line_vertices.push_back(vertex.position.y);
-            normal_line_vertices.push_back(vertex.position.z);
-            normal_line_vertices.push_back(vertex.position.x + vertex.normal.x * NORMAL_LENGTH);
-            normal_line_vertices.push_back(vertex.position.y + vertex.normal.y * NORMAL_LENGTH);
-            normal_line_vertices.push_back(vertex.position.z + vertex.normal.z * NORMAL_LENGTH);
+            lines.push_back(vertex.position.x);
+            lines.push_back(vertex.position.y);
+            lines.push_back(vertex.position.z);
+            lines.push_back(vertex.position.x + vertex.normal.x * NORMAL_LENGTH);
+            lines.push_back(vertex.position.y + vertex.normal.y * NORMAL_LENGTH);
+            lines.push_back(vertex.position.z + vertex.normal.z * NORMAL_LENGTH);
         }
-        normalLinesVertexCount = normal_line_vertices.size() / 3;
+        normalCount = lines.size() / 3;
 
         glGenVertexArrays(1, &normalLinesVao);
         glGenBuffers(1, &normalLinesVbo);
 
         glBindVertexArray(normalLinesVao);
         glBindBuffer(GL_ARRAY_BUFFER, normalLinesVbo);
-        glBufferData(GL_ARRAY_BUFFER, normal_line_vertices.size() * sizeof(float), normal_line_vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
