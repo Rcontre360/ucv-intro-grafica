@@ -334,6 +334,12 @@ private:
         width = newWidth;
         height = newHeight;
         glViewport(0, 0, width, height);
+
+        glBindTexture(GL_TEXTURE_2D, pickingTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+        glBindRenderbuffer(GL_RENDERBUFFER, pickingDepthStencilRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
     }
 
     void handleRotation(double deltaX, double deltaY){
@@ -352,8 +358,8 @@ private:
         glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
         float distance = glm::distance(camera.position, objectWorldPos);
 
-        float sensitivity = 0.03f; 
-        float moveFactor = (1.0f + distance) * sensitivity;
+        float sensitivity = 0.001f; 
+        float moveFactor = distance * sensitivity;
 
         glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
 

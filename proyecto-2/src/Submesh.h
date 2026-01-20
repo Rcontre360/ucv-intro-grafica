@@ -142,7 +142,7 @@ public:
     }
 
     void translate(const glm::vec3& offset) { 
-        transform = glm::translate(transform, offset); 
+        transform = glm::translate(glm::mat4(1.0f), offset) * transform;
     }
 
     void rotate(float angle, const glm::vec3& axis) { 

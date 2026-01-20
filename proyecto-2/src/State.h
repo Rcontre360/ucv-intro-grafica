@@ -129,13 +129,11 @@ public:
     {
         if (shapes.empty()) return;
 
-        glm::vec3 min_bound(numeric_limits<float>::max());
-        glm::vec3 max_bound(numeric_limits<float>::lowest());
-        glm::vec3 pivot = glm::vec3(0.0f, 0.0f, -3.0f); // Assuming this is the object's center after initial setup
+        glm::vec3 pivot = glm::vec3(0.0f, 0.0f, -3.0f); 
 
         for (Submesh* obj : shapes) {
-            obj->rotateAroundPoint(angleX, glm::vec3(1.0f, 0.0f, 0.0f), pivot); // Rotate around X-axis
-            obj->rotateAroundPoint(angleY, glm::vec3(0.0f, 1.0f, 0.0f), pivot); // Rotate around Y-axis
+            obj->rotateAroundPoint(angleX, glm::vec3(1.0f, 0.0f, 0.0f), pivot); 
+            obj->rotateAroundPoint(angleY, glm::vec3(0.0f, 1.0f, 0.0f), pivot);
         }
     }
 
