@@ -37,7 +37,7 @@ public:
     int vertexCount = 0;
     bool hasTexture = false;
 
-    BaseSubmesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) 
+    BaseSubmesh(const std::vector<Vertex>& vertices, GLuint textureId) 
         : transform(glm::mat4(1.0f)), vertexCount(vertices.size()), textureId(textureId)
     {
         hasTexture = (textureId != 0);
@@ -97,6 +97,22 @@ public:
         if (config.showVertices && config.vertexColor) {
             drawVertices(config);
         }
+    }
+
+    void drawAsLines(GLuint shaderProgram, float* color) {
+        setGpuVariable(shaderProgram, "model", transform);
+
+        setGpuVariable(shaderProgram, "uHasTexture", 0);
+        setGpuVariable(shaderProgram, "uHasColor", 1);
+        setGpuVariable(shaderProgram, "u_color", glm::make_vec3(color));
+
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1.0, -1.0);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_LINES, 0, vertexCount);
+        glBindVertexArray(0);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+        setGpuVariable(shaderProgram, "uHasColor", 0);
     }
 
     void translate(const glm::vec3& offset) { 

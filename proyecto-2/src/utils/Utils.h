@@ -16,7 +16,7 @@ public:
 
     static std::vector<float> flatten(const std::vector<Vertex>& vertices) {
         std::vector<float> flatVertices;
-        flatVertices.reserve(vertices.size() * 11);
+        flatVertices.reserve(vertices.size() * 8);
         for (const auto& vertex : vertices) {
             flatVertices.push_back(vertex.position.x);
             flatVertices.push_back(vertex.position.y);
