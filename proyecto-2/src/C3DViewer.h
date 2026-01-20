@@ -63,6 +63,7 @@ public:
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.Fonts->AddFontFromFileTTF("include/imgui/misc/fonts/Roboto-Medium.ttf", 18.0f);
 
         ImGui::StyleColorsDark();
 
@@ -265,48 +266,76 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Once);
-        ImGui::Begin("Control Panel");
-        
-        if (ImGui::Button("Load Model"))
+        // Top menu bar
+        if (ImGui::BeginMainMenuBar())
         {
-            auto selection = pfd::open_file("Choose OBJ file", ".", { "OBJ Files (.obj)", "*.obj" }).result();
-            if (!selection.empty())
+            if (ImGui::BeginMenu("File"))
             {
-                if (appState) {
-                    try {
-                        appState->loadObject(selection[0]);
-                    } catch (const exception& e) {
-                        cerr << "Error loading object: " << e.what() << endl;
+                if (ImGui::MenuItem("Load"))
+                {
+                    auto selection = pfd::open_file("Choose OBJ file", ".", { "OBJ Files (.obj)", "*.obj" }).result();
+                    if (!selection.empty())
+                    {
+                        if (appState) {
+                            try {
+                                appState->loadObject(selection[0]);
+                            } catch (const exception& e) {
+                                cerr << "Error loading object: " << e.what() << endl;
+                            }
+                        }
+                    }
+                }
+                if (ImGui::MenuItem("Save"))
+                {
+                    // Not implemented yet
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
+
+        // Left-side panel
+        ImGui::SetNextWindowPos(ImVec2(0, 20));
+        ImGui::SetNextWindowSize(ImVec2(width / 4, height - 20));
+        ImGui::Begin("Controls", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+
+        if (appState) {
+            if (ImGui::CollapsingHeader("Vertex"))
+            {
+                ImGui::Checkbox("Show", &appState->showVertices);
+                ImGui::SliderFloat("Size", &appState->pointSize, 1.0f, 20.0f);
+                ImGui::ColorEdit3("Color", appState->vertexColor, ImGuiColorEditFlags_NoInputs);
+            }
+
+            if (ImGui::CollapsingHeader("Wireframe"))
+            {
+                ImGui::Checkbox("Show", &appState->showWireframe);
+                ImGui::ColorEdit3("Color", appState->wireframeColor, ImGuiColorEditFlags_NoInputs);
+            }
+
+            if (ImGui::CollapsingHeader("Normals"))
+            {
+                ImGui::Checkbox("Show", &appState->showNormals);
+                ImGui::ColorEdit3("Color", appState->normalColor, ImGuiColorEditFlags_NoInputs);
+            }
+
+            if (ImGui::CollapsingHeader("Advanced"))
+            {
+                ImGui::Checkbox("Line Antialiasing", &appState->lineAntialiasing);
+                static int scaleValue = 50;
+                if (ImGui::SliderInt("Scale", &scaleValue, 10, 200))
+                {
+                    if (appState) {
+                        float scaleFactor = static_cast<float>(scaleValue) / 50.0f;
+                        appState->rescaleAllShapes(scaleFactor);
                     }
                 }
             }
         }
 
-        static int scaleValue = 50;
-        if (ImGui::SliderInt("Scale", &scaleValue, 10, 200)) 
-        {
-            if (appState) {
-                float scaleFactor = static_cast<float>(scaleValue) / 50.0f;
-                appState->rescaleAllShapes(scaleFactor);
-            }
-        }
-
-        if (appState) {
-            ImGui::Checkbox("Show Vertices", &appState->showVertices);
-            ImGui::ColorEdit3("Vertex Color", appState->vertexColor);
-            ImGui::SliderFloat("Point Size", &appState->pointSize, 1.0f, 20.0f);
-            ImGui::Checkbox("Show Fill", &appState->showFill);
-            ImGui::Checkbox("Show Wireframe", &appState->showWireframe);
-            ImGui::ColorEdit3("Wireframe Color", appState->wireframeColor);
-            ImGui::Checkbox("Line Antialiasing", &appState->lineAntialiasing);
-            ImGui::Separator();
-            ImGui::Checkbox("Show Normals", &appState->showNormals);
-            ImGui::ColorEdit3("Normal Color", appState->normalColor);
-        }
-
         ImGui::End();
 
+        // Selected Submesh Controls window
         if (selectedSubmeshIndex != -1 && appState && selectedSubmeshIndex < appState->shapes.size())
         {
             ImGui::Begin("Selected Submesh Controls");
