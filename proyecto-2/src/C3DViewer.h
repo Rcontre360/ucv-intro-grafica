@@ -78,12 +78,12 @@ public:
 
         setupDefaultShader();
         setupPickingShader();
-        setupNormalShader();
         setupPickingFBO(); 
 
         appState = new State();
 
         glViewport(0, 0, width, height);
+
 
         glfwSetWindowUserPointer(window, this);
         glfwSetKeyCallback(window, keyCallback);
@@ -123,7 +123,6 @@ public:
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
         if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
-        if (normalShaderProgram) glDeleteProgram(normalShaderProgram);
         if (pickingTexture) glDeleteTextures(1, &pickingTexture);
         if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
         if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
@@ -241,14 +240,7 @@ private:
         if (appState)
         {
             appState->draw(shaderProgram, selectedSubmeshIndex);
-                            if (appState->showNormals) {
-                                glUseProgram(normalShaderProgram);
-                                glm::mat4 view = camera.getViewMatrix();
-                                setGpuVariable(normalShaderProgram, "view", view);
-                                glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-                                setGpuVariable(normalShaderProgram, "projection", projection);
-                                appState->drawNormals(normalShaderProgram);
-                            }        }
+        }
 
         drawInterface();
     }
@@ -310,7 +302,6 @@ private:
             ImGui::Checkbox("Line Antialiasing", &appState->lineAntialiasing);
             ImGui::Separator();
             ImGui::Checkbox("Show Normals", &appState->showNormals);
-            ImGui::SliderFloat("Normal Length", &appState->normalLength, 0.01f, 1.0f);
             ImGui::ColorEdit3("Normal Color", appState->normalColor);
         }
 
@@ -443,19 +434,6 @@ private:
         glDeleteShader(fragmentShader);
     }
 
-    void setupNormalShader()
-    {
-        GLuint vertexShader = setupShader("NORMAL_VERTEX", normalVertexShaderSrc, GL_VERTEX_SHADER);
-        GLuint geometryShader = setupShader("NORMAL_GEOMETRY", normalGeometryShaderSrc, GL_GEOMETRY_SHADER);
-        GLuint fragmentShader = setupShader("NORMAL_FRAGMENT", normalFragmentShaderSrc, GL_FRAGMENT_SHADER);
-
-        normalShaderProgram = setupShaderProgram(vertexShader, fragmentShader, "NORMAL_PROGRAM", geometryShader);
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(geometryShader);
-        glDeleteShader(fragmentShader);
-    }
-
     bool checkCompileErrors(GLuint shader, const char* type) 
     {
         GLint success;
@@ -534,7 +512,6 @@ protected:
     GLuint pickingTexture = 0;
     GLuint pickingDepthStencilRBO = 0;
     GLuint pickingShaderProgram = 0;
-    GLuint normalShaderProgram = 0;
 
     const char* vertexShaderSrc = R"glsl(
         #version 330 core
@@ -611,60 +588,6 @@ protected:
                 float((objectId >> 16) & 0xFF) / 255.0f,
                 1.0f
             );
-        }
-    )glsl";
-
-    const char* normalVertexShaderSrc = R"glsl(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        layout (location = 1) in vec3 aNormal;
-
-        out VS_OUT {
-            vec3 normal;
-        } vs_out;
-
-        void main()
-        {
-            gl_Position = vec4(aPos, 1.0);
-            vs_out.normal = aNormal;
-        }
-    )glsl";
-
-    const char* normalGeometryShaderSrc = R"glsl(
-        #version 330 core
-        layout (points) in;
-        layout (line_strip, max_vertices = 2) out;
-
-        in VS_OUT {
-            vec3 normal;
-        } gs_in[];
-
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
-        uniform float normalLength;
-
-        void main() {
-            mat4 pvm = projection * view * model;
-
-            gl_Position = pvm * gl_in[0].gl_Position;
-            EmitVertex();
-
-            gl_Position = pvm * vec4(gl_in[0].gl_Position.xyz + gs_in[0].normal * normalLength, 1.0);
-            EmitVertex();
-
-            EndPrimitive();
-        }
-    )glsl";
-
-    const char* normalFragmentShaderSrc = R"glsl(
-        #version 330 core
-        out vec4 FragColor;
-        uniform vec3 normalColor;
-
-        void main()
-        {
-            FragColor = vec4(normalColor, 1.0);
         }
     )glsl";
 };

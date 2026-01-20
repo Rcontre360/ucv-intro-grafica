@@ -12,6 +12,8 @@
 
 using namespace std;
 
+const float NORMAL_LENGTH = 5.1f;
+
 struct DrawConfig {
     GLuint shaderProgram;
     bool isSelected;
@@ -21,6 +23,8 @@ struct DrawConfig {
     bool showWireframe;
     float* wireframeColor;
     bool showFill;
+    bool showNormals;
+    float* normalColor;
 };
 
 class Submesh 
@@ -41,6 +45,8 @@ public:
     bool showBoundingBox = false;
     float boundingBoxColor[3] = { 1.0f, 0.0f, 1.0f };
     GLuint bboxVao = 0, bboxVbo = 0;
+    GLuint normalLinesVao = 0, normalLinesVbo = 0;
+    int normalLinesVertexCount = 0;
 
     // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
     Submesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) 
@@ -87,6 +93,7 @@ public:
         glBindVertexArray(0);
 
         setupBoundingBox();
+        setupNormals(vertices);
     }
 
     // Destructor: Cleans up OpenGL buffers.
@@ -96,6 +103,8 @@ public:
         if (vao) glDeleteVertexArrays(1, &vao);
         if (bboxVbo) glDeleteBuffers(1, &bboxVbo);
         if (bboxVao) glDeleteVertexArrays(1, &bboxVao);
+        if (normalLinesVbo) glDeleteBuffers(1, &normalLinesVbo);
+        if (normalLinesVao) glDeleteVertexArrays(1, &normalLinesVao);
         if (hasTexture && textureId) glDeleteTextures(1, &textureId);
     }
 
@@ -126,12 +135,10 @@ public:
         if (config.showVertices && config.vertexColor) {
             drawVertices(config);
         }
-    }
 
-    void drawNormals()
-    {
-        glBindVertexArray(vao);
-        glDrawArrays(GL_POINTS, 0, vertexCount);
+        if (config.showNormals) {
+            drawNormals(config);
+        }
     }
 
     void translate(const glm::vec3& offset) { 
@@ -209,6 +216,18 @@ private:
         glDrawArrays(GL_POINTS, 0, vertexCount);
     }
 
+    void drawNormals(const DrawConfig& config) {
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
+        setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(config.normalColor));
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1.0, -1.0);
+        glBindVertexArray(normalLinesVao);
+        glDrawArrays(GL_LINES, 0, normalLinesVertexCount);
+        glBindVertexArray(0);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+    }
+
     void setupBoundingBox() {
         float vertices[] = {
             minBound.x, minBound.y, minBound.z,
@@ -241,6 +260,32 @@ private:
         glBindBuffer(GL_ARRAY_BUFFER, bboxVbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
         
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+
+    void setupNormals(const std::vector<Vertex>& vertices) {
+        std::vector<float> normal_line_vertices;
+        for (const auto& vertex : vertices) {
+            normal_line_vertices.push_back(vertex.position.x);
+            normal_line_vertices.push_back(vertex.position.y);
+            normal_line_vertices.push_back(vertex.position.z);
+            normal_line_vertices.push_back(vertex.position.x + vertex.normal.x * NORMAL_LENGTH);
+            normal_line_vertices.push_back(vertex.position.y + vertex.normal.y * NORMAL_LENGTH);
+            normal_line_vertices.push_back(vertex.position.z + vertex.normal.z * NORMAL_LENGTH);
+        }
+        normalLinesVertexCount = normal_line_vertices.size() / 3;
+
+        glGenVertexArrays(1, &normalLinesVao);
+        glGenBuffers(1, &normalLinesVbo);
+
+        glBindVertexArray(normalLinesVao);
+        glBindBuffer(GL_ARRAY_BUFFER, normalLinesVbo);
+        glBufferData(GL_ARRAY_BUFFER, normal_line_vertices.size() * sizeof(float), normal_line_vertices.data(), GL_STATIC_DRAW);
+
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
