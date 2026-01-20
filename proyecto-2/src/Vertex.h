@@ -17,9 +17,6 @@ public:
             flatVertices.push_back(vertex.position.x);
             flatVertices.push_back(vertex.position.y);
             flatVertices.push_back(vertex.position.z);
-            flatVertices.push_back(vertex.normal.x);
-            flatVertices.push_back(vertex.normal.y);
-            flatVertices.push_back(vertex.normal.z);
             flatVertices.push_back(vertex.color.x);
             flatVertices.push_back(vertex.color.y);
             flatVertices.push_back(vertex.color.z);

@@ -75,20 +75,16 @@ public:
         glBufferData(GL_ARRAY_BUFFER, flatVertices.size() * sizeof(float), flatVertices.data(), GL_STATIC_DRAW);
 
         // Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
-        // Normal attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
+        // Color attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
-        // Color attribute
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));
-        glEnableVertexAttribArray(2);
-
         // Texture coordinate attribute
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(9 * sizeof(float)));
-        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
 
         glBindVertexArray(0);
 
@@ -176,56 +172,56 @@ private:
     void drawFill(const DrawConfig& config) {
         setGpuVariable(config.shaderProgram, "uHasTexture", hasTexture);
         if (hasTexture) {
+            setGpuVariable(config.shaderProgram, "uHasColor", 0);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, textureId);
             setGpuVariable(config.shaderProgram, "uTexture", 0);
         }
-        setGpuVariable(config.shaderProgram, "u_render_points", 0);
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
 
     void drawWireframe(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
-        setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(config.wireframeColor));
+        setGpuVariable(config.shaderProgram, "uHasColor", 1);
+        setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(config.wireframeColor));
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+        setGpuVariable(config.shaderProgram, "uHasColor", 0);
     }
 
     void drawBoundingBox(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
-        setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(boundingBoxColor));
+        setGpuVariable(config.shaderProgram, "uHasColor", 1);
+        setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(boundingBoxColor));
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);
         glBindVertexArray(bboxVao);
         glDrawArrays(GL_LINES, 0, 24);
         glBindVertexArray(0);
         glDisable(GL_POLYGON_OFFSET_LINE);
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+        setGpuVariable(config.shaderProgram, "uHasColor", 0);
     }
 
     void drawVertices(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "u_render_points", 1);
-        setGpuVariable(config.shaderProgram, "vertexColor", glm::make_vec3(config.vertexColor));
+        setGpuVariable(config.shaderProgram, "uHasColor", 1);
+        setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(config.vertexColor));
         setGpuVariable(config.shaderProgram, "u_point_size", config.pointSize);
         glBindVertexArray(vao);
         glDrawArrays(GL_POINTS, 0, vertexCount);
+        setGpuVariable(config.shaderProgram, "uHasColor", 0);
     }
 
     void drawNormals(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 1);
-        setGpuVariable(config.shaderProgram, "u_wireframe_color", glm::make_vec3(config.normalColor));
+        setGpuVariable(config.shaderProgram, "uHasColor", 1);
+        setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(config.normalColor));
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);
         glBindVertexArray(normalLinesVao);
         glDrawArrays(GL_LINES, 0, normalCount);
         glBindVertexArray(0);
         glDisable(GL_POLYGON_OFFSET_LINE);
-        setGpuVariable(config.shaderProgram, "u_is_wireframe", 0);
+        setGpuVariable(config.shaderProgram, "uHasColor", 0);
     }
 
     void setupBoundingBox() {

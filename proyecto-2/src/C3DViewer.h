@@ -302,28 +302,28 @@ private:
         if (appState) {
             if (ImGui::CollapsingHeader("Vertex"))
             {
-                ImGui::Checkbox("Show", &appState->showVertices);
-                ImGui::SliderFloat("Size", &appState->pointSize, 1.0f, 20.0f);
-                ImGui::ColorEdit3("Color", appState->vertexColor, ImGuiColorEditFlags_NoInputs);
+                ImGui::Checkbox("Show##Vertex", &appState->showVertices);
+                ImGui::SliderFloat("Size##Vertex", &appState->pointSize, 1.0f, 20.0f);
+                ImGui::ColorEdit3("Color##Vertex", appState->vertexColor, ImGuiColorEditFlags_NoInputs);
             }
 
             if (ImGui::CollapsingHeader("Wireframe"))
             {
-                ImGui::Checkbox("Show", &appState->showWireframe);
-                ImGui::ColorEdit3("Color", appState->wireframeColor, ImGuiColorEditFlags_NoInputs);
+                ImGui::Checkbox("Show##Wireframe", &appState->showWireframe);
+                ImGui::ColorEdit3("Color##Wireframe", appState->wireframeColor, ImGuiColorEditFlags_NoInputs);
             }
 
             if (ImGui::CollapsingHeader("Normals"))
             {
-                ImGui::Checkbox("Show", &appState->showNormals);
-                ImGui::ColorEdit3("Color", appState->normalColor, ImGuiColorEditFlags_NoInputs);
+                ImGui::Checkbox("Show##Normals", &appState->showNormals);
+                ImGui::ColorEdit3("Color##Normals", appState->normalColor, ImGuiColorEditFlags_NoInputs);
             }
 
             if (ImGui::CollapsingHeader("Advanced"))
             {
-                ImGui::Checkbox("Line Antialiasing", &appState->lineAntialiasing);
+                ImGui::Checkbox("Line Antialiasing##Advanced", &appState->lineAntialiasing);
                 static int scaleValue = 50;
-                if (ImGui::SliderInt("Scale", &scaleValue, 10, 200))
+                if (ImGui::SliderInt("Scale##Advanced", &scaleValue, 10, 200))
                 {
                     if (appState) {
                         float scaleFactor = static_cast<float>(scaleValue) / 50.0f;
@@ -550,51 +550,48 @@ protected:
 
     const char* vertexShaderSrc = R"glsl(
         #version 330 core
+
         layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aNormal;
-        layout(location = 2) in vec3 aColor;
-        layout(location = 3) in vec2 aTexCoord;
-        out vec3 vNormal;
+        layout(location = 1) in vec3 aColor;
+        layout(location = 2) in vec2 aTexCoord;
+
         out vec3 vColor;
         out vec2 vTexCoord;
+
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
-        uniform bool u_render_points;
         uniform float u_point_size;
+
         void main() 
         {
             gl_Position = projection * view * model * vec4(aPos, 1.0);
-            vNormal = aNormal;
             vColor = aColor;
             vTexCoord = aTexCoord;
-            if (u_render_points) {
-                gl_PointSize = u_point_size;
-            }
+            gl_PointSize = u_point_size;
         }
     )glsl";
 
     const char* fragmentShaderSrc = R"glsl(
         #version 330 core
-        in vec3 vNormal;
+
         in vec3 vColor;
         in vec2 vTexCoord;
+
         out vec4 FragColor;
+
         uniform bool uHasTexture;
+        uniform bool uHasColor;
         uniform sampler2D uTexture;
-        uniform bool u_render_points;
-        uniform vec3 vertexColor;
-        uniform bool u_is_wireframe;
-        uniform vec3 u_wireframe_color;
+        uniform vec3 u_color;
+
         void main() {
-            if (u_is_wireframe) {
-                FragColor = vec4(u_wireframe_color, 1.0);
-            } else if (u_render_points) {
-                FragColor = vec4(vertexColor, 1.0);
-            } else if (uHasTexture) {
+            FragColor = vec4(vColor, 1.0);
+
+            if (uHasTexture) {
                 FragColor = texture(uTexture, vTexCoord);
-            } else {
-                FragColor = vec4(vColor, 1.0);
+            } else if (uHasColor){
+                FragColor = vec4(u_color, 1.0);
             }
         }
     )glsl";
