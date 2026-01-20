@@ -30,7 +30,7 @@ $(TARGET): $(OBJS)
 	@mkdir -p build
 	$(CXX) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LDLIBS)
 
-build/main.o: src/Main.cpp src/C3DViewer.h
+build/main.o: src/Main.cpp 
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

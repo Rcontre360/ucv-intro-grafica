@@ -4,9 +4,10 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include "submesh/Submesh.h"
 #include "tinyobjloader.h"
 #include "stb/stb_image.h"
+
+#include "../submesh/Submesh.h"
 
 using namespace std;
 

@@ -8,10 +8,10 @@
 #include <algorithm>
 #include <GLFW/glfw3.h>
 
-#include "submesh/Submesh.h"
 #include "tinyobjloader.h"
-#include "FileLoader.h"
-#include "Utils.h"
+#include "../submesh/Submesh.h"
+#include "../utils/FileLoader.h"
+#include "../utils/Utils.h"
 
 using namespace std;
 

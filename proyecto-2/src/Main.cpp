@@ -1,7 +1,5 @@
-#include "C3DViewer.h"
+#include "state/C3DViewer.h"
 #include <iostream>
-
-
 
 int main() 
 {
