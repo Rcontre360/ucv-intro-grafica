@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <limits>
 #include "../Utils.h"
-#include "../Vertex.h"
 
 using namespace std;
 
