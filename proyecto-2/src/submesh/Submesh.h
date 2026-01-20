@@ -7,6 +7,8 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
+
+#include "Base.h"
 #include "../GLUtils.h"
 #include "../Vertex.h"
 
@@ -14,45 +16,19 @@ using namespace std;
 
 const float NORMAL_LENGTH = 5.1f;
 
-struct DrawConfig {
-    GLuint shaderProgram;
-    bool isSelected;
-    bool showVertices;
-    float* vertexColor;
-    float pointSize;
-    bool showWireframe;
-    float* wireframeColor;
-    bool showFill;
-    bool showNormals;
-    float* normalColor;
-};
-
-class Submesh 
+class Submesh : public BaseSubmesh 
 {
 public:
-    // Transformation matrix
-    glm::mat4 transform;
-
-    // OpenGL buffer IDs
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    int vertexCount = 0;
-    GLuint textureId = 0;
-    bool hasTexture = false;
-    float overrideColor[3] = { 1.0f, 1.0f, 1.0f };
     glm::vec3 minBound;
     glm::vec3 maxBound;
+
     bool showBoundingBox = false;
     float boundingBoxColor[3] = { 1.0f, 0.0f, 1.0f };
     GLuint bboxVao = 0, bboxVbo = 0;
     GLuint normalLinesVao = 0, normalLinesVbo = 0;
     int normalCount = 0;
 
-    // Constructor: Initializes transformation and creates OpenGL buffers for the object's geometry.
-    Submesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) 
-        : transform(glm::mat4(1.0f)), vertexCount(vertices.size()), textureId(textureId)
-    {
-        hasTexture = (textureId != 0);
+    Submesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) : BaseSubmesh(vertices,textureId){
         minBound = glm::vec3(std::numeric_limits<float>::max());
         maxBound = glm::vec3(std::numeric_limits<float>::lowest());
         for (const auto& vertex : vertices) {
@@ -64,72 +40,23 @@ public:
             maxBound.z = std::max(maxBound.z, vertex.position.z);
         }
 
-        std::vector<float> flatVertices = Vertex::flatten(vertices);
-
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-
-        glBindVertexArray(vao);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, flatVertices.size() * sizeof(float), flatVertices.data(), GL_STATIC_DRAW);
-
-        // Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-
-        // Color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-
-        // Texture coordinate attribute
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-        glEnableVertexAttribArray(2);
-
-        glBindVertexArray(0);
-
         setupBoundingBox();
         setupNormals(vertices);
     }
 
-    // Destructor: Cleans up OpenGL buffers.
     ~Submesh()
     {
-        if (vbo) glDeleteBuffers(1, &vbo);
-        if (vao) glDeleteVertexArrays(1, &vao);
         if (bboxVbo) glDeleteBuffers(1, &bboxVbo);
         if (bboxVao) glDeleteVertexArrays(1, &bboxVao);
         if (normalLinesVbo) glDeleteBuffers(1, &normalLinesVbo);
         if (normalLinesVao) glDeleteVertexArrays(1, &normalLinesVao);
-        if (hasTexture && textureId) glDeleteTextures(1, &textureId);
     }
 
-    void drawForPicking(GLuint shaderProgram)
-    {
-        setGpuVariable(shaderProgram, "model", transform);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-    }
-
-    // Draws the submesh using the provided shader program.
-    void draw(const DrawConfig& config)
-    {
-        setGpuVariable(config.shaderProgram, "model", transform);
+    void draw(const DrawConfig& config){
+        BaseSubmesh::draw(config);
         
-        if (config.showFill) {
-            drawFill(config);
-        }
-
-        if (config.showWireframe && config.wireframeColor) {
-            drawWireframe(config);
-        }
-
         if (showBoundingBox) {
             drawBoundingBox(config);
-        }
-
-        if (config.showVertices && config.vertexColor) {
-            drawVertices(config);
         }
 
         if (config.showNormals) {
@@ -137,60 +64,7 @@ public:
         }
     }
 
-    void translate(const glm::vec3& offset) { 
-        transform = glm::translate(glm::mat4(1.0f), offset) * transform;
-    }
-
-    void rotate(float angle, const glm::vec3& axis) { 
-        transform = glm::rotate(transform, glm::radians(angle), axis); 
-    }
-
-    void scale(const glm::vec3& factor) { 
-        transform = glm::scale(transform, factor); 
-    }
-
-    const glm::mat4& getTransform() const { 
-        return transform; 
-    }
-
-    void setTransform(const glm::mat4& newTransform) { 
-        transform = newTransform; 
-    }
-
-    void resetTransform() { 
-        transform = glm::mat4(1.0f); 
-    }
-
-    void rotateAroundPoint(float angle, const glm::vec3& axis, const glm::vec3& pivot) {
-        transform = glm::translate(glm::mat4(1.0f), pivot) * 
-                    glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis) * 
-                    glm::translate(glm::mat4(1.0f), -pivot) * 
-                    transform;
-    }
-
 private:
-    void drawFill(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "uHasTexture", hasTexture);
-        if (hasTexture) {
-            setGpuVariable(config.shaderProgram, "uHasColor", 0);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, textureId);
-            setGpuVariable(config.shaderProgram, "uTexture", 0);
-        }
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-    }
-
-    void drawWireframe(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "uHasColor", 1);
-        setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(config.wireframeColor));
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        setGpuVariable(config.shaderProgram, "uHasColor", 0);
-    }
-
     void drawBoundingBox(const DrawConfig& config) {
         setGpuVariable(config.shaderProgram, "uHasColor", 1);
         setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(boundingBoxColor));
@@ -200,15 +74,6 @@ private:
         glDrawArrays(GL_LINES, 0, 24);
         glBindVertexArray(0);
         glDisable(GL_POLYGON_OFFSET_LINE);
-        setGpuVariable(config.shaderProgram, "uHasColor", 0);
-    }
-
-    void drawVertices(const DrawConfig& config) {
-        setGpuVariable(config.shaderProgram, "uHasColor", 1);
-        setGpuVariable(config.shaderProgram, "u_color", glm::make_vec3(config.vertexColor));
-        setGpuVariable(config.shaderProgram, "u_point_size", config.pointSize);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_POINTS, 0, vertexCount);
         setGpuVariable(config.shaderProgram, "uHasColor", 0);
     }
 
