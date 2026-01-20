@@ -11,7 +11,7 @@
 #include "submesh/Submesh.h"
 #include "tinyobjloader.h"
 #include "FileLoader.h"
-#include "GLUtils.h"
+#include "Utils.h"
 
 using namespace std;
 

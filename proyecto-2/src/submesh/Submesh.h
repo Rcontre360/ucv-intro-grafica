@@ -9,12 +9,11 @@
 #include <limits>
 
 #include "Base.h"
-#include "../GLUtils.h"
-#include "../Vertex.h"
+#include "../Utils.h"
 
 using namespace std;
 
-const float NORMAL_LENGTH = 5.1f;
+const float NORMAL_LENGTH = 1.1f;
 
 class Submesh : public BaseSubmesh 
 {

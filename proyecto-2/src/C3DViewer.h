@@ -16,7 +16,7 @@
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include "State.h"
 #include "Camera.h"
-#include "GLUtils.h"
+#include "Utils.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
