@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include "Submesh.h"
+#include "submesh/Submesh.h"
 #include "tinyobjloader.h"
 #include "stb/stb_image.h"
 #include "Vertex.h"

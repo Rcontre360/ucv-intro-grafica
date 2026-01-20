@@ -7,8 +7,8 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
-#include "GLUtils.h"
-#include "Vertex.h"
+#include "../GLUtils.h"
+#include "../Vertex.h"
 
 using namespace std;
 

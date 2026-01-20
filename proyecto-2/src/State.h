@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <GLFW/glfw3.h>
 
-#include "Submesh.h"
+#include "submesh/Submesh.h"
 #include "tinyobjloader.h"
 #include "FileLoader.h"
 #include "GLUtils.h"
