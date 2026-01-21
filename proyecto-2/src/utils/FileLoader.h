@@ -5,7 +5,6 @@
 #include <iostream>
 #include <stdexcept>
 #include "tinyobjloader.h"
-#include "stb/stb_image.h"
 
 #include "../submesh/Submesh.h"
 
@@ -50,7 +49,6 @@ private:
     static Submesh* processObject(const tinyobj::shape_t& shape, const tinyobj::attrib_t& info, const vector<tinyobj::material_t>& materials, const string& basedir, bool hasNormals, const vector<glm::vec3>& calculatedNormals) {
         vector<Vertex> vertices;
         size_t indexOffset = 0;
-        GLuint textureId = 0;
 
         for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
             int fv = shape.mesh.num_face_vertices[f];
@@ -84,61 +82,20 @@ private:
                         materials[materialId].diffuse[1],
                         materials[materialId].diffuse[2]
                     };
-                    if (!materials[materialId].diffuse_texname.empty() && textureId == 0) {
-                        string texturePath = basedir + materials[materialId].diffuse_texname;
-                        textureId = loadTexture(texturePath);
-                    }
                 }
 
-                if (idx.texcoord_index >= 0) {
-                    vertex.texCoord = {
-                        info.texcoords[2 * idx.texcoord_index + 0],
-                        info.texcoords[2 * idx.texcoord_index + 1]
-                    };
-                } else {
-                    vertex.texCoord = {0.0f, 0.0f};
-                }
                 vertices.push_back(vertex);
             }
             indexOffset += fv;
         }
 
         if (!vertices.empty()) {
-            return new Submesh(vertices, textureId);
+            return new Submesh(vertices);
         }
         return nullptr;
     }
 
 public:
-    static GLuint loadTexture(const std::string& path) {
-        GLuint textureId;
-        glGenTextures(1, &textureId);
-        glBindTexture(GL_TEXTURE_2D, textureId);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        int width, height, nrChannels;
-        stbi_set_flip_vertically_on_load(true);
-        unsigned char *data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-        if (data) {
-            GLenum format;
-            if (nrChannels == 1) format = GL_RED;
-            else if (nrChannels == 3) format = GL_RGB;
-            else if (nrChannels == 4) format = GL_RGBA;
-
-            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-        } else {
-            std::cerr << "Failed to load texture: " << path << std::endl;
-        }
-        stbi_image_free(data);
-
-        return textureId;
-    }
-
     static LoadedObject loadObject(const std::string& path) {
         LoadedObject loadedObject;
         tinyobj::attrib_t info;

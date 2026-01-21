@@ -23,7 +23,7 @@ public:
     BaseSubmesh* boundingBox = nullptr;
     BaseSubmesh* normals = nullptr;
 
-    Submesh(const std::vector<Vertex>& vertices, GLuint textureId = 0) : BaseSubmesh(vertices,textureId){
+    Submesh(const std::vector<Vertex>& vertices) : BaseSubmesh(vertices){
         setupBoundingBox(vertices);
         setupNormals(vertices);
     }
@@ -86,7 +86,7 @@ private:
             bbox_vertices.push_back(vertex);
         }
 
-        boundingBox = new BaseSubmesh(bbox_vertices, 0);
+        boundingBox = new BaseSubmesh(bbox_vertices);
     }
 
     void setupNormals(const std::vector<Vertex>& vertices) {
@@ -100,6 +100,6 @@ private:
             normal_vertices.push_back(v1);
             normal_vertices.push_back(v2);
         }
-        normals = new BaseSubmesh(normal_vertices, 0);
+        normals = new BaseSubmesh(normal_vertices);
     }
 };

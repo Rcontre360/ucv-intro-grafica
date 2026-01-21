@@ -17,6 +17,9 @@
 #include "State.h"
 #include "../utils/Camera.h"
 #include "../utils/Utils.h"
+#include "../utils/Shaders.h"
+
+using namespace Shaders;
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
@@ -254,10 +257,10 @@ private:
         glUseProgram(program);
 
         glm::mat4 view = camera.getViewMatrix();
-        setGpuVariable(program, "view", view);
+        setGpuVariable(program, DefaultShader::view, view);
 
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-        setGpuVariable(program, "projection", projection);
+        setGpuVariable(program, DefaultShader::projection, projection);
     }
 
     void drawInterface()
@@ -548,78 +551,4 @@ protected:
     GLuint pickingDepthStencilRBO = 0;
     GLuint pickingShaderProgram = 0;
 
-    const char* vertexShaderSrc = R"glsl(
-        #version 330 core
-
-        layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aColor;
-        layout(location = 2) in vec2 aTexCoord;
-
-        out vec3 vColor;
-        out vec2 vTexCoord;
-
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
-        uniform float u_point_size;
-
-        void main() 
-        {
-            gl_Position = projection * view * model * vec4(aPos, 1.0);
-            vColor = aColor;
-            vTexCoord = aTexCoord;
-            gl_PointSize = u_point_size;
-        }
-    )glsl";
-
-    const char* fragmentShaderSrc = R"glsl(
-        #version 330 core
-
-        in vec3 vColor;
-        in vec2 vTexCoord;
-
-        out vec4 FragColor;
-
-        uniform bool uHasTexture;
-        uniform bool uHasColor;
-        uniform sampler2D uTexture;
-        uniform vec3 u_color;
-
-        void main() {
-            FragColor = vec4(vColor, 1.0);
-
-            if (uHasTexture) {
-                FragColor = texture(uTexture, vTexCoord);
-            } else if (uHasColor){
-                FragColor = vec4(u_color, 1.0);
-            }
-        }
-    )glsl";
-
-    const char* pickingVertexShaderSrc = R"glsl(
-        #version 330 core
-        layout(location = 0) in vec3 aPos;
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
-        void main()
-        {
-            gl_Position = projection * view * model * vec4(aPos, 1.0);
-        }
-    )glsl";
-
-    const char* pickingFragmentShaderSrc = R"glsl(
-        #version 330 core
-        out vec4 FragColor;
-        uniform int objectId;
-        void main()
-        {
-            FragColor = vec4(
-                float((objectId >> 0) & 0xFF) / 255.0f,
-                float((objectId >> 8) & 0xFF) / 255.0f,
-                float((objectId >> 16) & 0xFF) / 255.0f,
-                1.0f
-            );
-        }
-    )glsl";
 };

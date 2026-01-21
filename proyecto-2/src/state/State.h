@@ -12,6 +12,7 @@
 #include "../submesh/Submesh.h"
 #include "../utils/FileLoader.h"
 #include "../utils/Utils.h"
+#include "../utils/Shaders.h"
 
 using namespace std;
 
@@ -73,7 +74,7 @@ public:
     {
         for (size_t i = 0; i < shapes.size(); ++i)
         {
-            setGpuVariable(pickingShaderProgram, "objectId", (int)(i + 1));
+            setGpuVariable(pickingShaderProgram, Shaders::PickingShader::objectId, (int)(i + 1));
             shapes[i]->drawForPicking(pickingShaderProgram);
         }
     }
