@@ -30,6 +30,8 @@ class BaseSubmesh
 {
 public:
     glm::mat4 transform;
+    std::vector<Vertex> vertices;
+    float color[3];
 
     GLuint vao = 0;
     GLuint vbo = 0;
@@ -37,8 +39,14 @@ public:
     int vertexCount = 0;
 
     BaseSubmesh(const std::vector<Vertex>& vertices) 
-        : transform(glm::mat4(1.0f)), vertexCount(vertices.size())
+        : transform(glm::mat4(1.0f)), vertices(vertices), vertexCount(vertices.size())
     {
+        if (!vertices.empty()) {
+            color[0] = vertices[0].color.r;
+            color[1] = vertices[0].color.g;
+            color[2] = vertices[0].color.b;
+        }
+
         std::vector<float> flatVertices = Vertex::flatten(vertices);
 
         glGenVertexArrays(1, &vao);
@@ -114,6 +122,16 @@ public:
 
     void scale(const glm::vec3& factor) { 
         transform = glm::scale(transform, factor); 
+    }
+
+    void updateColor() {
+        for (auto& vertex : vertices) {
+            vertex.color = {color[0], color[1], color[2]};
+        }
+        std::vector<float> flatVertices = Vertex::flatten(vertices);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, flatVertices.size() * sizeof(float), flatVertices.data());
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     const glm::mat4& getTransform() const { 

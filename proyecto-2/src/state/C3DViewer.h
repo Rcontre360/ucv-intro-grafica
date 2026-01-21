@@ -167,24 +167,26 @@ private:
                 mouseButtonsDown[0] = true;
                 glfwGetCursorPos(window, &mousePos.first, &mousePos.second); // Get current mouse pos when button pressed
 
-                glm::vec3 pickedColor = readPixelColor(mousePos.first, mousePos.second);
+                if (appState && !appState->moveFullObjectMode) {
+                    glm::vec3 pickedColor = readPixelColor(mousePos.first, mousePos.second);
 
-                int pickedID = static_cast<int>(pickedColor.x) + static_cast<int>(pickedColor.y) * 256 + static_cast<int>(pickedColor.z) * 256 * 256;
+                    int pickedID = static_cast<int>(pickedColor.x) + static_cast<int>(pickedColor.y) * 256 + static_cast<int>(pickedColor.z) * 256 * 256;
 
-                if (selectedSubmeshIndex != -1 && selectedSubmeshIndex < appState->shapes.size()) {
-                    appState->shapes[selectedSubmeshIndex]->showBoundingBox = false;
-                }
+                    if (selectedSubmeshIndex != -1 && selectedSubmeshIndex < appState->shapes.size()) {
+                        appState->shapes[selectedSubmeshIndex]->showBoundingBox = false;
+                    }
 
-                if (pickedID > 0 && appState && pickedID <= appState->shapes.size())
-                {
-                    selectedSubmeshIndex = pickedID - 1; // Adjust for +1 offset in shader
-                    appState->shapes[selectedSubmeshIndex]->showBoundingBox = true;
-                    std::cout << "Selected submesh index: " << selectedSubmeshIndex << std::endl;
-                }
-                else
-                {
-                    selectedSubmeshIndex = -1; // No submesh selected
-                    std::cout << "No submesh selected." << std::endl;
+                    if (pickedID > 0 && appState && pickedID <= appState->shapes.size())
+                    {
+                        selectedSubmeshIndex = pickedID - 1; // Adjust for +1 offset in shader
+                        appState->shapes[selectedSubmeshIndex]->showBoundingBox = true;
+                        std::cout << "Selected submesh index: " << selectedSubmeshIndex << std::endl;
+                    }
+                    else
+                    {
+                        selectedSubmeshIndex = -1; // No submesh selected
+                        std::cout << "No submesh selected." << std::endl;
+                    }
                 }
             }
             else if (action == GLFW_RELEASE)
@@ -221,7 +223,11 @@ private:
         if (mouseButtonsDown[1]){
             handleRotation(deltaX, deltaY);
         } else if (mouseButtonsDown[0]){
-            handleTranslation(deltaX, -deltaY, selectedSubmeshIndex);
+            if (appState && appState->moveFullObjectMode) {
+                handleFullObjectTranslation(deltaX, -deltaY);
+            } else {
+                handleTranslation(deltaX, -deltaY, selectedSubmeshIndex);
+            }
         }
         
         mousePos = {xpos,ypos};
@@ -324,6 +330,11 @@ private:
 
             if (ImGui::CollapsingHeader("Advanced"))
             {
+                if (ImGui::Checkbox("Move full object", &appState->moveFullObjectMode)) {
+                    if (appState->moveFullObjectMode) {
+                        appState->updateGlobalBoundingBox();
+                    }
+                }
                 ImGui::Checkbox("Line Antialiasing##Advanced", &appState->lineAntialiasing);
                 static int scaleValue = 50;
                 if (ImGui::SliderInt("Scale##Advanced", &scaleValue, 10, 200))
@@ -352,7 +363,10 @@ private:
             }
             else
             {
-                ImGui::ColorEdit3("Bounding Box Color", selectedSubmesh->boundingBoxColor);
+                if (ImGui::ColorEdit3("Color", selectedSubmesh->color, ImGuiColorEditFlags_NoInputs)) {
+                    selectedSubmesh->updateColor();
+                }
+                ImGui::ColorEdit3("Bounding Box Color", selectedSubmesh->boundingBoxColor, ImGuiColorEditFlags_NoInputs);
             }
             ImGui::End();
         }
@@ -396,6 +410,19 @@ private:
         glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
 
         appState->translateSubmesh(submeshIndex, translationVector);
+    }
+
+    void handleFullObjectTranslation(double deltaX, double deltaY) {
+        if (!appState || appState->shapes.empty()) return;
+
+        float distance = glm::distance(camera.position, glm::vec3(0.0f, 0.0f, -3.0f)); // Approximate distance to object
+
+        float sensitivity = 0.001f; 
+        float moveFactor = distance * sensitivity;
+
+        glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
+
+        appState->translateFullObject(translationVector);
     }
 
     GLuint setupShader(const char* name, const char* src, const GLenum type) {

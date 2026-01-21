@@ -31,6 +31,8 @@ public:
     GLuint globalBboxVao = 0, globalBboxVbo = 0;
     bool showNormals = false;
     float normalColor[3] = { 1.0f, 1.0f, 0.0f };
+    bool moveFullObjectMode = false;
+    BaseSubmesh* globalBoundingBox = nullptr;
 
     State(){}
 
@@ -40,8 +42,58 @@ public:
             delete obj;
         }
         shapes.clear();
+        delete globalBoundingBox;
     }
 
+    void updateGlobalBoundingBox()
+    {
+        delete globalBoundingBox;
+        globalBoundingBox = nullptr;
+
+        if (shapes.empty()) return;
+
+        glm::vec3 minBound(numeric_limits<float>::max());
+        glm::vec3 maxBound(numeric_limits<float>::lowest());
+
+        for (const auto& shape : shapes) {
+            for (const auto& vertex : shape->vertices) {
+                glm::vec3 worldPos = shape->transform * glm::vec4(vertex.position, 1.0f);
+                minBound.x = min(minBound.x, worldPos.x);
+                minBound.y = min(minBound.y, worldPos.y);
+                minBound.z = min(minBound.z, worldPos.z);
+                maxBound.x = max(maxBound.x, worldPos.x);
+                maxBound.y = max(maxBound.y, worldPos.y);
+                maxBound.z = max(maxBound.z, worldPos.z);
+            }
+        }
+
+        float v[] = {
+            minBound.x, minBound.y, minBound.z,
+            maxBound.x, minBound.y, minBound.z,
+            maxBound.x, maxBound.y, minBound.z,
+            minBound.x, maxBound.y, minBound.z,
+            minBound.x, minBound.y, maxBound.z,
+            maxBound.x, minBound.y, maxBound.z,
+            maxBound.x, maxBound.y, maxBound.z,
+            minBound.x, maxBound.y, maxBound.z
+        };
+
+        unsigned int indices[] = {
+            0, 1, 1, 2, 2, 3, 3, 0,
+            4, 5, 5, 6, 6, 7, 7, 4,
+            0, 4, 1, 5, 2, 6, 3, 7
+        };
+        
+        std::vector<Vertex> bbox_vertices;
+        for(int i = 0; i < 24; ++i) {
+            Vertex vertex;
+            vertex.position = {v[indices[i]*3+0], v[indices[i]*3+1], v[indices[i]*3+2]};
+            vertex.color = {1.0,1.0,1.0};
+            bbox_vertices.push_back(vertex);
+        }
+
+        globalBoundingBox = new BaseSubmesh(bbox_vertices);
+    }
 
     void deleteSubmesh(int index)
     {
@@ -67,6 +119,10 @@ public:
         for (size_t i = 0; i < shapes.size(); ++i) {
             config.isSelected = ((int)i == selectedSubmeshIndex);
             shapes[i]->draw(config);
+        }
+
+        if (moveFullObjectMode && globalBoundingBox) {
+            globalBoundingBox->drawAsLines(shaderProgram, globalBoundingBoxColor);
         }
     }
 
@@ -108,15 +164,14 @@ public:
         oldScale = factor;
     }
 
-    void translateObject(float deltaX, float deltaY, float deltaZ)
+    void translateFullObject(const glm::vec3& offset)
     {
         if (shapes.empty()) return;
 
-        glm::vec3 moveTo = glm::vec3(deltaX, deltaY, deltaZ); 
-
         for (Submesh* obj : shapes) {
-            obj->translate(moveTo); 
+            obj->translate(offset); 
         }
+        globalBoundingBox->translate(offset);
     }
 
     void translateSubmesh(int index, const glm::vec3& offset)
