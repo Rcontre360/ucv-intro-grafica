@@ -298,6 +298,13 @@ private:
                 {
                     // Not implemented yet
                 }
+                if (ImGui::MenuItem("Reset Object"))
+                {
+                    if (appState) {
+                        appState->resetObject();
+                        selectedSubmeshIndex = -1;
+                    }
+                }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();

@@ -147,6 +147,13 @@ public:
         loadedAttrib = loaded.attrib;
 
         centerShape();
+
+        for (Submesh* obj : shapes) {
+            obj->initialTransform = obj->getTransform();
+            obj->initialColor[0] = obj->color[0];
+            obj->initialColor[1] = obj->color[1];
+            obj->initialColor[2] = obj->color[2];
+        }
     }
 
     void rescaleShape(size_t shape_index, float factor)
@@ -191,6 +198,20 @@ public:
             obj->rotateAroundPoint(angleX, glm::vec3(1.0f, 0.0f, 0.0f), pivot); 
             obj->rotateAroundPoint(angleY, glm::vec3(0.0f, 1.0f, 0.0f), pivot);
         }
+    }
+
+    void resetObject() {
+        for (Submesh* obj : shapes) {
+            obj->setTransform(obj->initialTransform);
+            obj->color[0] = obj->initialColor[0];
+            obj->color[1] = obj->initialColor[1];
+            obj->color[2] = obj->initialColor[2];
+            obj->updateColor(); // Update VBO with initial color
+            obj->showBoundingBox = false; // Hide individual bounding boxes
+        }
+        moveFullObjectMode = false;
+        delete globalBoundingBox;
+        globalBoundingBox = nullptr;
     }
 
 private:

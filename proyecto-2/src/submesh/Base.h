@@ -30,8 +30,10 @@ class BaseSubmesh
 {
 public:
     glm::mat4 transform;
+    glm::mat4 initialTransform;
     std::vector<Vertex> vertices;
     float color[3];
+    float initialColor[3];
 
     GLuint vao = 0;
     GLuint vbo = 0;
