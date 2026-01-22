@@ -172,20 +172,14 @@ private:
 
                     int pickedID = static_cast<int>(pickedColor.x) + static_cast<int>(pickedColor.y) * 256 + static_cast<int>(pickedColor.z) * 256 * 256;
 
-                    if (selectedSubmeshIndex != -1 && selectedSubmeshIndex < appState->shapes.size()) {
-                        appState->shapes[selectedSubmeshIndex]->showBoundingBox = false;
-                    }
-
-                    if (pickedID > 0 && appState && pickedID <= appState->shapes.size())
-                    {
-                        selectedSubmeshIndex = pickedID - 1; // Adjust for +1 offset in shader
-                        appState->shapes[selectedSubmeshIndex]->showBoundingBox = true;
-                        std::cout << "Selected submesh index: " << selectedSubmeshIndex << std::endl;
+                    if (pickedID > 0 && appState){
+                        appState->setSelected(selectedSubmeshIndex, false);
+                        appState->setSelected(pickedID - 1, true);
+                        selectedSubmeshIndex = pickedID;
                     }
                     else
                     {
-                        selectedSubmeshIndex = -1; // No submesh selected
-                        std::cout << "No submesh selected." << std::endl;
+                        selectedSubmeshIndex = -1; 
                     }
                 }
             }
@@ -226,6 +220,7 @@ private:
             if (appState && appState->moveFullObjectMode) {
                 handleFullObjectTranslation(deltaX, -deltaY);
             } else {
+                printf("handleTranslation %i",selectedSubmeshIndex);
                 handleTranslation(deltaX, -deltaY, selectedSubmeshIndex);
             }
         }
@@ -343,11 +338,11 @@ private:
                     }
                 }
                 ImGui::Checkbox("Line Antialiasing##Advanced", &appState->lineAntialiasing);
-                static int scaleValue = 50;
-                if (ImGui::SliderInt("Scale##Advanced", &scaleValue, 10, 200))
+                static int scaleValue = 100;
+                if (ImGui::SliderInt("Scale##Advanced", &scaleValue, 10, 500))
                 {
                     if (appState) {
-                        float scaleFactor = static_cast<float>(scaleValue) / 50.0f;
+                        float scaleFactor = static_cast<float>(scaleValue) / 100.0f;
                         appState->rescaleAllShapes(scaleFactor);
                     }
                 }

@@ -103,6 +103,11 @@ public:
         }
     }
 
+    void setSelected(int index, bool selected){
+        if (index >= 0 && index < shapes.size())
+            shapes[index]->showBoundingBox = selected;
+    }
+
     void draw(GLuint shaderProgram, int selectedSubmeshIndex)
     {
         DrawConfig config;
