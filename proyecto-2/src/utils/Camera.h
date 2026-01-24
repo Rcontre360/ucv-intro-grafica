@@ -12,27 +12,30 @@ enum CameraMovement {
 
 class Camera {
 public:
-    glm::vec3 position;
-    glm::vec3 front;
+    static Camera& getInstance() {
+        if (instance == nullptr) {
+            instance = new Camera();
+        }
+        return *instance;
+    }
+
+    // Delete copy constructor and assignment operator
+    Camera(const Camera&) = delete;
+    Camera& operator=(const Camera&) = delete;
+
+    glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 front = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 up;
     glm::vec3 right;
-    glm::vec3 worldUp;
+    glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-    float yaw;
-    float pitch;
+    float yaw = -90.0f;
+    float pitch = 0.0f;
 
-    float movementSpeed;
-    float mouseSensitivity;
-    float zoom;
-
-    Camera(glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 upDir = glm::vec3(0.0f, 1.0f, 0.0f), float y = -90.0f, float p = 0.0f)
-        : front(glm::vec3(0.0f, 0.0f, -1.0f)), movementSpeed(2.5f), mouseSensitivity(0.1f), zoom(45.0f) {
-        position = pos;
-        worldUp = upDir;
-        yaw = y;
-        pitch = p;
-        updateCameraVectors();
-    }
+    float movementSpeed = 2.5f;
+    float mouseSensitivity = 0.1f;
+    float zoom = 45.0f;
+    glm::vec3 initialObjectPosition = glm::vec3(0.0f, 0.0f, -3.0f);
 
     glm::mat4 getViewMatrix() {
         return glm::lookAt(position, position + front, up);
@@ -51,6 +54,12 @@ public:
     }
 
 private:
+    inline static Camera* instance = nullptr; // Initialize static member here
+
+    Camera(){
+        updateCameraVectors();
+    }
+
     void updateCameraVectors() {
         glm::vec3 newFront;
         newFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));

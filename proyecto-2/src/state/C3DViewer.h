@@ -142,13 +142,13 @@ private:
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             if (key == GLFW_KEY_UP)
-                camera.processKeyboard(FORWARD, 0.1f);
+                Camera::getInstance().processKeyboard(FORWARD, 0.1f);
             if (key == GLFW_KEY_DOWN)
-                camera.processKeyboard(BACKWARD, 0.1f);
+                Camera::getInstance().processKeyboard(BACKWARD, 0.1f);
             if (key == GLFW_KEY_LEFT)
-                camera.processKeyboard(LEFT, 0.1f);
+                Camera::getInstance().processKeyboard(LEFT, 0.1f);
             if (key == GLFW_KEY_RIGHT)
-                camera.processKeyboard(RIGHT, 0.1f);
+                Camera::getInstance().processKeyboard(RIGHT, 0.1f);
         }
     }
 
@@ -256,7 +256,7 @@ private:
 
         glUseProgram(program);
 
-        glm::mat4 view = camera.getViewMatrix();
+        glm::mat4 view = Camera::getInstance().getViewMatrix();
         setGpuVariable(program, DefaultShader::view, view);
 
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
@@ -406,7 +406,7 @@ private:
         if (!appState || appState->shapes.empty() || submeshIndex < 0) return;
 
         glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
-        float distance = glm::distance(camera.position, glm::vec3(0.0f, 0.0f, -3.0f)); 
+        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initialObjectPosition); 
 
         float theta = glm::radians(45.0f / 2.0f);
         float halfTan = tanf(theta);
@@ -414,7 +414,7 @@ private:
         float heightAtDepth = distance * halfTan;
         float moveFactor = (heightAtDepth * 2.0f) / height;
 
-        glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
+        glm::vec3 translationVector = (Camera::getInstance().right * (float)deltaX * moveFactor) + (Camera::getInstance().up * (float)deltaY * moveFactor);
 
         appState->translateSubmesh(submeshIndex, translationVector);
     }
@@ -422,7 +422,7 @@ private:
     void handleFullObjectTranslation(double deltaX, double deltaY) {
         if (!appState || appState->shapes.empty()) return;
 
-        float distance = glm::distance(camera.position, glm::vec3(0.0f, 0.0f, -3.0f)); // Approximate distance to object
+        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initialObjectPosition); // Approximate distance to object
                                                                                        //
         float theta = glm::radians(45.0f / 2.0f);
         float halfTan = tanf(theta);
@@ -430,7 +430,7 @@ private:
         float heightAtDepth = distance * halfTan;
         float moveFactor = (heightAtDepth * 2.0f) / height;
 
-        glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
+        glm::vec3 translationVector = (Camera::getInstance().right * (float)deltaX * moveFactor) + (Camera::getInstance().up * (float)deltaY * moveFactor);
 
         appState->translateFullObject(translationVector);
     }
@@ -575,7 +575,6 @@ protected:
     GLFWwindow* window = nullptr;
     State* appState = nullptr;
     GLuint shaderProgram = 0;
-    Camera camera;
 
     int width = 720;
     int height = 480;
