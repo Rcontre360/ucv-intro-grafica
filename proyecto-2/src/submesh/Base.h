@@ -143,29 +143,17 @@ public:
     }
 
     void rotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
-    // 1. Create ONLY the rotation for THIS specific call (the delta)
-    glm::quat deltaQuat = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
+        glm::quat rotationQuad = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
+        orientation = rotationQuad * orientation;
 
-    // 2. Update your stored orientation
-    orientation = deltaQuat * orientation;
+        glm::vec3 pos = glm::vec3(transform[3]);
+        glm::vec3 dirToPivot = pos - center;
 
-    // 3. Calculate the Position Shift
-    // Get the current world position from the matrix
-    glm::vec3 currentPos = glm::vec3(transform[3]);
+        glm::vec3 newDir = rotationQuad * dirToPivot;
+        glm::vec3 delta = (center + newDir) - pos;
 
-    // Vector from pivot to the object
-    glm::vec3 dirToPivot = currentPos - center;
-
-    // Rotate that vector by the DELTA rotation only
-    glm::vec3 rotatedDir = deltaQuat * dirToPivot;
-
-    // 4. Calculate the Delta Translation
-    // We want to move the object from (center + dirToPivot) to (center + rotatedDir)
-    glm::vec3 translationDelta = (center + rotatedDir) - currentPos;
-
-    // Apply only the difference to the transform matrix
-    translate(translationDelta);
-}
+        translate(delta);
+    }
 
     void scale(const glm::vec3& factor) { 
         transform = glm::scale(transform, factor); 
