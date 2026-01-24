@@ -29,9 +29,15 @@ struct DrawConfig {
 class BaseSubmesh 
 {
 public:
-    glm::mat4 transform;
+    glm::mat4 transform = glm::mat4(1.0f);
+    glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::mat4 initialTransform;
-    std::vector<Vertex> vertices;
+
+    glm::vec3 minBound = glm::vec3(numeric_limits<float>::max());
+    glm::vec3 maxBound = glm::vec3(numeric_limits<float>::lowest());
+    glm::vec3 center = glm::vec3(0.0f);
+
+    vector<Vertex> vertices;
     float color[3];
     float initialColor[3];
 
@@ -40,16 +46,29 @@ public:
 
     int vertexCount = 0;
 
-    BaseSubmesh(const std::vector<Vertex>& vertices) 
-        : transform(glm::mat4(1.0f)), vertices(vertices), vertexCount(vertices.size())
+    BaseSubmesh(const vector<Vertex>& vertices) 
+        : vertices(vertices), vertexCount(vertices.size())
     {
+        glm::vec3 minBound = glm::vec3(numeric_limits<float>::max());
+        glm::vec3 maxBound = glm::vec3(numeric_limits<float>::lowest());
+        for (const auto& vertex : vertices) {
+            minBound.x = min(minBound.x, vertex.position.x);
+            minBound.y = min(minBound.y, vertex.position.y);
+            minBound.z = min(minBound.z, vertex.position.z);
+            maxBound.x = max(maxBound.x, vertex.position.x);
+            maxBound.y = max(maxBound.y, vertex.position.y);
+            maxBound.z = max(maxBound.z, vertex.position.z);
+        }
+
+        center = (minBound + maxBound) / 2.0f;
+
         if (!vertices.empty()) {
             color[0] = vertices[0].color.r;
             color[1] = vertices[0].color.g;
             color[2] = vertices[0].color.b;
         }
 
-        std::vector<float> flatVertices = Vertex::flatten(vertices);
+        vector<float> flatVertices = Vertex::flatten(vertices);
 
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
@@ -78,7 +97,7 @@ public:
 
     void drawForPicking(GLuint shaderProgram)
     {
-        setGpuVariable(shaderProgram, Shaders::PickingShader::model, transform);
+        setGpuVariable(shaderProgram, Shaders::PickingShader::model, getTransform());
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
@@ -86,7 +105,7 @@ public:
     // Draws the submesh using the provided shader program.
     virtual void draw(const DrawConfig& config)
     {
-        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, transform);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
         
         if (config.showFill) {
             drawFill(config);
@@ -102,7 +121,7 @@ public:
     }
 
     void drawAsLines(GLuint shaderProgram, float* color) {
-        setGpuVariable(shaderProgram, Shaders::DefaultShader::model, transform);
+        setGpuVariable(shaderProgram, Shaders::DefaultShader::model, getTransform());
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 1);
         setGpuVariable(shaderProgram, Shaders::DefaultShader::u_color, glm::make_vec3(color));
         glEnable(GL_POLYGON_OFFSET_LINE);
@@ -119,7 +138,8 @@ public:
     }
 
     void rotate(float angle, const glm::vec3& axis) { 
-        transform = glm::rotate(transform, glm::radians(angle), axis); 
+        glm::quat q = glm::angleAxis(glm::radians(angle), axis);
+        orientation = q * orientation;
     }
 
     void scale(const glm::vec3& factor) { 
@@ -130,14 +150,14 @@ public:
         for (auto& vertex : vertices) {
             vertex.color = {color[0], color[1], color[2]};
         }
-        std::vector<float> flatVertices = Vertex::flatten(vertices);
+        vector<float> flatVertices = Vertex::flatten(vertices);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, flatVertices.size() * sizeof(float), flatVertices.data());
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    const glm::mat4& getTransform() const { 
-        return transform; 
+    const glm::mat4 getTransform() const { 
+        return transform * glm::mat4(orientation); 
     }
 
     void setTransform(const glm::mat4& newTransform) { 
@@ -146,12 +166,6 @@ public:
 
     void resetTransform() { 
         transform = glm::mat4(1.0f); 
-    }
-
-    void rotateAroundPoint(float angle, const glm::vec3& axis, const glm::vec3& pivot) {
-        translate(pivot);
-        rotate(angle,axis);
-        translate(-pivot);
     }
 
 private:

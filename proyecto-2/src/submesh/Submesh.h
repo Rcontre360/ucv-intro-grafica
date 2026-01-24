@@ -23,7 +23,9 @@ public:
     BaseSubmesh* boundingBox = nullptr;
     BaseSubmesh* normals = nullptr;
 
-    Submesh(const std::vector<Vertex>& vertices) : BaseSubmesh(vertices){
+    glm::vec3 center = glm::vec3(1.0f);
+
+    Submesh(const vector<Vertex>& vertices) : BaseSubmesh(vertices){
         setupBoundingBox(vertices);
         setupNormals(vertices);
     }
@@ -49,18 +51,7 @@ public:
     }
 
 private:
-    void setupBoundingBox(const std::vector<Vertex>& vertices) {
-        glm::vec3 minBound = glm::vec3(std::numeric_limits<float>::max());
-        glm::vec3 maxBound = glm::vec3(std::numeric_limits<float>::lowest());
-        for (const auto& vertex : vertices) {
-            minBound.x = std::min(minBound.x, vertex.position.x);
-            minBound.y = std::min(minBound.y, vertex.position.y);
-            minBound.z = std::min(minBound.z, vertex.position.z);
-            maxBound.x = std::max(maxBound.x, vertex.position.x);
-            maxBound.y = std::max(maxBound.y, vertex.position.y);
-            maxBound.z = std::max(maxBound.z, vertex.position.z);
-        }
-
+    void setupBoundingBox(const vector<Vertex>& vertices) {
         float v[] = {
             minBound.x, minBound.y, minBound.z,
             maxBound.x, minBound.y, minBound.z,
@@ -78,7 +69,7 @@ private:
             0, 4, 1, 5, 2, 6, 3, 7
         };
         
-        std::vector<Vertex> bbox_vertices;
+        vector<Vertex> bbox_vertices;
         for(int i = 0; i < 24; ++i) {
             Vertex vertex;
             vertex.position = {v[indices[i]*3+0], v[indices[i]*3+1], v[indices[i]*3+2]};
@@ -89,8 +80,8 @@ private:
         boundingBox = new BaseSubmesh(bbox_vertices);
     }
 
-    void setupNormals(const std::vector<Vertex>& vertices) {
-        std::vector<Vertex> normal_vertices;
+    void setupNormals(const vector<Vertex>& vertices) {
+        vector<Vertex> normal_vertices;
         for (const auto& vertex : vertices) {
             Vertex v1, v2;
             v1.position = vertex.position;

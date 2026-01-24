@@ -197,11 +197,9 @@ public:
     {
         if (shapes.empty()) return;
 
-        glm::vec3 pivot = glm::vec3(0.0f, 0.0f, -3.0f); 
-
         for (Submesh* obj : shapes) {
-            obj->rotateAroundPoint(angleX, glm::vec3(1.0f, 0.0f, 0.0f), pivot); 
-            obj->rotateAroundPoint(angleY, glm::vec3(0.0f, 1.0f, 0.0f), pivot);
+            obj->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f)); 
+            obj->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f));
         }
     }
 

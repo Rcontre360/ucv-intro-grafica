@@ -306,7 +306,7 @@ private:
 
         // Left-side panel
         ImGui::SetNextWindowPos(ImVec2(0, 20));
-        ImGui::SetNextWindowSize(ImVec2(width / 4, height - 20));
+        ImGui::SetNextWindowSize(ImVec2(150, height - 20));
         ImGui::Begin("Controls", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 
         if (appState) {
