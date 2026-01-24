@@ -57,20 +57,14 @@ public:
 
         if (shapes.empty()) return;
 
-        glm::vec3 minBound(numeric_limits<float>::max());
-        glm::vec3 maxBound(numeric_limits<float>::lowest());
-
-        for (const auto& shape : shapes) {
-            for (const auto& vertex : shape->vertices) {
-                glm::vec3 worldPos = shape->transform * glm::vec4(vertex.position, 1.0f);
-                minBound.x = min(minBound.x, worldPos.x);
-                minBound.y = min(minBound.y, worldPos.y);
-                minBound.z = min(minBound.z, worldPos.z);
-                maxBound.x = max(maxBound.x, worldPos.x);
-                maxBound.y = max(maxBound.y, worldPos.y);
-                maxBound.z = max(maxBound.z, worldPos.z);
-            }
+        vector<Vertex> allVertices;
+        for (Submesh* shape : shapes) {
+            vector<Vertex> worldVertex = shape->getWorldVertices();
+            allVertices.insert(allVertices.end(), worldVertex.begin(), worldVertex.end());
         }
+        
+        auto [minBound,maxBound,_center] = makeBoundingBox(allVertices);
+        center = _center;
 
         float v[] = {
             minBound.x, minBound.y, minBound.z,
@@ -203,7 +197,7 @@ public:
         if (shapes.empty()) return;
 
         if (shouldUpdateCenter){
-            updateCenter();
+            updateGlobalBoundingBox();
             shouldUpdateCenter = false;
         }
 
@@ -229,18 +223,6 @@ public:
 
 private:
     float oldScale = 1.0;
-
-    void updateCenter(){
-        vector<Vertex> allVertices;
-
-        for (Submesh* shape : shapes) {
-            vector<Vertex> worldVertex = shape->getWorldVertices();
-            allVertices.insert(allVertices.end(), worldVertex.begin(), worldVertex.end());
-        }
-        
-        auto [_a,_b,_center] = makeBoundingBox(allVertices);
-        center = _center;
-    }
 
     void centerShape(LoadedObject obj)
     {

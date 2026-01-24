@@ -38,12 +38,12 @@ public:
         BaseSubmesh::draw(config);
         
         if (showBoundingBox && boundingBox) {
-            boundingBox->transform = transform;
+            boundingBox->transform = getTransform();
             boundingBox->drawAsLines(config.shaderProgram, boundingBoxColor);
         }
 
         if (config.showNormals && normals) {
-            normals->transform = transform;
+            normals->transform = getTransform();
             normals->drawAsLines(config.shaderProgram, config.normalColor);
         }
     }
