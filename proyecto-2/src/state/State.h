@@ -39,7 +39,9 @@ public:
     GLuint globalBboxVao = 0, globalBboxVbo = 0;
     BaseSubmesh* globalBoundingBox = nullptr;
 
-    State(){}
+    State(){
+        updateGlobalBoundingBox();
+    }
 
     ~State()
     {
@@ -186,7 +188,8 @@ public:
         for (Submesh* obj : shapes) {
             obj->translate(offset); 
         }
-        globalBoundingBox->translate(offset);
+        if (globalBoundingBox)
+            globalBoundingBox->translate(offset);
     }
 
     void translateSubmesh(int index, const glm::vec3& offset)
@@ -211,8 +214,10 @@ public:
             obj->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
         }
 
-        globalBoundingBox->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
-        globalBoundingBox->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+        if (globalBoundingBox){
+            globalBoundingBox->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
+            globalBoundingBox->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+        }
     }
 
     void resetObject() {
