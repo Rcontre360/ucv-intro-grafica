@@ -7,14 +7,16 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 class Vertex {
 public:
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec3 color;
 
-    static std::vector<float> flatten(const std::vector<Vertex>& vertices) {
-        std::vector<float> flatVertices;
+    static vector<float> flatten(const vector<Vertex>& vertices) {
+        vector<float> flatVertices;
         flatVertices.reserve(vertices.size() * 6);
         for (const auto& vertex : vertices) {
             flatVertices.push_back(vertex.position.x);
@@ -28,42 +30,64 @@ public:
     }
 };
 
-void setGpuVariable(GLuint program, const std::string& name, const glm::mat4& value) {
+struct BoundingBox {
+    glm::vec3 min;
+    glm::vec3 max;
+    glm::vec3 center;
+};
+
+BoundingBox makeBoundingBox(const vector<Vertex>& vertices){
+    glm::vec3 minBound = glm::vec3(numeric_limits<float>::max());
+    glm::vec3 maxBound = glm::vec3(numeric_limits<float>::lowest());
+    for (const auto& vertex : vertices) {
+        minBound.x = min(minBound.x, vertex.position.x);
+        minBound.y = min(minBound.y, vertex.position.y);
+        minBound.z = min(minBound.z, vertex.position.z);
+        maxBound.x = max(maxBound.x, vertex.position.x);
+        maxBound.y = max(maxBound.y, vertex.position.y);
+        maxBound.z = max(maxBound.z, vertex.position.z);
+    }
+    glm::vec3 center = (maxBound + minBound) / 2.0f;
+
+    return { minBound, maxBound, center };
+}
+
+void setGpuVariable(GLuint program, const string& name, const glm::mat4& value) {
     GLint location = glGetUniformLocation(program, name.c_str());
     if (location != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
     }
 }
 
-void setGpuVariable(GLuint program, const std::string& name, const glm::vec3& value) {
+void setGpuVariable(GLuint program, const string& name, const glm::vec3& value) {
     GLint location = glGetUniformLocation(program, name.c_str());
     if (location != -1) {
         glUniform3fv(location, 1, glm::value_ptr(value));
     }
 }
 
-void setGpuVariable(GLuint program, const std::string& name, const glm::vec4& value) {
+void setGpuVariable(GLuint program, const string& name, const glm::vec4& value) {
     GLint location = glGetUniformLocation(program, name.c_str());
     if (location != -1) {
         glUniform4fv(location, 1, glm::value_ptr(value));
     }
 }
 
-void setGpuVariable(GLuint program, const std::string& name, float value) {
+void setGpuVariable(GLuint program, const string& name, float value) {
     GLint location = glGetUniformLocation(program, name.c_str());
     if (location != -1) {
         glUniform1f(location, value);
     }
 }
 
-void setGpuVariable(GLuint program, const std::string& name, int value) {
+void setGpuVariable(GLuint program, const string& name, int value) {
     GLint location = glGetUniformLocation(program, name.c_str());
     if (location != -1) {
         glUniform1i(location, value);
     }
 }
 
-void setGpuVariable(GLuint program, const std::string& name, bool value) {
+void setGpuVariable(GLuint program, const string& name, bool value) {
     GLint location = glGetUniformLocation(program, name.c_str());
     if (location != -1) {
         glUniform1i(location, static_cast<int>(value));

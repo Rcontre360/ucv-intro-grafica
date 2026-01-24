@@ -329,14 +329,16 @@ private:
                 ImGui::ColorEdit3("Color##Normals", appState->normalColor, ImGuiColorEditFlags_NoInputs);
             }
 
-            if (ImGui::CollapsingHeader("Advanced"))
+            if (ImGui::CollapsingHeader("More"))
             {
+                ImGui::Checkbox("Show fill##More", &appState->showFill);
+
                 if (ImGui::Checkbox("Move full object", &appState->moveFullObjectMode)) {
                     if (appState->moveFullObjectMode) {
                         appState->updateGlobalBoundingBox();
                     }
                 }
-                ImGui::Checkbox("Line Antialiasing##Advanced", &appState->lineAntialiasing);
+                ImGui::Checkbox("Line Antialiasing##More", &appState->lineAntialiasing);
                 static int scaleValue = 100;
                 if (ImGui::SliderInt("Scale##Advanced", &scaleValue, 10, 500))
                 {

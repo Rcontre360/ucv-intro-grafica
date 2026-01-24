@@ -11,8 +11,8 @@
 using namespace std;
 
 struct LoadedObject {
-    std::vector<Submesh*> shapes;
-    tinyobj::attrib_t attrib;
+    vector<Submesh*> shapes;
+    vector<Vertex> vertices;
 };
 
 class FileLoader {
@@ -108,8 +108,6 @@ public:
             throw std::runtime_error(warn + err);
         }
 
-        loadedObject.attrib = info;
-
         bool hasNormals = !info.normals.empty();
         vector<glm::vec3> calculatedNormals;
         if (!hasNormals) {
@@ -120,6 +118,7 @@ public:
             Submesh* newShape = processObject(shape, info, materials, basedir, hasNormals, calculatedNormals);
             if (newShape) {
                 loadedObject.shapes.push_back(newShape);
+                loadedObject.vertices.insert(loadedObject.vertices.end(), newShape->vertices.begin(), newShape->vertices.end());
             }
         }
         return loadedObject;

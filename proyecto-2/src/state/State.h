@@ -19,19 +19,24 @@ using namespace std;
 class State
 {
 public:
-    vector<Submesh*> shapes;
     bool showVertices = false;
-    float vertexColor[3] = { 1.0f, 1.0f, 1.0f };
-    float pointSize = 5.0f;
     bool showWireframe = false;
-    float wireframeColor[3] = { 1.0f, 1.0f, 1.0f };
     bool showFill = true;
     bool lineAntialiasing = false;
-    float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
-    GLuint globalBboxVao = 0, globalBboxVbo = 0;
     bool showNormals = false;
-    float normalColor[3] = { 1.0f, 1.0f, 0.0f };
     bool moveFullObjectMode = false;
+    bool shouldUpdateCenter = false;
+
+    float vertexColor[3] = { 1.0f, 1.0f, 1.0f };
+    float pointSize = 5.0f;
+    float wireframeColor[3] = { 1.0f, 1.0f, 1.0f };
+    float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
+    float normalColor[3] = { 1.0f, 1.0f, 0.0f };
+
+    vector<Submesh*> shapes;
+
+    glm::vec3 center = glm::vec3(1.0f);
+    GLuint globalBboxVao = 0, globalBboxVbo = 0;
     BaseSubmesh* globalBoundingBox = nullptr;
 
     State(){}
@@ -149,9 +154,8 @@ public:
 
         LoadedObject loaded = FileLoader::loadObject(path);
         shapes = loaded.shapes;
-        loadedAttrib = loaded.attrib;
 
-        centerShape();
+        centerShape(loaded);
 
         for (Submesh* obj : shapes) {
             obj->initialTransform = obj->getTransform();
@@ -188,6 +192,7 @@ public:
 
     void translateSubmesh(int index, const glm::vec3& offset)
     {
+        shouldUpdateCenter = true;
         if (index >= 0 && index < shapes.size()) {
             shapes[index]->translate(offset);
         }
@@ -197,9 +202,14 @@ public:
     {
         if (shapes.empty()) return;
 
+        if (shouldUpdateCenter){
+            updateCenter();
+            shouldUpdateCenter = false;
+        }
+
         for (Submesh* obj : shapes) {
-            obj->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f)); 
-            obj->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f));
+            obj->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
+            obj->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
         }
     }
 
@@ -218,28 +228,28 @@ public:
     }
 
 private:
-    tinyobj::attrib_t loadedAttrib;
     float oldScale = 1.0;
 
-    void centerShape()
+    void updateCenter(){
+        vector<Vertex> allVertices;
+
+        for (Submesh* shape : shapes) {
+            vector<Vertex> worldVertex = shape->getWorldVertices();
+            allVertices.insert(allVertices.end(), worldVertex.begin(), worldVertex.end());
+        }
+        
+        auto [_a,_b,_center] = makeBoundingBox(allVertices);
+        center = _center;
+    }
+
+    void centerShape(LoadedObject obj)
     {
-        if (shapes.empty() || loadedAttrib.vertices.empty()) {
+        if (shapes.empty() || obj.vertices.empty()) {
             return;
         }
 
-        glm::vec3 minBound(numeric_limits<float>::max());
-        glm::vec3 maxBound(numeric_limits<float>::lowest());
+        auto [minBound,maxBound,_center] = makeBoundingBox(obj.vertices);
 
-        for (size_t i = 0; i < loadedAttrib.vertices.size(); i += 3) {
-            minBound.x = min(minBound.x, loadedAttrib.vertices[i + 0]);
-            minBound.y = min(minBound.y, loadedAttrib.vertices[i + 1]);
-            minBound.z = min(minBound.z, loadedAttrib.vertices[i + 2]);
-            maxBound.x = max(maxBound.x, loadedAttrib.vertices[i + 0]);
-            maxBound.y = max(maxBound.y, loadedAttrib.vertices[i + 1]);
-            maxBound.z = max(maxBound.z, loadedAttrib.vertices[i + 2]);
-        }
-
-        glm::vec3 center = (maxBound + minBound) / 2.0f;
         glm::vec3 size = maxBound - minBound;
         float maxDim = max({size.x, size.y, size.z});
         float scaleFactor = 1.0f / maxDim;
@@ -249,6 +259,8 @@ private:
         glm::mat4 toScene = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
         
         glm::mat4 normalizationMatrix = toScene * scale * toOrigin;
+
+        center = glm::vec3(normalizationMatrix * glm::vec4(_center,1.0f));
 
         for (Submesh* shape : shapes) {
             shape->setTransform(normalizationMatrix);

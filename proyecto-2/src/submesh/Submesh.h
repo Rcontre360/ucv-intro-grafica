@@ -23,8 +23,6 @@ public:
     BaseSubmesh* boundingBox = nullptr;
     BaseSubmesh* normals = nullptr;
 
-    glm::vec3 center = glm::vec3(1.0f);
-
     Submesh(const vector<Vertex>& vertices) : BaseSubmesh(vertices){
         setupBoundingBox(vertices);
         setupNormals(vertices);
@@ -52,6 +50,8 @@ public:
 
 private:
     void setupBoundingBox(const vector<Vertex>& vertices) {
+        auto [minBound,maxBound,_] = makeBoundingBox(vertices);
+
         float v[] = {
             minBound.x, minBound.y, minBound.z,
             maxBound.x, minBound.y, minBound.z,

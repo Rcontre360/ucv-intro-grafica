@@ -33,10 +33,6 @@ public:
     glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::mat4 initialTransform;
 
-    glm::vec3 minBound = glm::vec3(numeric_limits<float>::max());
-    glm::vec3 maxBound = glm::vec3(numeric_limits<float>::lowest());
-    glm::vec3 center = glm::vec3(0.0f);
-
     vector<Vertex> vertices;
     float color[3];
     float initialColor[3];
@@ -49,19 +45,6 @@ public:
     BaseSubmesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
     {
-        glm::vec3 minBound = glm::vec3(numeric_limits<float>::max());
-        glm::vec3 maxBound = glm::vec3(numeric_limits<float>::lowest());
-        for (const auto& vertex : vertices) {
-            minBound.x = min(minBound.x, vertex.position.x);
-            minBound.y = min(minBound.y, vertex.position.y);
-            minBound.z = min(minBound.z, vertex.position.z);
-            maxBound.x = max(maxBound.x, vertex.position.x);
-            maxBound.y = max(maxBound.y, vertex.position.y);
-            maxBound.z = max(maxBound.z, vertex.position.z);
-        }
-
-        center = (minBound + maxBound) / 2.0f;
-
         if (!vertices.empty()) {
             color[0] = vertices[0].color.r;
             color[1] = vertices[0].color.g;
@@ -133,6 +116,23 @@ public:
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 0);
     }
 
+    vector<Vertex> getWorldVertices() const {
+        glm::mat4 transformMat = getTransform();
+
+        vector<Vertex> worldV;
+        worldV.reserve(vertices.size());
+
+        for (const auto& v : vertices) {
+            Vertex res = v;
+            glm::vec4 worldPos = transformMat * glm::vec4(v.position, 1.0f);
+            res.position = glm::vec3(worldPos);
+
+            worldV.push_back(res);
+        }
+
+        return worldV;
+    }
+
     void translate(const glm::vec3& offset) { 
         transform = glm::translate(glm::mat4(1.0f), offset) * transform;
     }
@@ -141,6 +141,31 @@ public:
         glm::quat q = glm::angleAxis(glm::radians(angle), axis);
         orientation = q * orientation;
     }
+
+    void rotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
+    // 1. Create ONLY the rotation for THIS specific call (the delta)
+    glm::quat deltaQuat = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
+
+    // 2. Update your stored orientation
+    orientation = deltaQuat * orientation;
+
+    // 3. Calculate the Position Shift
+    // Get the current world position from the matrix
+    glm::vec3 currentPos = glm::vec3(transform[3]);
+
+    // Vector from pivot to the object
+    glm::vec3 dirToPivot = currentPos - center;
+
+    // Rotate that vector by the DELTA rotation only
+    glm::vec3 rotatedDir = deltaQuat * dirToPivot;
+
+    // 4. Calculate the Delta Translation
+    // We want to move the object from (center + dirToPivot) to (center + rotatedDir)
+    glm::vec3 translationDelta = (center + rotatedDir) - currentPos;
+
+    // Apply only the difference to the transform matrix
+    translate(translationDelta);
+}
 
     void scale(const glm::vec3& factor) { 
         transform = glm::scale(transform, factor); 
