@@ -175,7 +175,7 @@ private:
                     if (pickedID > 0 && appState){
                         appState->setSelected(selectedSubmeshIndex, false);
                         appState->setSelected(pickedID - 1, true);
-                        selectedSubmeshIndex = pickedID;
+                        selectedSubmeshIndex = pickedID - 1;
                     }
                     else
                     {
@@ -220,7 +220,6 @@ private:
             if (appState && appState->moveFullObjectMode) {
                 handleFullObjectTranslation(deltaX, -deltaY);
             } else {
-                printf("handleTranslation %i",selectedSubmeshIndex);
                 handleTranslation(deltaX, -deltaY, selectedSubmeshIndex);
             }
         }
@@ -404,10 +403,13 @@ private:
         if (!appState || appState->shapes.empty() || submeshIndex < 0) return;
 
         glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
-        float distance = glm::distance(camera.position, objectWorldPos);
+        float distance = glm::distance(camera.position, glm::vec3(0.0f, 0.0f, -3.0f)); 
 
-        float sensitivity = 0.001f; 
-        float moveFactor = distance * sensitivity;
+        float theta = glm::radians(45.0f / 2.0f);
+        float halfTan = tanf(theta);
+
+        float heightAtDepth = distance * halfTan;
+        float moveFactor = (heightAtDepth * 2.0f) / height;
 
         glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
 
@@ -418,9 +420,12 @@ private:
         if (!appState || appState->shapes.empty()) return;
 
         float distance = glm::distance(camera.position, glm::vec3(0.0f, 0.0f, -3.0f)); // Approximate distance to object
+                                                                                       //
+        float theta = glm::radians(45.0f / 2.0f);
+        float halfTan = tanf(theta);
 
-        float sensitivity = 0.001f; 
-        float moveFactor = distance * sensitivity;
+        float heightAtDepth = distance * halfTan;
+        float moveFactor = (heightAtDepth * 2.0f) / height;
 
         glm::vec3 translationVector = (camera.right * (float)deltaX * moveFactor) + (camera.up * (float)deltaY * moveFactor);
 
