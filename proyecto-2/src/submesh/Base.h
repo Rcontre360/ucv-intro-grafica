@@ -149,10 +149,9 @@ public:
     }
 
     void rotateAroundPoint(float angle, const glm::vec3& axis, const glm::vec3& pivot) {
-        transform = glm::translate(glm::mat4(1.0f), pivot) * 
-                    glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis) * 
-                    glm::translate(glm::mat4(1.0f), -pivot) * 
-                    transform;
+        translate(pivot);
+        rotate(angle,axis);
+        translate(-pivot);
     }
 
 private:
