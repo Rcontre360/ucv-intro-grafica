@@ -14,7 +14,6 @@ using namespace std;
 
 struct DrawConfig {
     GLuint shaderProgram;
-    bool isSelected;
     bool showVertices;
     float* vertexColor;
     float pointSize;

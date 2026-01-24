@@ -107,7 +107,13 @@ public:
             shapes[index]->showBoundingBox = selected;
     }
 
-    void draw(GLuint shaderProgram, int selectedSubmeshIndex)
+    void unselectAll(){
+        for (Submesh* shape : shapes) {
+            shape->showBoundingBox = false;     
+        }
+    }
+
+    void draw(GLuint shaderProgram)
     {
         DrawConfig config;
         config.shaderProgram = shaderProgram;
@@ -121,7 +127,6 @@ public:
         config.normalColor = normalColor;
 
         for (size_t i = 0; i < shapes.size(); ++i) {
-            config.isSelected = ((int)i == selectedSubmeshIndex);
             shapes[i]->draw(config);
         }
 
@@ -205,6 +210,9 @@ public:
             obj->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
             obj->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
         }
+
+        globalBoundingBox->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
+        globalBoundingBox->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
     }
 
     void resetObject() {

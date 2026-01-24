@@ -243,7 +243,7 @@ private:
 
         if (appState)
         {
-            appState->draw(shaderProgram, selectedSubmeshIndex);
+            appState->draw(shaderProgram);
         }
 
         drawInterface();
@@ -336,6 +336,7 @@ private:
                 if (ImGui::Checkbox("Move full object", &appState->moveFullObjectMode)) {
                     if (appState->moveFullObjectMode) {
                         appState->updateGlobalBoundingBox();
+                        appState->unselectAll();
                     }
                 }
                 ImGui::Checkbox("Line Antialiasing##More", &appState->lineAntialiasing);
