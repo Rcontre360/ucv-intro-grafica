@@ -13,7 +13,7 @@
 
 using namespace std;
 
-const float NORMAL_LENGTH = 1.1f;
+const float NORMAL_LENGTH_BOX = 0.1;
 
 class Submesh : public BaseSubmesh 
 {
@@ -24,8 +24,8 @@ public:
     BaseSubmesh* normals = nullptr;
 
     Submesh(const vector<Vertex>& vertices) : BaseSubmesh(vertices){
-        setupBoundingBox(vertices);
-        setupNormals(vertices);
+        BoundingBox box = setupBoundingBox(vertices);
+        setupNormals(vertices,box);
     }
 
     ~Submesh()
@@ -49,8 +49,9 @@ public:
     }
 
 private:
-    void setupBoundingBox(const vector<Vertex>& vertices) {
-        auto [minBound,maxBound,_] = makeBoundingBox(vertices);
+    BoundingBox setupBoundingBox(const vector<Vertex>& vertices) {
+        BoundingBox box = makeBoundingBox(vertices);
+        auto [minBound,maxBound,_] = box;
 
         float v[] = {
             minBound.x, minBound.y, minBound.z,
@@ -78,15 +79,18 @@ private:
         }
 
         boundingBox = new BaseSubmesh(bbox_vertices);
+        return box;
     }
 
-    void setupNormals(const vector<Vertex>& vertices) {
+    void setupNormals(const vector<Vertex>& vertices, BoundingBox box) {
         vector<Vertex> normal_vertices;
+        float length = glm::distance(box.max , box.min) * NORMAL_LENGTH_BOX;
+
         for (const auto& vertex : vertices) {
             Vertex v1, v2;
             v1.position = vertex.position;
             v1.color = {1.0,1.0,0.0};
-            v2.position = vertex.position + vertex.normal * NORMAL_LENGTH;
+            v2.position = vertex.position + vertex.normal * length;
             v2.color = {1.0,1.0,0.0};
             normal_vertices.push_back(v1);
             normal_vertices.push_back(v2);

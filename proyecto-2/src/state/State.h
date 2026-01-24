@@ -39,9 +39,7 @@ public:
     GLuint globalBboxVao = 0, globalBboxVbo = 0;
     BaseSubmesh* globalBoundingBox = nullptr;
 
-    State(){
-        updateGlobalBoundingBox();
-    }
+    State(){}
 
     ~State()
     {
@@ -157,6 +155,7 @@ public:
         shapes = loaded.shapes;
 
         centerShape(loaded);
+        updateGlobalBoundingBox();
 
         for (Submesh* obj : shapes) {
             obj->initialTransform = obj->getTransform();
