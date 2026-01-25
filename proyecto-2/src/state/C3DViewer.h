@@ -311,7 +311,17 @@ private:
                 }
                 if (ImGui::MenuItem("Save"))
                 {
-                    // Not implemented yet
+                    auto selection = pfd::save_file("Save OBJ file", ".", { "OBJ Files (.obj)", "*.obj" }).result();
+                    if (!selection.empty())
+                    {
+                        if (appState) {
+                            try {
+                                FileLoader::saveObject(selection, appState->shapes);
+                            } catch (const exception& e) {
+                                cerr << "Error saving object: " << e.what() << endl;
+                            }
+                        }
+                    }
                 }
                 if (ImGui::MenuItem("Reset Object"))
                 {
