@@ -170,18 +170,16 @@ public:
         }
     }
 
-    void rescaleShape(size_t shape_index, float factor)
-    {
-        if (shape_index < shapes.size()) {
-            shapes[shape_index]->scale(glm::vec3(factor));
-        }
-    }
-
     void rescaleAllShapes(float factor)
     {
         for (Submesh* obj : shapes) {
             obj->scale(glm::vec3((float)(factor / oldScale)));
         }
+
+        if (globalBoundingBox){
+            globalBoundingBox->scale(glm::vec3((float)(factor / oldScale)));
+        }
+
         oldScale = factor;
     }
 
@@ -222,6 +220,25 @@ public:
             globalBoundingBox->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
             globalBoundingBox->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
         }
+    }
+
+    void centerObjectToInitialPosition() {
+        if (shapes.empty()) return;
+
+        updateGlobalBoundingBox(); // Ensure current center is up-to-date
+
+        // Calculate the vector from the current center to the initial object position
+        glm::vec3 translationVector = Camera::getInstance().initialObjectPosition - center;
+
+        // Apply this translation to all submeshes
+        for (Submesh* obj : shapes) {
+            obj->translate(translationVector);
+        }
+        // Update global bounding box center as well
+        if (globalBoundingBox) {
+            globalBoundingBox->translate(translationVector);
+        }
+        center += translationVector; // Update the stored center
     }
 
     void resetObject() {

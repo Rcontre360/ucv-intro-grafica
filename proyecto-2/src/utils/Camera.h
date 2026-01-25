@@ -37,6 +37,13 @@ public:
     float zoom = 45.0f;
     glm::vec3 initialObjectPosition = glm::vec3(0.0f, 0.0f, -3.0f);
 
+    void resetCamera() {
+        position = glm::vec3(0.0f, 0.0f, 0.0f);
+        yaw = -90.0f;
+        pitch = 0.0f;
+        updateCameraVectors();
+    }
+
     glm::mat4 getViewMatrix() {
         return glm::lookAt(position, position + front, up);
     }

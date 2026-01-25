@@ -349,7 +349,14 @@ private:
                 {
                     if (appState) {
                         float scaleFactor = static_cast<float>(scaleValue) / 100.0f;
+                        appState->moveFullObjectMode = false;
                         appState->rescaleAllShapes(scaleFactor);
+                    }
+                }
+                if (ImGui::Button("Center")) { // New button
+                    if (appState) {
+                        appState->centerObjectToInitialPosition();
+                        Camera::getInstance().resetCamera();
                     }
                 }
             }
