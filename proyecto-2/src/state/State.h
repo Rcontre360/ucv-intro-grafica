@@ -27,12 +27,16 @@ public:
     bool showNormals = false;
     bool moveFullObjectMode = false;
     bool shouldUpdateCenter = false;
+    bool showFPS = true; // New
+    bool enableBackfaceCulling = false; // New
+    bool enableDepthTest = true; // New
 
     float vertexColor[3] = { 1.0f, 1.0f, 1.0f };
     float pointSize = 5.0f;
     float wireframeColor[3] = { 1.0f, 1.0f, 1.0f };
     float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
     float normalColor[3] = { 1.0f, 1.0f, 0.0f };
+    float backgroundColor[3] = { 0.3f, 0.3f, 0.3f }; // New
 
     vector<Submesh*> shapes;
 

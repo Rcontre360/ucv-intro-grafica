@@ -189,10 +189,13 @@ private:
     void drawWireframe(const DrawConfig& config) {
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, 1);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, glm::make_vec3(config.wireframeColor));
+        glEnable(GL_POLYGON_OFFSET_LINE); // Enable polygon offset for lines
+        glPolygonOffset(-1.0f, -1.0f); // Offset parameters
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE); // Disable polygon offset
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, 0);
     }
 
@@ -200,8 +203,11 @@ private:
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, 1);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, glm::make_vec3(config.vertexColor));
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_point_size, config.pointSize);
+        glEnable(GL_POLYGON_OFFSET_POINT); // Enable polygon offset for points
+        glPolygonOffset(-1.0f, -1.0f); // Offset parameters
         glBindVertexArray(vao);
         glDrawArrays(GL_POINTS, 0, vertexCount);
+        glDisable(GL_POLYGON_OFFSET_POINT); // Disable polygon offset
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, 0);
     }
 };

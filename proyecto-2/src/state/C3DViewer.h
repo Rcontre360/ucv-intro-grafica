@@ -59,7 +59,6 @@ public:
             return false;
         }
         
-        glEnable(GL_DEPTH_TEST);
         glEnable(GL_PROGRAM_POINT_SIZE);
 
         IMGUI_CHECKVERSION();
@@ -97,10 +96,20 @@ public:
         return true;
     }
 
-    void mainLoop() 
+    void mainLoop()
     {
-        while (!glfwWindowShouldClose(window)) 
+        while (!glfwWindowShouldClose(window))
         {
+            double currentFrameTime = glfwGetTime();
+            double deltaTime = currentFrameTime - lastFrameTime; 
+
+            frameCount++;
+            if (deltaTime >= 1.0) { 
+                sprintf(fpsText, "FPS: %.1f",(float)frameCount / (float)deltaTime); 
+                frameCount = 0;
+                lastFrameTime = currentFrameTime; 
+            }
+
             glfwPollEvents();
 
             if (appState && appState->lineAntialiasing) {
@@ -110,7 +119,20 @@ public:
                 glDisable(GL_LINE_SMOOTH);
             }
 
-            clear(0.3f);
+            if (appState && appState->enableBackfaceCulling) {
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+            } else {
+                glDisable(GL_CULL_FACE);
+            }
+
+            if (appState && appState->enableDepthTest) {
+                glEnable(GL_DEPTH_TEST);
+            } else {
+                glDisable(GL_DEPTH_TEST);
+            }
+
+            clear(appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]); // Modified clear call
             render();
 
             glfwSwapBuffers(window);
@@ -230,7 +252,7 @@ private:
     void render() 
     {
         glBindFramebuffer(GL_FRAMEBUFFER, pickingFBO);
-        prepareRendering(pickingShaderProgram, 0.0f);
+        prepareRendering(pickingShaderProgram, 0.0f, 0.0f, 0.0f); // Use black for picking FBO
 
         if (appState)
         {
@@ -239,7 +261,7 @@ private:
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
-        prepareRendering(shaderProgram, 0.1f);
+        prepareRendering(shaderProgram, appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]); // Use appState background color
 
         if (appState)
         {
@@ -249,11 +271,10 @@ private:
         drawInterface();
     }
 
-    void prepareRendering(GLuint program, float clearColor)
+    void prepareRendering(GLuint program, float r, float g, float b)
     {
-        clear(clearColor);
-        glEnable(GL_DEPTH_TEST);
-
+        clear(r, g, b);
+        
         glUseProgram(program);
 
         glm::mat4 view = Camera::getInstance().getViewMatrix();
@@ -306,10 +327,34 @@ private:
 
         // Left-side panel
         ImGui::SetNextWindowPos(ImVec2(0, 20));
-        ImGui::SetNextWindowSize(ImVec2(150, height - 20));
-        ImGui::Begin("Controls", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+        ImGui::SetNextWindowSize(ImVec2(200, height - 20)); // Increased width for better layout
+
+        ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); // Added NoTitleBar for cleaner look
 
         if (appState) {
+            // Basic Options Section
+            if (ImGui::CollapsingHeader("Basic"))
+            {
+                ImGui::Checkbox("Show fill", &appState->showFill);
+                if (ImGui::Checkbox("Move full object", &appState->moveFullObjectMode)) {
+                    if (appState->moveFullObjectMode) {
+                        appState->updateGlobalBoundingBox();
+                        appState->unselectAll();
+                    }
+                }
+                ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs); // New
+                
+                static int scaleValue = 100;
+                if (ImGui::SliderInt("Scale", &scaleValue, 10, 500))
+                {
+                    if (appState) {
+                        float scaleFactor = static_cast<float>(scaleValue) / 100.0f;
+                        appState->rescaleAllShapes(scaleFactor);
+                    }
+                }
+            }
+
+            // Other Sections (Vertex, Wireframe, Normals, More)
             if (ImGui::CollapsingHeader("Vertex"))
             {
                 ImGui::Checkbox("Show##Vertex", &appState->showVertices);
@@ -329,29 +374,19 @@ private:
                 ImGui::ColorEdit3("Color##Normals", appState->normalColor, ImGuiColorEditFlags_NoInputs);
             }
 
-            if (ImGui::CollapsingHeader("More"))
+            // Advanced Options Section
+            if (ImGui::CollapsingHeader("Advanced"))
             {
-                ImGui::Checkbox("Show fill##More", &appState->showFill);
-
-                if (ImGui::Checkbox("Move full object", &appState->moveFullObjectMode)) {
-                    if (appState->moveFullObjectMode) {
-                        appState->updateGlobalBoundingBox();
-                        appState->unselectAll();
-                    }
-                }
-                ImGui::Checkbox("Line Antialiasing##More", &appState->lineAntialiasing);
-                static int scaleValue = 100;
-                if (ImGui::SliderInt("Scale##Advanced", &scaleValue, 10, 500))
-                {
-                    if (appState) {
-                        float scaleFactor = static_cast<float>(scaleValue) / 100.0f;
-                        appState->rescaleAllShapes(scaleFactor);
-                    }
-                }
+                ImGui::Checkbox("Antialiasing", &appState->lineAntialiasing);
+                ImGui::Checkbox("Back-face Culling", &appState->enableBackfaceCulling); // New
+                ImGui::Checkbox("Depth Test", &appState->enableDepthTest); // New
             }
+
+            // FPS Display
+            ImGui::TextUnformatted(fpsText); // Display FPS
         }
 
-        ImGui::End();
+        ImGui::End(); // End Settings window
 
         // Selected Submesh Controls window
         if (selectedSubmeshIndex != -1 && appState && selectedSubmeshIndex < appState->shapes.size())
@@ -363,7 +398,7 @@ private:
             if (ImGui::Button("Delete Submesh"))
             {
                 appState->deleteSubmesh(selectedSubmeshIndex);
-                selectedSubmeshIndex = -1; 
+                selectedSubmeshIndex = -1;
             }
             else
             {
@@ -544,8 +579,8 @@ private:
         return glm::vec3(data[0], data[1], data[2]);
     }
 
-    void clear(float color){
-        glClearColor(color, color, color, 1.0f);
+    void clear(float r, float g, float b){
+        glClearColor(r, g, b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
@@ -581,6 +616,10 @@ protected:
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
     int selectedSubmeshIndex = -1;
+
+    double lastFrameTime = 0.0; // New
+    int frameCount = 0; // New
+    char fpsText[16] = "FPS: n/a"; // New
 
     GLuint pickingFBO = 0;
     GLuint pickingTexture = 0;
