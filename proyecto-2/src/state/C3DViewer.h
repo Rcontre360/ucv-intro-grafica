@@ -401,31 +401,28 @@ private:
 
             // FPS Display
             ImGui::TextUnformatted(fpsText); // Display FPS
+
+            // Selected Submesh Controls as a collapsible header
+            if (ImGui::CollapsingHeader("Selected Submesh") && selectedSubmeshIndex != -1 && appState && selectedSubmeshIndex < appState->shapes.size())
+            {
+                Submesh* selectedSubmesh = appState->shapes[selectedSubmeshIndex];
+
+                if (ImGui::Button("Delete Submesh"))
+                {
+                    appState->deleteSubmesh(selectedSubmeshIndex);
+                    selectedSubmeshIndex = -1;
+                }
+                else
+                {
+                    if (ImGui::ColorEdit3("Color", selectedSubmesh->color, ImGuiColorEditFlags_NoInputs)) {
+                        selectedSubmesh->updateColor();
+                    }
+                    ImGui::ColorEdit3("Bounding Box Color", selectedSubmesh->boundingBoxColor, ImGuiColorEditFlags_NoInputs);
+                }
+            }
         }
 
         ImGui::End(); // End Settings window
-
-        // Selected Submesh Controls window
-        if (selectedSubmeshIndex != -1 && appState && selectedSubmeshIndex < appState->shapes.size())
-        {
-            ImGui::Begin("Selected Submesh Controls");
-
-            Submesh* selectedSubmesh = appState->shapes[selectedSubmeshIndex];
-
-            if (ImGui::Button("Delete Submesh"))
-            {
-                appState->deleteSubmesh(selectedSubmeshIndex);
-                selectedSubmeshIndex = -1;
-            }
-            else
-            {
-                if (ImGui::ColorEdit3("Color", selectedSubmesh->color, ImGuiColorEditFlags_NoInputs)) {
-                    selectedSubmesh->updateColor();
-                }
-                ImGui::ColorEdit3("Bounding Box Color", selectedSubmesh->boundingBoxColor, ImGuiColorEditFlags_NoInputs);
-            }
-            ImGui::End();
-        }
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
