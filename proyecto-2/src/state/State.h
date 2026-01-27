@@ -23,7 +23,7 @@ public:
     bool showVertices = false;
     bool showWireframe = false;
     bool showFill = true;
-    bool lineAntialiasing = false;
+    bool lineAntialiasing = true;
     bool showNormals = false;
     bool moveFullObjectMode = false;
     bool shouldUpdateCenter = false;
