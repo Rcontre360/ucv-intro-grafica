@@ -227,20 +227,16 @@ public:
     void centerObjectToInitialPosition() {
         if (shapes.empty()) return;
 
-        updateGlobalBoundingBox(); // Ensure current center is up-to-date
+        updateGlobalBoundingBox();
+        glm::vec3 moveTo = Camera::getInstance().initObjectPos - center;
 
-        // Calculate the vector from the current center to the initial object position
-        glm::vec3 translationVector = Camera::getInstance().initObjectPos - center;
-
-        // Apply this translation to all submeshes
         for (Submesh* obj : shapes) {
-            obj->setTranslate(translationVector);
+            obj->setTranslate(moveTo);
         }
-        // Update global bounding box center as well
         if (globalBoundingBox) {
-            globalBoundingBox->setTranslate(translationVector);
+            globalBoundingBox->setTranslate(moveTo);
         }
-        center += translationVector; // Update the stored center
+        center += moveTo; 
     }
 
     void resetObject() {
