@@ -97,6 +97,21 @@ public:
         return true;
     }
 
+    void processFPS(double deltaTime) {
+        float speed = (float)(5.0 * deltaTime); // Adjust speed constant as needed
+
+        if (isFPSMode) {
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+                Camera::getInstance().processKeyboard(FORWARD, speed);
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+                Camera::getInstance().processKeyboard(BACKWARD, speed);
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+                Camera::getInstance().processKeyboard(LEFT, speed);
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+                Camera::getInstance().processKeyboard(RIGHT, speed);
+        }
+    }
+
     void mainLoop()
     {
         while (!glfwWindowShouldClose(window))
@@ -111,6 +126,7 @@ public:
                 lastFrameTime = currentFrameTime; 
             }
 
+            processFPS(deltaTime);
             glfwPollEvents();
 
             if (appState && appState->lineAntialiasing) {
@@ -173,6 +189,16 @@ private:
                 Camera::getInstance().processKeyboard(LEFT, 0.1f);
             if (key == GLFW_KEY_RIGHT)
                 Camera::getInstance().processKeyboard(RIGHT, 0.1f);
+
+            if (key == GLFW_KEY_SPACE) {
+                isFPSMode = !isFPSMode;
+                if (isFPSMode) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    firstMouse = true; 
+                } else {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                }
+            }
         }
     }
 
@@ -226,8 +252,21 @@ private:
         }
     }
 
-    void onCursorPos(double xpos, double ypos) 
-    {
+    void onCursorPos(double xpos, double ypos) {
+        if (isFPSMode) {
+            if (firstMouse) {
+                mousePos = {xpos, ypos};
+                firstMouse = false;
+            }
+
+            float deltaX = (float)(xpos - mousePos.first);
+            float deltaY = (float)(mousePos.second - ypos); 
+            mousePos = {xpos, ypos};
+
+            Camera::getInstance().processMouseMovement(deltaX, deltaY);
+            return; 
+        }
+
         ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
         ImGuiIO& io = ImGui::GetIO();
         if (io.WantCaptureMouse) {
@@ -372,7 +411,7 @@ private:
                     appState->moveFullObjectMode = false;
                     appState->rescaleAllShapes(scaleValue);
                 }
-                if (ImGui::Button("Center")) { // New button
+                if (ImGui::Button("Center")) {
                     if (appState) {
                         appState->centerObjectToInitialPosition();
                         Camera::getInstance().resetCamera();
@@ -637,6 +676,8 @@ protected:
     int width = 720;
     int height = 480;
     bool mouseButtonsDown[2] = { false, false };
+    bool firstMouse = false;
+    bool isFPSMode = false;
     pair<double,double> mousePos = {0.0,0.0};
     int selectedSubmeshIndex = -1;
 
