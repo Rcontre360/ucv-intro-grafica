@@ -464,7 +464,7 @@ private:
         if (!appState || appState->shapes.empty() || submeshIndex < 0) return;
 
         glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
-        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initialObjectPosition); 
+        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); 
 
         float theta = glm::radians(45.0f / 2.0f);
         float halfTan = tanf(theta);
@@ -480,7 +480,7 @@ private:
     void handleFullObjectTranslation(double deltaX, double deltaY) {
         if (!appState || appState->shapes.empty()) return;
 
-        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initialObjectPosition); // Approximate distance to object
+        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); // Approximate distance to object
                                                                                        //
         float theta = glm::radians(45.0f / 2.0f);
         float halfTan = tanf(theta);

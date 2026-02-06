@@ -35,7 +35,7 @@ public:
     float movementSpeed = 2.5f;
     float mouseSensitivity = 0.1f;
     float zoom = 45.0f;
-    glm::vec3 initialObjectPosition = glm::vec3(0.0f, 0.0f, -3.0f);
+    glm::vec3 initObjectPos = glm::vec3(0.0f, 0.0f, -3.0f);
 
     void resetCamera() {
         position = glm::vec3(0.0f, 0.0f, 0.0f);

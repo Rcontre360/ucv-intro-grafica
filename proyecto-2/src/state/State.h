@@ -230,7 +230,7 @@ public:
         updateGlobalBoundingBox(); // Ensure current center is up-to-date
 
         // Calculate the vector from the current center to the initial object position
-        glm::vec3 translationVector = Camera::getInstance().initialObjectPosition - center;
+        glm::vec3 translationVector = Camera::getInstance().initObjectPos - center;
 
         // Apply this translation to all submeshes
         for (Submesh* obj : shapes) {
@@ -269,16 +269,14 @@ private:
         float maxDim = max({size.x, size.y, size.z});
         float scaleFactor = 1.0f / maxDim;
 
-        glm::mat4 toOrigin = glm::translate(glm::mat4(1.0f), -center);
-        glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(scaleFactor));
-        glm::mat4 toScene = glm::translate(glm::mat4(1.0f), Camera::getInstance().initialObjectPosition);
-        
-        glm::mat4 normalizationMatrix = toScene * scale * toOrigin;
-
-        center = glm::vec3(normalizationMatrix * glm::vec4(_center,1.0f));
+        glm::vec3 initialPos = Camera::getInstance().initObjectPos;
+        glm::vec3 translation = initialPos - (_center * scaleFactor);
 
         for (Submesh* shape : shapes) {
-            shape->initTranslate(normalizationMatrix);
+            shape->resetTransform();
+
+            shape->scale = glm::vec3(scaleFactor);
+            shape->translate = glm::translate(glm::mat4(1.0f), translation);
         }
     }
 };
