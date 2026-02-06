@@ -41,6 +41,8 @@ public:
     vector<Submesh*> shapes;
 
     glm::vec3 center = glm::vec3(1.0f);
+    glm::vec3 oldScale = glm::vec3(1.0f);
+
     GLuint globalBboxVao = 0, globalBboxVbo = 0;
     BaseSubmesh* globalBoundingBox = nullptr;
 
@@ -170,14 +172,14 @@ public:
         }
     }
 
-    void rescaleAllShapes(float factor)
+    void rescaleAllShapes(glm::vec3 factor)
     {
         for (Submesh* obj : shapes) {
-            obj->scale(glm::vec3((float)(factor / oldScale)));
+            obj->scale((factor / oldScale));
         }
 
         if (globalBoundingBox){
-            globalBoundingBox->scale(glm::vec3((float)(factor / oldScale)));
+            globalBoundingBox->scale((factor / oldScale));
         }
 
         oldScale = factor;
@@ -188,17 +190,17 @@ public:
         if (shapes.empty()) return;
 
         for (Submesh* obj : shapes) {
-            obj->translate(offset); 
+            obj->setTranslate(offset); 
         }
         if (globalBoundingBox)
-            globalBoundingBox->translate(offset);
+            globalBoundingBox->setTranslate(offset);
     }
 
     void translateSubmesh(int index, const glm::vec3& offset)
     {
         shouldUpdateCenter = true;
         if (index >= 0 && index < shapes.size()) {
-            shapes[index]->translate(offset);
+            shapes[index]->setTranslate(offset);
         }
     }
 
@@ -212,13 +214,13 @@ public:
         }
 
         for (Submesh* obj : shapes) {
-            obj->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
-            obj->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+            obj->setRotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
+            obj->setRotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
         }
 
         if (globalBoundingBox){
-            globalBoundingBox->rotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
-            globalBoundingBox->rotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+            globalBoundingBox->setRotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
+            globalBoundingBox->setRotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
         }
     }
 
@@ -232,11 +234,11 @@ public:
 
         // Apply this translation to all submeshes
         for (Submesh* obj : shapes) {
-            obj->translate(translationVector);
+            obj->setTranslate(translationVector);
         }
         // Update global bounding box center as well
         if (globalBoundingBox) {
-            globalBoundingBox->translate(translationVector);
+            globalBoundingBox->setTranslate(translationVector);
         }
         center += translationVector; // Update the stored center
     }
@@ -256,8 +258,6 @@ public:
     }
 
 private:
-    float oldScale = 1.0;
-
     void centerShape(LoadedObject obj)
     {
         if (shapes.empty() || obj.vertices.empty()) {

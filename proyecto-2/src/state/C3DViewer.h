@@ -356,14 +356,21 @@ private:
                 }
                 ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs); // New
                 
-                static int scaleValue = 100;
-                if (ImGui::SliderInt("Scale", &scaleValue, 10, 500))
+                static glm::vec3 scaleValue = glm::vec3(1.0f);
+                if (ImGui::SliderFloat("Scale X", &scaleValue.x, 0.01, 3))
                 {
-                    if (appState) {
-                        float scaleFactor = static_cast<float>(scaleValue) / 100.0f;
-                        appState->moveFullObjectMode = false;
-                        appState->rescaleAllShapes(scaleFactor);
-                    }
+                    appState->moveFullObjectMode = false;
+                    appState->rescaleAllShapes(scaleValue);
+                }
+                if (ImGui::SliderFloat("Scale Y", &scaleValue.y, 0.01, 3))
+                {
+                    appState->moveFullObjectMode = false;
+                    appState->rescaleAllShapes(scaleValue);
+                }
+                if (ImGui::SliderFloat("Scale Z", &scaleValue.z, 0.01, 3))
+                {
+                    appState->moveFullObjectMode = false;
+                    appState->rescaleAllShapes(scaleValue);
                 }
                 if (ImGui::Button("Center")) { // New button
                     if (appState) {

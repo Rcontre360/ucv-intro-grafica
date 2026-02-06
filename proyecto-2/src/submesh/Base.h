@@ -28,8 +28,8 @@ struct DrawConfig {
 class BaseSubmesh 
 {
 public:
-    glm::mat4 transform = glm::mat4(1.0f);
-    glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::mat4 translate = glm::mat4(1.0f);
+    glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::mat4 initialTransform;
 
     vector<Vertex> vertices;
@@ -132,30 +132,30 @@ public:
         return worldV;
     }
 
-    void translate(const glm::vec3& offset) { 
-        transform = glm::translate(glm::mat4(1.0f), offset) * transform;
+    void setTranslate(const glm::vec3& offset) { 
+        translate = glm::translate(glm::mat4(1.0f), offset) * translate;
     }
 
-    void rotate(float angle, const glm::vec3& axis) { 
+    void setRotate(float angle, const glm::vec3& axis) { 
         glm::quat q = glm::angleAxis(glm::radians(angle), axis);
-        orientation = q * orientation;
+        rotate = q * rotate;
     }
 
-    void rotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
+    void setRotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
         glm::quat rotationQuad = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
-        orientation = rotationQuad * orientation;
+        rotate = rotationQuad * rotate;
 
-        glm::vec3 pos = glm::vec3(transform[3]);
+        glm::vec3 pos = glm::vec3(translate[3]);
         glm::vec3 dirToPivot = pos - center;
 
         glm::vec3 newDir = rotationQuad * dirToPivot;
         glm::vec3 delta = (center + newDir) - pos;
 
-        translate(delta);
+        setTranslate(delta);
     }
 
     void scale(const glm::vec3& factor) { 
-        transform = glm::scale(transform, factor); 
+        translate = glm::scale(translate, factor); 
     }
 
     void updateColor() {
@@ -169,15 +169,15 @@ public:
     }
 
     const glm::mat4 getTransform() const { 
-        return transform * glm::mat4(orientation); 
+        return translate * glm::mat4(rotate); 
     }
 
     void setTransform(const glm::mat4& newTransform) { 
-        transform = newTransform; 
+        translate = newTransform; 
     }
 
     void resetTransform() { 
-        transform = glm::mat4(1.0f); 
+        translate = glm::mat4(1.0f); 
     }
 
 private:
