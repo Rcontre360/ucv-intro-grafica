@@ -28,8 +28,9 @@ struct DrawConfig {
 class BaseSubmesh 
 {
 public:
-    glm::mat4 translate = glm::mat4(1.0f);
+    glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::mat4 translate = glm::mat4(1.0f);
     glm::mat4 initialTransform;
 
     vector<Vertex> vertices;
@@ -132,6 +133,10 @@ public:
         return worldV;
     }
 
+    void initTranslate(const glm::mat4& newTransform) { 
+        translate = newTransform; 
+    }
+
     void setTranslate(const glm::vec3& offset) { 
         translate = glm::translate(glm::mat4(1.0f), offset) * translate;
     }
@@ -154,8 +159,8 @@ public:
         setTranslate(delta);
     }
 
-    void scale(const glm::vec3& factor) { 
-        translate = glm::scale(translate, factor); 
+    void setScale(const glm::vec3& factor) { 
+        scale *= factor;
     }
 
     void updateColor() {
@@ -169,11 +174,9 @@ public:
     }
 
     const glm::mat4 getTransform() const { 
-        return translate * glm::mat4(rotate); 
-    }
-
-    void setTransform(const glm::mat4& newTransform) { 
-        translate = newTransform; 
+        glm::mat4 R = glm::mat4(rotate);
+        glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
+        return translate * R * S;
     }
 
     void resetTransform() { 

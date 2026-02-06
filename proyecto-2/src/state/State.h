@@ -175,11 +175,11 @@ public:
     void rescaleAllShapes(glm::vec3 factor)
     {
         for (Submesh* obj : shapes) {
-            obj->scale((factor / oldScale));
+            obj->setScale((factor / oldScale));
         }
 
         if (globalBoundingBox){
-            globalBoundingBox->scale((factor / oldScale));
+            globalBoundingBox->setScale((factor / oldScale));
         }
 
         oldScale = factor;
@@ -245,7 +245,6 @@ public:
 
     void resetObject() {
         for (Submesh* obj : shapes) {
-            obj->setTransform(obj->initialTransform);
             obj->color[0] = obj->initialColor[0];
             obj->color[1] = obj->initialColor[1];
             obj->color[2] = obj->initialColor[2];
@@ -279,7 +278,7 @@ private:
         center = glm::vec3(normalizationMatrix * glm::vec4(_center,1.0f));
 
         for (Submesh* shape : shapes) {
-            shape->setTransform(normalizationMatrix);
+            shape->initTranslate(normalizationMatrix);
         }
     }
 };
