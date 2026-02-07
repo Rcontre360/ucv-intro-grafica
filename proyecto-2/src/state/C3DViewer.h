@@ -313,6 +313,8 @@ private:
             config.normalShaderProgram = normalShaderProgram;
             config.width = width;
             config.height = height;
+            config.view = Camera::getInstance().getViewMatrix(); // Populate view matrix
+            config.projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f); // Populate projection matrix
             config.showVertices = appState->showVertices;
             config.vertexColor = appState->vertexColor;
             config.pointSize = appState->pointSize;

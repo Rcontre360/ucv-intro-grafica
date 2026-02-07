@@ -17,6 +17,8 @@ struct DrawConfig {
     GLuint normalShaderProgram; // New: for normal visualization
     int width; // New: for projection aspect ratio
     int height; // New: for projection aspect ratio
+    glm::mat4 view; // New: View matrix
+    glm::mat4 projection; // New: Projection matrix
     bool showVertices;
     float* vertexColor;
     float pointSize;
@@ -123,16 +125,14 @@ public:
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 0);
     }
 
-    void drawCorrectlyTransformedLines(GLuint normalProgram, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, const float* normalColor, float normalLength) {
-        glUseProgram(normalProgram);
+    void drawCorrectlyTransformedLines(const DrawConfig& config, const glm::mat4& model, const float* normalColor, float normalLength) {
+        glUseProgram(config.normalShaderProgram);
 
-        // normalMatrix is now calculated in the NORMAL_VERTEX shader, not passed here.
-
-        setGpuVariable(normalProgram, Shaders::NormalShader::model, model);
-        setGpuVariable(normalProgram, Shaders::NormalShader::view, view);
-        setGpuVariable(normalProgram, Shaders::NormalShader::projection, projection);
-        setGpuVariable(normalProgram, Shaders::NormalShader::normalLength, normalLength);
-        setGpuVariable(normalProgram, Shaders::NormalShader::u_normal_color, glm::make_vec3(normalColor));
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::model, model);
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::view, config.view);
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::projection, config.projection);
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::normalLength, normalLength);
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::u_normal_color, glm::make_vec3(normalColor));
         
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);

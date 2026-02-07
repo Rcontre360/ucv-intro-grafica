@@ -45,15 +45,16 @@ public:
 
         if (config.showNormals && normals) {
             glm::mat4 model = getTransform();
-            glm::mat4 view = Camera::getInstance().getViewMatrix();
-            glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)config.width / (float)config.height, 0.1f, 100.0f);
+            // Use view and projection from config, already calculated in C3DViewer::render
+            // glm::mat4 view = Camera::getInstance().getViewMatrix(); // REMOVED
+            // glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)config.width / (float)config.height, 0.1f, 100.0f); // REMOVED
 
             // Calculate normal length based on this submesh's bounding box diagonal
             BoundingBox localBounds = makeBoundingBox(this->vertices);
             float diagonalLength = glm::distance(localBounds.min, localBounds.max);
             float currentNormalLength = diagonalLength * NORMAL_DIAGONAL_PERCENTAGE;
 
-            normals->drawCorrectlyTransformedLines(config.normalShaderProgram, model, view, projection, config.normalColor, currentNormalLength);
+            normals->drawCorrectlyTransformedLines(config, model, config.normalColor, currentNormalLength);
             glUseProgram(config.shaderProgram); // Restore the main shader program
         }
     }
