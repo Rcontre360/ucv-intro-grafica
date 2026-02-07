@@ -3,6 +3,7 @@
 #include <vector>
 #include <utility>
 #include <iostream>
+#include <cmath>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -526,16 +527,17 @@ private:
     void handleTranslation(double deltaX, double deltaY, int submeshIndex){
         if (!appState || appState->shapes.empty() || submeshIndex < 0) return;
 
+        Camera &cam = Camera::getInstance();
         glm::vec3 objectWorldPos = glm::vec3(appState->shapes[submeshIndex]->getTransform()[3]);
-        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); 
+        float distance = glm::dot(objectWorldPos - cam.position, cam.front);
 
-        float theta = glm::radians(45.0f / 2.0f);
+        float theta = glm::radians(cam.zoom/ 2.0f);
         float halfTan = tanf(theta);
 
         float heightAtDepth = distance * halfTan;
         float moveFactor = (heightAtDepth * 2.0f) / height;
 
-        glm::vec3 translationVector = (Camera::getInstance().right * (float)deltaX * moveFactor) + (Camera::getInstance().up * (float)deltaY * moveFactor);
+        glm::vec3 translationVector = (cam.right * (float)deltaX * moveFactor) + (cam.up * (float)deltaY * moveFactor);
 
         appState->translateSubmesh(submeshIndex, translationVector);
     }
