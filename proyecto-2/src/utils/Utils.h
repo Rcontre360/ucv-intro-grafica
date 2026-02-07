@@ -103,4 +103,4 @@ void setGpuVariable(GLuint program, const string& name, bool value) {
     }
 }
 
-#endif // GL_UTILS_H
+#endif 

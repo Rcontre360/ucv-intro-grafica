@@ -3,14 +3,14 @@
 
 int main() 
 {
-    C3DViewer test;
-    if (!test.setup()) 
+    C3DViewer app;
+    if (!app.setup()) 
     {
         fprintf(stderr, "Failed to setup C3DViewer\n");
         return -1;
     }
 
-    test.mainLoop();
+    app.mainLoop();
 
     return 0;
 }

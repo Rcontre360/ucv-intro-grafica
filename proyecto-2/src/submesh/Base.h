@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <limits>
 #include "../utils/Utils.h"
+#include "../utils/Camera.h"
 #include "../utils/Shaders.h"
 
 using namespace std;
@@ -15,10 +16,6 @@ using namespace std;
 struct DrawConfig {
     GLuint shaderProgram;
     GLuint normalShaderProgram; // New: for normal visualization
-    glm::mat4 view; // New: View matrix
-    glm::mat4 projection; // New: Projection matrix
-    int width; // New: for projection aspect ratio
-    int height; // New: for projection aspect ratio
     bool showVertices;
     float* vertexColor;
     float normalWidth; // New: for projection aspect ratio
@@ -88,13 +85,6 @@ public:
         if (vao) glDeleteVertexArrays(1, &vao);
     }
 
-    void drawForPicking(GLuint shaderProgram)
-    {
-        setGpuVariable(shaderProgram, Shaders::PickingShader::model, getTransform());
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-    }
-
     // Draws the submesh using the provided shader program.
     virtual void draw(const DrawConfig& config)
     {
@@ -113,25 +103,35 @@ public:
         }
     }
 
+    void drawForPicking(GLuint shaderProgram)
+    {
+        setGpuVariable(shaderProgram, Shaders::PickingShader::model, getTransform());
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+    }
+
+    // used for bounding box
     void drawAsLines(GLuint shaderProgram, float* color) {
         setGpuVariable(shaderProgram, Shaders::DefaultShader::model, getTransform());
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 1);
         setGpuVariable(shaderProgram, Shaders::DefaultShader::u_color, glm::make_vec3(color));
+
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);
         glBindVertexArray(vao);
         glDrawArrays(GL_LINES, 0, vertexCount);
         glBindVertexArray(0);
         glDisable(GL_POLYGON_OFFSET_LINE);
+
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 0);
     }
 
-    void drawCorrectlyTransformedLines(const DrawConfig& config, const glm::mat4& model, const float* normalColor, float normalLength) {
+    void drawAsNormals(const DrawConfig& config, const glm::mat4& model, const float* normalColor, float normalLength) {
         glUseProgram(config.normalShaderProgram);
 
         setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::model, model);
-        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::view, config.view);
-        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::projection, config.projection);
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::view,Camera::getInstance().getViewMatrix());
+        setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::projection, Camera::getInstance().projection);
         setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::normalLength, normalLength);
         setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::u_normal_color, glm::make_vec3(normalColor));
         
@@ -145,6 +145,7 @@ public:
         glDisable(GL_POLYGON_OFFSET_LINE);
     }
 
+    // gets vertex object in the world. Basically apply transformations to the vertex we have on cpu
     vector<Vertex> getWorldVertices() const {
         glm::mat4 transformMat = getTransform();
 
@@ -162,29 +163,33 @@ public:
         return worldV;
     }
 
-    void initTranslate(const glm::mat4& newTransform) { 
-        translate = newTransform; 
-    }
-
+    // translate
     void setTranslate(const glm::vec3& offset) { 
         translate = glm::translate(glm::mat4(1.0f), offset) * translate;
     }
 
+    // normal rotate
     void setRotate(float angle, const glm::vec3& axis) { 
         glm::quat q = glm::angleAxis(glm::radians(angle), axis);
         rotate = q * rotate;
     }
 
+    // rotate over a given center.
+    // used bc submeshes might be far from shape center and must rotate around it
     void setRotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
+        // update rotation matrix accordingly
         glm::quat rotationQuad = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
         rotate = rotationQuad * rotate;
 
+        // get the vector from center to the current position
         glm::vec3 pos = glm::vec3(translate[3]);
         glm::vec3 dirToPivot = pos - center;
 
+        // obtain new position and calculate the vector towards it
         glm::vec3 newDir = rotationQuad * dirToPivot;
         glm::vec3 delta = (center + newDir) - pos;
 
+        // apply given translation
         setTranslate(delta);
     }
 

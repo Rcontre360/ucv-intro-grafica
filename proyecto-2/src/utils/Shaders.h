@@ -2,12 +2,13 @@
 
 namespace Shaders {
 
+    // we keep normal bc we will use on proy3
     const char* vertexShaderSrc = R"glsl(
         #version 330 core
 
         layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aNormal; // Normal attribute
-        layout(location = 2) in vec3 aColor;  // Color attribute
+        layout(location = 1) in vec3 aNormal;
+        layout(location = 2) in vec3 aColor; 
 
         out vec3 vColor;
 
@@ -32,7 +33,6 @@ namespace Shaders {
         out vec4 FragColor;
 
         uniform bool uHasColor;
-        uniform sampler2D uTexture;
         uniform vec3 u_color;
 
         void main() {
@@ -49,6 +49,7 @@ namespace Shaders {
         inline static const std::string view = "view";
         inline static const std::string projection = "projection";
         inline static const std::string u_point_size = "u_point_size";
+        // used for wireframes and vertex colors
         inline static const std::string uHasColor = "uHasColor";
         inline static const std::string u_color = "u_color";
     };
@@ -56,7 +57,7 @@ namespace Shaders {
     const char* normalVertexShaderSrc = R"glsl(
         #version 330 core
         layout (location = 0) in vec3 aPos;
-        layout (location = 1) in vec3 aNormal; // Input normal
+        layout (location = 1) in vec3 aNormal; 
 
         out VS_OUT {
             vec3 normal;

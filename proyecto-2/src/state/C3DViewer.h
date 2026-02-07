@@ -307,10 +307,6 @@ private:
             DrawConfig config;
             config.shaderProgram = shaderProgram;
             config.normalShaderProgram = normalShaderProgram;
-            config.width = width;
-            config.height = height;
-            config.view = Camera::getInstance().getViewMatrix(); // Populate view matrix
-            config.projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f); // Populate projection matrix
             config.showVertices = appState->showVertices;
             config.vertexColor = appState->vertexColor;
             config.pointSize = appState->pointSize;
@@ -336,8 +332,7 @@ private:
         glm::mat4 view = Camera::getInstance().getViewMatrix();
         setGpuVariable(program, DefaultShader::view, view);
 
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-        setGpuVariable(program, DefaultShader::projection, projection);
+        setGpuVariable(program, DefaultShader::projection, Camera::getInstance().projection);
     }
 
     void drawInterface()
@@ -489,6 +484,9 @@ private:
     {
         width = newWidth;
         height = newHeight;
+
+        Camera::getInstance().setProjection(width,height);
+
         glViewport(0, 0, width, height);
 
         glBindTexture(GL_TEXTURE_2D, pickingTexture);

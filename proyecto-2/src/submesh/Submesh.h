@@ -49,7 +49,7 @@ public:
             float diagonalLength = glm::distance(localBounds.min, localBounds.max) * scaleFactor;
             float currentNormalLength = diagonalLength / 100 * config.normalWidth;
 
-            normals->drawCorrectlyTransformedLines(config, model, config.normalColor, currentNormalLength);
+            normals->drawAsNormals(config, model, config.normalColor, currentNormalLength);
             glUseProgram(config.shaderProgram); 
         }
     }
