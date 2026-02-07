@@ -55,9 +55,11 @@ public:
         if (direction == BACKWARD)
             position -= front * velocity;
         if (direction == LEFT)
-            position -= right * velocity;
+            yaw -= velocity;
         if (direction == RIGHT)
-            position += right * velocity;
+            yaw += velocity;
+
+        updateCameraVectors();
     }
 
     void processMouseMovement(float xoffset, float yoffset, bool constrainPitch = true) {

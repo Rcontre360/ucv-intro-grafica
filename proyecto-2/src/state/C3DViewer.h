@@ -99,7 +99,7 @@ public:
     }
 
     void processFPS(double deltaTime) {
-        float speed = (float)(5.0 * deltaTime); // Adjust speed constant as needed
+        float speed = (float)(1.0 * deltaTime); // Adjust speed constant as needed
 
         if (isFPSMode) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -181,16 +181,20 @@ private:
     {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) // Handle both press and hold
         {
+            double currentFrameTime = glfwGetTime();
+            double deltaTime = currentFrameTime - lastFrameTime; 
+            float speed = (float)(1.0 * deltaTime); 
+
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             if (key == GLFW_KEY_UP)
-                Camera::getInstance().processKeyboard(FORWARD, 0.1f);
+                Camera::getInstance().processKeyboard(FORWARD, speed);
             if (key == GLFW_KEY_DOWN)
-                Camera::getInstance().processKeyboard(BACKWARD, 0.1f);
+                Camera::getInstance().processKeyboard(BACKWARD, speed);
             if (key == GLFW_KEY_LEFT)
-                Camera::getInstance().processKeyboard(LEFT, 0.1f);
+                Camera::getInstance().processKeyboard(LEFT,speed);
             if (key == GLFW_KEY_RIGHT)
-                Camera::getInstance().processKeyboard(RIGHT, 0.1f);
+                Camera::getInstance().processKeyboard(RIGHT, speed);
 
             if (key == GLFW_KEY_SPACE) {
                 isFPSMode = !isFPSMode;

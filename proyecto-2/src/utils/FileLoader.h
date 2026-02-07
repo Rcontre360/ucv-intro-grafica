@@ -21,6 +21,7 @@ private:
     static vector<glm::vec3> calculateNormals(const tinyobj::attrib_t& info, const vector<tinyobj::shape_t>& shapes) {
         vector<glm::vec3> calculatedNormals;
         calculatedNormals.resize(info.vertices.size() / 3, glm::vec3(0.0f));
+        //algorithm is O(n) since for each submesh we run over the vertices only once
         for (const auto& shape : shapes) {
             for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
                 int fv = shape.mesh.num_face_vertices[f];
