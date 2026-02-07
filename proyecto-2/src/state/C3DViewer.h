@@ -28,11 +28,50 @@ using namespace std;
 
 class State;
 
-class C3DViewer 
-{
+class C3DViewer {
+protected:
+    GLFWwindow* window = nullptr;
+    State* appState = nullptr;
+    GLuint shaderProgram = 0;
+    GLuint normalShaderProgram = 0;
+
+    int width = 720;
+    int height = 480;
+    bool mouseButtonsDown[2] = { false, false };
+    bool firstMouse = false;
+    bool isFPSMode = false;
+    pair<double,double> mousePos = {0.0,0.0};
+    int selectedSubmeshIndex = -1;
+
+    double lastFrameTime = 0.0; // New
+    int frameCount = 0; // New
+    char fpsText[16] = "FPS: n/a"; // New
+
+    GLuint pickingFBO = 0;
+    GLuint pickingTexture = 0;
+    GLuint pickingDepthStencilRBO = 0;
+    GLuint pickingShaderProgram = 0;
 
 public:
     C3DViewer() {}
+
+    ~C3DViewer()
+    {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+        
+        delete appState;
+
+        if (shaderProgram) glDeleteProgram(shaderProgram);
+        if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
+        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); // New: Clean up normal shader program
+        if (pickingTexture) glDeleteTextures(1, &pickingTexture);
+        if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
+        if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
+        if (window) glfwDestroyWindow(window);
+        glfwTerminate();
+    }
 
     bool setup()
     {
@@ -82,7 +121,7 @@ public:
 
         setupDefaultShader();
         setupPickingShader();
-        setupNormalShader(); // Call new setup method
+        setupNormalShader(); 
         setupPickingFBO(); 
 
         appState = new State();
@@ -154,28 +193,10 @@ public:
         }
     }
 
-    ~C3DViewer()
-    {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-        
-        delete appState;
-
-        if (shaderProgram) glDeleteProgram(shaderProgram);
-        if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
-        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); // New: Clean up normal shader program
-        if (pickingTexture) glDeleteTextures(1, &pickingTexture);
-        if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
-        if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
-        if (window) glfwDestroyWindow(window);
-        glfwTerminate();
-    }
-
 private:
     void onKey(int key, int scancode, int action, int mods) 
     {
-        if (action == GLFW_PRESS || action == GLFW_REPEAT) // Handle both press and hold
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) 
         {
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -202,7 +223,6 @@ private:
 
     void onMouseButton(int button, int action, int mods) 
     {
-        ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
         ImGuiIO& io = ImGui::GetIO();
         if (io.WantCaptureMouse) {
             return;
@@ -341,7 +361,6 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Top menu bar
         if (ImGui::BeginMainMenuBar())
         {
             if (ImGui::BeginMenu("File"))
@@ -379,14 +398,12 @@ private:
             ImGui::EndMainMenuBar();
         }
 
-        // Left-side panel
         ImGui::SetNextWindowPos(ImVec2(0, 20));
-        ImGui::SetNextWindowSize(ImVec2(200, height - 20)); // Increased width for better layout
+        ImGui::SetNextWindowSize(ImVec2(200, height - 20));
 
-        ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); // Added NoTitleBar for cleaner look
+        ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); 
 
         if (appState) {
-            // Basic Options Section
             if (ImGui::CollapsingHeader("Basic"))
             {
                 ImGui::Checkbox("Show fill", &appState->showFill);
@@ -474,7 +491,7 @@ private:
             }
         }
 
-        ImGui::End(); // End Settings window
+        ImGui::End(); 
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -543,8 +560,6 @@ private:
         GLuint shader = glCreateShader(type);
         glShaderSource(shader, 1, &src, nullptr);
         glCompileShader(shader);
-        if (!checkCompileErrors(shader, name)) 
-            throw invalid_argument("set: out of bounds");
 
         return shader;
     }
@@ -554,7 +569,7 @@ private:
         GLuint vertexShader = setupShader("VERTEX", vertexShaderSrc, GL_VERTEX_SHADER);
         GLuint fragmentShader = setupShader("FRAGMENT", fragmentShaderSrc,GL_FRAGMENT_SHADER);
 
-        shaderProgram = setupShaderProgram(vertexShader,fragmentShader, "PROGRAM");
+        shaderProgram = setupShaderProgram(vertexShader,fragmentShader);
 
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
@@ -587,7 +602,7 @@ private:
         return true;
     }
 
-    GLuint setupShaderProgram(GLuint vertexShader, GLuint fragmentShader, const char* name, GLuint geometryShader = 0){
+    GLuint setupShaderProgram(GLuint vertexShader, GLuint fragmentShader, GLuint geometryShader = 0){
         GLuint program = glCreateProgram();
         glAttachShader(program, vertexShader);
         glAttachShader(program, fragmentShader);
@@ -595,9 +610,6 @@ private:
             glAttachShader(program, geometryShader);
         }
         glLinkProgram(program);
-
-        if (!checkCompileErrors(program, name)) 
-            throw runtime_error("error compiling shader program");
 
         return program;
     }
@@ -607,49 +619,23 @@ private:
         GLuint vertexShader = setupShader("PICKING_VERTEX",pickingVertexShaderSrc, GL_VERTEX_SHADER);
         GLuint fragmentShader = setupShader("PICKING_FRAGMENT",pickingFragmentShaderSrc, GL_FRAGMENT_SHADER);
 
-        pickingShaderProgram = setupShaderProgram(vertexShader,fragmentShader, "PICKING_PROGRAM");
+        pickingShaderProgram = setupShaderProgram(vertexShader,fragmentShader);
 
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
     }
 
-    void setupNormalShader() // New: Setup Normal Shader
+    void setupNormalShader() 
     {
         GLuint vertexShader = setupShader("NORMAL_VERTEX", normalVertexShaderSrc, GL_VERTEX_SHADER);
         GLuint geometryShader = setupShader("NORMAL_GEOMETRY", normalGeometryShaderSrc, GL_GEOMETRY_SHADER);
         GLuint fragmentShader = setupShader("NORMAL_FRAGMENT", normalFragmentShaderSrc, GL_FRAGMENT_SHADER);
 
-        normalShaderProgram = setupShaderProgram(vertexShader, fragmentShader, "NORMAL_PROGRAM", geometryShader);
+        normalShaderProgram = setupShaderProgram(vertexShader, fragmentShader, geometryShader);
 
         glDeleteShader(vertexShader);
-        glDeleteShader(geometryShader); // Delete geometry shader after linking
+        glDeleteShader(geometryShader); 
         glDeleteShader(fragmentShader);
-    }
-
-    bool checkCompileErrors(GLuint shader, const char* type) 
-    {
-        GLint success;
-        GLchar infoLog[1024];
-        if (strcmp(type, "PROGRAM") != 0) 
-        {
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-            if (!success) 
-            {
-                glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-                fprintf(stderr, "ERROR::SHADER_COMPILATION_ERROR of type: %s\n%s\n", type, infoLog);
-                return false;
-            }
-        }
-        else 
-        {
-            glGetProgramiv(shader, GL_LINK_STATUS, &success);
-            if (!success) {
-                glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-                fprintf(stderr, "ERROR::PROGRAM_LINKING_ERROR of type: %s\n%s\n", type, infoLog);
-                return false;
-            }
-        }
-        return true;
     }
 
     glm::vec3 readPixelColor(double xpos, double ypos)
@@ -686,29 +672,5 @@ private:
         C3DViewer* self = (C3DViewer*)glfwGetWindowUserPointer(window);
         if (self) self->onCursorPos(xpos, ypos);
     }
-
-
-protected:
-    GLFWwindow* window = nullptr;
-    State* appState = nullptr;
-    GLuint shaderProgram = 0;
-    GLuint normalShaderProgram = 0;
-
-    int width = 720;
-    int height = 480;
-    bool mouseButtonsDown[2] = { false, false };
-    bool firstMouse = false;
-    bool isFPSMode = false;
-    pair<double,double> mousePos = {0.0,0.0};
-    int selectedSubmeshIndex = -1;
-
-    double lastFrameTime = 0.0; // New
-    int frameCount = 0; // New
-    char fpsText[16] = "FPS: n/a"; // New
-
-    GLuint pickingFBO = 0;
-    GLuint pickingTexture = 0;
-    GLuint pickingDepthStencilRBO = 0;
-    GLuint pickingShaderProgram = 0;
 
 };

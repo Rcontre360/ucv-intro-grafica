@@ -44,7 +44,6 @@ public:
     glm::vec3 center = glm::vec3(1.0f);
     glm::vec3 oldScale = glm::vec3(1.0f);
 
-    GLuint globalBboxVao = 0, globalBboxVbo = 0;
     BaseSubmesh* globalBoundingBox = nullptr;
 
     State(){}
