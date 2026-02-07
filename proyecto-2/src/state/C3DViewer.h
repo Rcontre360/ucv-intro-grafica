@@ -387,13 +387,6 @@ private:
                         }
                     }
                 }
-                if (ImGui::MenuItem("Reset Object"))
-                {
-                    if (appState) {
-                        appState->resetObject();
-                        selectedSubmeshIndex = -1;
-                    }
-                }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -436,7 +429,7 @@ private:
                 }
                 if (ImGui::Button("Center")) {
                     if (appState) {
-                        appState->centerObjectToInitialPosition();
+                        appState->centerAndScaleBack();
                         Camera::getInstance().resetCamera();
                     }
                 }

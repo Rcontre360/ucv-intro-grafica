@@ -58,20 +58,24 @@ public:
         delete globalBoundingBox;
     }
 
-    void updateGlobalBoundingBox()
-    {
-        delete globalBoundingBox;
-        globalBoundingBox = nullptr;
-
-        if (shapes.empty()) return;
-
+    BoundingBox getBoundingBox(){
         vector<Vertex> allVertices;
         for (Submesh* shape : shapes) {
             vector<Vertex> worldVertex = shape->getWorldVertices();
             allVertices.insert(allVertices.end(), worldVertex.begin(), worldVertex.end());
         }
         
-        auto [minBound,maxBound,_center] = makeBoundingBox(allVertices);
+        return makeBoundingBox(allVertices);
+    }
+
+    void updateGlobalBoundingBox()
+    {
+        delete globalBoundingBox;
+        globalBoundingBox = nullptr;
+
+        if (shapes.empty()) return;
+        
+        auto [minBound,maxBound,_center] = getBoundingBox();
         center = _center;
 
         float v[] = {
@@ -151,7 +155,7 @@ public:
         LoadedObject loaded = FileLoader::loadObject(path);
         shapes = loaded.shapes;
 
-        centerShape(loaded);
+        centerOnLoad(loaded);
         updateGlobalBoundingBox();
 
         for (Submesh* obj : shapes) {
@@ -214,49 +218,48 @@ public:
         }
     }
 
-    void centerObjectToInitialPosition() {
+    //moves shape to center and scales back to unit cube
+    void centerAndScaleBack() {
         if (shapes.empty()) return;
 
         updateGlobalBoundingBox();
+
+        BoundingBox box = getBoundingBox();
         glm::vec3 moveTo = Camera::getInstance().initObjectPos - center;
+        glm::vec3 size = box.max - box.min;
+
+        float maxDim = std::max({size.x, size.y, size.z});
+        float globalScaleFactor = 1.0f / maxDim;
 
         for (Submesh* obj : shapes) {
             obj->setTranslate(moveTo);
+            obj->scale *= globalScaleFactor;
         }
         if (globalBoundingBox) {
             globalBoundingBox->setTranslate(moveTo);
+            globalBoundingBox->scale *= globalScaleFactor;
         }
         center += moveTo; 
     }
 
-    void resetObject() {
-        for (Submesh* obj : shapes) {
-            obj->color[0] = obj->initialColor[0];
-            obj->color[1] = obj->initialColor[1];
-            obj->color[2] = obj->initialColor[2];
-            obj->updateColor(); // Update VBO with initial color
-            obj->showBoundingBox = false; // Hide individual bounding boxes
-        }
-        moveFullObjectMode = false;
-        delete globalBoundingBox;
-        globalBoundingBox = nullptr;
-    }
-
 private:
-    void centerShape(LoadedObject obj)
+    void centerOnLoad(LoadedObject obj)
     {
         if (shapes.empty() || obj.vertices.empty()) {
             return;
         }
 
-        auto [minBound,maxBound,_center] = makeBoundingBox(obj.vertices);
+        BoundingBox box = makeBoundingBox(obj.vertices);
+        centerShape(box);
+    }
 
-        glm::vec3 size = maxBound - minBound;
+    void centerShape(BoundingBox box){
+        glm::vec3 size = box.max - box.min;
         float maxDim = max({size.x, size.y, size.z});
         float scaleFactor = 1.0f / maxDim;
 
         glm::vec3 initialPos = Camera::getInstance().initObjectPos;
-        glm::vec3 translation = initialPos - (_center * scaleFactor);
+        glm::vec3 translation = initialPos - (box.center * scaleFactor);
 
         for (Submesh* shape : shapes) {
             shape->resetTransform();
