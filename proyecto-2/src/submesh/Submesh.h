@@ -10,10 +10,11 @@
 
 #include "Base.h"
 #include "../utils/Utils.h"
+#include "../utils/Camera.h" // Added for Camera::getInstance()
 
 using namespace std;
 
-const float NORMAL_LENGTH_BOX = 0.1;
+const float NORMAL_DIAGONAL_PERCENTAGE = 0.05f; // New constant
 
 class Submesh : public BaseSubmesh 
 {
@@ -43,8 +44,17 @@ public:
         }
 
         if (config.showNormals && normals) {
-            normals->translate = getTransform();
-            normals->drawAsLines(config.shaderProgram, config.normalColor);
+            glm::mat4 model = getTransform();
+            glm::mat4 view = Camera::getInstance().getViewMatrix();
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)config.width / (float)config.height, 0.1f, 100.0f);
+
+            // Calculate normal length based on this submesh's bounding box diagonal
+            BoundingBox localBounds = makeBoundingBox(this->vertices);
+            float diagonalLength = glm::distance(localBounds.min, localBounds.max);
+            float currentNormalLength = diagonalLength * NORMAL_DIAGONAL_PERCENTAGE;
+
+            normals->drawCorrectlyTransformedLines(config.normalShaderProgram, model, view, projection, config.normalColor, currentNormalLength);
+            glUseProgram(config.shaderProgram); // Restore the main shader program
         }
     }
 
@@ -84,16 +94,12 @@ private:
 
     void setupNormals(const vector<Vertex>& vertices, BoundingBox box) {
         vector<Vertex> normal_vertices;
-        float length = glm::distance(box.max , box.min) * NORMAL_LENGTH_BOX;
-
         for (const auto& vertex : vertices) {
-            Vertex v1, v2;
-            v1.position = vertex.position;
-            v1.color = {1.0,1.0,0.0};
-            v2.position = vertex.position + vertex.normal * length;
-            v2.color = {1.0,1.0,0.0};
-            normal_vertices.push_back(v1);
-            normal_vertices.push_back(v2);
+            Vertex v;
+            v.position = vertex.position;
+            v.normal = vertex.normal; // Store original normal
+            v.color = {1.0, 1.0, 0.0}; // Yellow for normals
+            normal_vertices.push_back(v);
         }
         normals = new BaseSubmesh(normal_vertices);
     }

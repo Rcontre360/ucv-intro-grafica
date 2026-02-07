@@ -14,6 +14,9 @@ using namespace std;
 
 struct DrawConfig {
     GLuint shaderProgram;
+    GLuint normalShaderProgram; // New: for normal visualization
+    int width; // New: for projection aspect ratio
+    int height; // New: for projection aspect ratio
     bool showVertices;
     float* vertexColor;
     float pointSize;
@@ -61,13 +64,17 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, flatVertices.size() * sizeof(float), flatVertices.data(), GL_STATIC_DRAW);
 
-        // Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        // Position attribute (location 0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
-        // Color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        // Normal attribute (location 1)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
+
+        // Color attribute (location 2)
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
 
         glBindVertexArray(0);
     }
@@ -114,6 +121,27 @@ public:
         glBindVertexArray(0);
         glDisable(GL_POLYGON_OFFSET_LINE);
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 0);
+    }
+
+    void drawCorrectlyTransformedLines(GLuint normalProgram, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, const float* normalColor, float normalLength) {
+        glUseProgram(normalProgram);
+
+        // normalMatrix is now calculated in the NORMAL_VERTEX shader, not passed here.
+
+        setGpuVariable(normalProgram, Shaders::NormalShader::model, model);
+        setGpuVariable(normalProgram, Shaders::NormalShader::view, view);
+        setGpuVariable(normalProgram, Shaders::NormalShader::projection, projection);
+        setGpuVariable(normalProgram, Shaders::NormalShader::normalLength, normalLength);
+        setGpuVariable(normalProgram, Shaders::NormalShader::u_normal_color, glm::make_vec3(normalColor));
+        
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1.0, -1.0);
+
+        glBindVertexArray(vao);
+        glDrawArrays(GL_POINTS, 0, vertexCount); // Changed to GL_POINTS for Geometry Shader input
+        glBindVertexArray(0);
+
+        glDisable(GL_POLYGON_OFFSET_LINE);
     }
 
     vector<Vertex> getWorldVertices() const {

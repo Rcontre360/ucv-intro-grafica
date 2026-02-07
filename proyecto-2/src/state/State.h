@@ -120,25 +120,14 @@ public:
         }
     }
 
-    void draw(GLuint shaderProgram)
+    void draw(const DrawConfig& config)
     {
-        DrawConfig config;
-        config.shaderProgram = shaderProgram;
-        config.showVertices = showVertices;
-        config.vertexColor = vertexColor;
-        config.pointSize = pointSize;
-        config.showWireframe = showWireframe;
-        config.wireframeColor = wireframeColor;
-        config.showFill = showFill;
-        config.showNormals = showNormals;
-        config.normalColor = normalColor;
-
         for (size_t i = 0; i < shapes.size(); ++i) {
             shapes[i]->draw(config);
         }
 
         if (moveFullObjectMode && globalBoundingBox) {
-            globalBoundingBox->drawAsLines(shaderProgram, globalBoundingBoxColor);
+            globalBoundingBox->drawAsLines(config.shaderProgram, globalBoundingBoxColor);
         }
     }
 

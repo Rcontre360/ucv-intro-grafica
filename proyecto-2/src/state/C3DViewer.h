@@ -82,6 +82,7 @@ public:
 
         setupDefaultShader();
         setupPickingShader();
+        setupNormalShader(); // Call new setup method
         setupPickingFBO(); 
 
         appState = new State();
@@ -167,6 +168,7 @@ public:
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
         if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
+        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); // New: Clean up normal shader program
         if (pickingTexture) glDeleteTextures(1, &pickingTexture);
         if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
         if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
@@ -306,7 +308,21 @@ private:
 
         if (appState)
         {
-            appState->draw(shaderProgram);
+            DrawConfig config;
+            config.shaderProgram = shaderProgram;
+            config.normalShaderProgram = normalShaderProgram;
+            config.width = width;
+            config.height = height;
+            config.showVertices = appState->showVertices;
+            config.vertexColor = appState->vertexColor;
+            config.pointSize = appState->pointSize;
+            config.showWireframe = appState->showWireframe;
+            config.wireframeColor = appState->wireframeColor;
+            config.showFill = appState->showFill;
+            config.showNormals = appState->showNormals;
+            config.normalColor = appState->normalColor;
+
+            appState->draw(config);
         }
 
         drawInterface();
@@ -606,6 +622,19 @@ private:
         glDeleteShader(fragmentShader);
     }
 
+    void setupNormalShader() // New: Setup Normal Shader
+    {
+        GLuint vertexShader = setupShader("NORMAL_VERTEX", normalVertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint geometryShader = setupShader("NORMAL_GEOMETRY", normalGeometryShaderSrc, GL_GEOMETRY_SHADER);
+        GLuint fragmentShader = setupShader("NORMAL_FRAGMENT", normalFragmentShaderSrc, GL_FRAGMENT_SHADER);
+
+        normalShaderProgram = setupShaderProgram(vertexShader, fragmentShader, "NORMAL_PROGRAM", geometryShader);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(geometryShader); // Delete geometry shader after linking
+        glDeleteShader(fragmentShader);
+    }
+
     bool checkCompileErrors(GLuint shader, const char* type) 
     {
         GLint success;
@@ -672,6 +701,7 @@ protected:
     GLFWwindow* window = nullptr;
     State* appState = nullptr;
     GLuint shaderProgram = 0;
+    GLuint normalShaderProgram = 0;
 
     int width = 720;
     int height = 480;
