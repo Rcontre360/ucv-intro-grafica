@@ -32,7 +32,7 @@ public:
     float yaw = -90.0f;
     float pitch = 0.0f;
 
-    float movementSpeed = 2.5f;
+    float movementSpeed = 0.5f;
     float mouseSensitivity = 0.1f;
     float zoom = 45.0f;
     glm::vec3 initObjectPos = glm::vec3(0.0f, 0.0f, -3.0f);
@@ -54,10 +54,6 @@ public:
             position += front * velocity;
         if (direction == BACKWARD)
             position -= front * velocity;
-        if (direction == LEFT)
-            yaw -= velocity;
-        if (direction == RIGHT)
-            yaw += velocity;
 
         updateCameraVectors();
     }
@@ -69,7 +65,6 @@ public:
         yaw   += xoffset;
         pitch += yoffset;
 
-        // Make sure that when pitch is out of bounds, screen doesn't get flipped
         if (constrainPitch) {
             if (pitch > 89.0f)
                 pitch = 89.0f;
@@ -77,7 +72,6 @@ public:
                 pitch = -89.0f;
         }
 
-        // Update front, right and up Vectors using the updated Euler angles
         updateCameraVectors();
     }
 

@@ -106,10 +106,6 @@ public:
                 Camera::getInstance().processKeyboard(FORWARD, speed);
             if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
                 Camera::getInstance().processKeyboard(BACKWARD, speed);
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                Camera::getInstance().processKeyboard(LEFT, speed);
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                Camera::getInstance().processKeyboard(RIGHT, speed);
         }
     }
 
@@ -181,20 +177,16 @@ private:
     {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) // Handle both press and hold
         {
-            double currentFrameTime = glfwGetTime();
-            double deltaTime = currentFrameTime - lastFrameTime; 
-            float speed = (float)(1.0 * deltaTime); 
-
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             if (key == GLFW_KEY_UP)
-                Camera::getInstance().processKeyboard(FORWARD, speed);
+                Camera::getInstance().processKeyboard(FORWARD, 1);
             if (key == GLFW_KEY_DOWN)
-                Camera::getInstance().processKeyboard(BACKWARD, speed);
+                Camera::getInstance().processKeyboard(BACKWARD, 1);
             if (key == GLFW_KEY_LEFT)
-                Camera::getInstance().processKeyboard(LEFT,speed);
+                Camera::getInstance().processMouseMovement(-7, 0, false);
             if (key == GLFW_KEY_RIGHT)
-                Camera::getInstance().processKeyboard(RIGHT, speed);
+                Camera::getInstance().processMouseMovement(7, 0, false);
 
             if (key == GLFW_KEY_SPACE) {
                 isFPSMode = !isFPSMode;
