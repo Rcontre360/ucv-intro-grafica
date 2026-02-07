@@ -33,6 +33,7 @@ public:
 
     float vertexColor[3] = { 1.0f, 1.0f, 1.0f };
     float pointSize = 5.0f;
+    float normalWidth = 1.0f;
     float wireframeColor[3] = { 1.0f, 1.0f, 1.0f };
     float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
     float normalColor[3] = { 1.0f, 1.0f, 0.0f };

@@ -15,12 +15,13 @@ using namespace std;
 struct DrawConfig {
     GLuint shaderProgram;
     GLuint normalShaderProgram; // New: for normal visualization
-    int width; // New: for projection aspect ratio
-    int height; // New: for projection aspect ratio
     glm::mat4 view; // New: View matrix
     glm::mat4 projection; // New: Projection matrix
+    int width; // New: for projection aspect ratio
+    int height; // New: for projection aspect ratio
     bool showVertices;
     float* vertexColor;
+    float normalWidth; // New: for projection aspect ratio
     float pointSize;
     bool showWireframe;
     float* wireframeColor;

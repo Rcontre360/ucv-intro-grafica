@@ -111,7 +111,7 @@ public:
 
         bool hasNormals = !info.normals.empty();
         vector<glm::vec3> calculatedNormals;
-        if (!hasNormals) {
+        if (!hasNormals || true) {
             calculatedNormals = calculateNormals(info, _shapes);
         }
 

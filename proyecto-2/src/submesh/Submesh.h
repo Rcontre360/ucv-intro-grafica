@@ -14,8 +14,6 @@
 
 using namespace std;
 
-const float NORMAL_DIAGONAL_PERCENTAGE = 0.05f; // New constant
-
 class Submesh : public BaseSubmesh 
 {
 public:
@@ -45,17 +43,14 @@ public:
 
         if (config.showNormals && normals) {
             glm::mat4 model = getTransform();
-            // Use view and projection from config, already calculated in C3DViewer::render
-            // glm::mat4 view = Camera::getInstance().getViewMatrix(); // REMOVED
-            // glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)config.width / (float)config.height, 0.1f, 100.0f); // REMOVED
-
-            // Calculate normal length based on this submesh's bounding box diagonal
             BoundingBox localBounds = makeBoundingBox(this->vertices);
-            float diagonalLength = glm::distance(localBounds.min, localBounds.max);
-            float currentNormalLength = diagonalLength * NORMAL_DIAGONAL_PERCENTAGE;
+
+            float scaleFactor = std::max({scale.x, scale.y, scale.z});
+            float diagonalLength = glm::distance(localBounds.min, localBounds.max) * scaleFactor;
+            float currentNormalLength = diagonalLength / 100 * config.normalWidth;
 
             normals->drawCorrectlyTransformedLines(config, model, config.normalColor, currentNormalLength);
-            glUseProgram(config.shaderProgram); // Restore the main shader program
+            glUseProgram(config.shaderProgram); 
         }
     }
 

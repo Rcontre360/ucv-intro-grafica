@@ -323,6 +323,7 @@ private:
             config.showFill = appState->showFill;
             config.showNormals = appState->showNormals;
             config.normalColor = appState->normalColor;
+            config.normalWidth = appState->normalWidth;
 
             appState->draw(config);
         }
@@ -455,6 +456,7 @@ private:
             {
                 ImGui::Checkbox("Show##Normals", &appState->showNormals);
                 ImGui::ColorEdit3("Color##Normals", appState->normalColor, ImGuiColorEditFlags_NoInputs);
+                ImGui::SliderFloat("Size##Normals", &appState->normalWidth, 0.1f, 100.0f);
             }
 
             // Advanced Options Section
