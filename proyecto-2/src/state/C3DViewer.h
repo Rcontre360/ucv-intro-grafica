@@ -203,9 +203,9 @@ private:
             if (key == GLFW_KEY_DOWN)
                 Camera::getInstance().processKeyboard(BACKWARD, 1);
             if (key == GLFW_KEY_LEFT)
-                Camera::getInstance().processMouseMovement(-7, 0, false);
+                Camera::getInstance().processMouseMovement(-10, 0, false);
             if (key == GLFW_KEY_RIGHT)
-                Camera::getInstance().processMouseMovement(7, 0, false);
+                Camera::getInstance().processMouseMovement(10, 0, false);
 
             if (key == GLFW_KEY_SPACE) {
                 isFPSMode = !isFPSMode;
@@ -371,6 +371,7 @@ private:
                         if (appState) {
                             try {
                                 appState->loadObject(selection[0]);
+                                Camera::getInstance().resetCamera();
                             } catch (const exception& e) {
                                 cerr << "Error loading object: " << e.what() << endl;
                             }
@@ -413,21 +414,20 @@ private:
                 }
                 ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs); // New
                 
-                static glm::vec3 scaleValue = glm::vec3(1.0f);
-                if (ImGui::SliderFloat("Scale X", &scaleValue.x, 0.01, 3))
+                if (ImGui::SliderFloat("Scale X", &appState->uiScale.x, 0.01, 3))
                 {
                     appState->moveFullObjectMode = false;
-                    appState->rescaleAllShapes(scaleValue);
+                    appState->rescaleAllShapes(appState->uiScale);
                 }
-                if (ImGui::SliderFloat("Scale Y", &scaleValue.y, 0.01, 3))
+                if (ImGui::SliderFloat("Scale Y", &appState->uiScale.y, 0.01, 3))
                 {
                     appState->moveFullObjectMode = false;
-                    appState->rescaleAllShapes(scaleValue);
+                    appState->rescaleAllShapes(appState->uiScale);
                 }
-                if (ImGui::SliderFloat("Scale Z", &scaleValue.z, 0.01, 3))
+                if (ImGui::SliderFloat("Scale Z", &appState->uiScale.z, 0.01, 3))
                 {
                     appState->moveFullObjectMode = false;
-                    appState->rescaleAllShapes(scaleValue);
+                    appState->rescaleAllShapes(appState->uiScale);
                 }
                 if (ImGui::Button("Center")) {
                     if (appState) {

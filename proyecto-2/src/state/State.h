@@ -41,6 +41,7 @@ public:
 
     vector<Submesh*> shapes;
 
+    glm::vec3 uiScale = glm::vec3(1.0f);
     glm::vec3 center = glm::vec3(1.0f);
     glm::vec3 oldScale = glm::vec3(1.0f);
 
@@ -149,7 +150,9 @@ public:
         for (Submesh* obj : shapes) {
             delete obj;
         }
+
         shapes.clear();
+        resetState();
 
         LoadedObject loaded = FileLoader::loadObject(path);
         shapes = loaded.shapes;
@@ -220,7 +223,6 @@ public:
     //moves shape to center and scales back to unit cube
     void centerAndScaleBack() {
         if (shapes.empty()) return;
-
         updateGlobalBoundingBox();
 
         BoundingBox box = getBoundingBox();
@@ -239,6 +241,31 @@ public:
             globalBoundingBox->scale *= globalScaleFactor;
         }
         center += moveTo; 
+
+        updateGlobalBoundingBox();
+    }
+
+    void resetState(){
+        showVertices = false;
+        showWireframe = false;
+        showFill = true;
+        lineAntialiasing = true;
+        showNormals = false;
+        moveFullObjectMode = false;
+        showFPS = false;
+        enableBackfaceCulling = false;
+        enableDepthTest = true;
+
+        pointSize = 5.0f;
+        normalWidth = 1.0f;
+
+        //avoid losing the pointer used on the ui
+        uiScale.x = 1.0f;
+        uiScale.y = 1.0f;
+        uiScale.z = 1.0f;
+        oldScale.x = 1.0f;
+        oldScale.y = 1.0f;
+        oldScale.z = 1.0f;
     }
 
 private:
