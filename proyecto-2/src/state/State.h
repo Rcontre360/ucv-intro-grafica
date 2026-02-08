@@ -37,7 +37,7 @@ public:
     float wireframeColor[3] = { 1.0f, 1.0f, 1.0f };
     float globalBoundingBoxColor[3] = { 0.0f, 1.0f, 0.0f };
     float normalColor[3] = { 1.0f, 1.0f, 0.0f };
-    float backgroundColor[3] = { 0.3f, 0.3f, 0.3f }; // New
+    float backgroundColor[3] = { 0.0f, 0.0f, 0.0f }; // New
 
     vector<Submesh*> shapes;
 

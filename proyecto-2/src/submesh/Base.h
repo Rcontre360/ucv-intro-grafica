@@ -116,6 +116,7 @@ public:
         setGpuVariable(shaderProgram, Shaders::DefaultShader::uHasColor, 1);
         setGpuVariable(shaderProgram, Shaders::DefaultShader::u_color, glm::make_vec3(color));
 
+        //fixes z-fighting 
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);
         glBindVertexArray(vao);
@@ -135,6 +136,7 @@ public:
         setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::normalLength, normalLength);
         setGpuVariable(config.normalShaderProgram, Shaders::NormalShader::u_normal_color, glm::make_vec3(normalColor));
         
+        //fixes z-fighting 
         glEnable(GL_POLYGON_OFFSET_LINE);
         glPolygonOffset(-1.0, -1.0);
 
@@ -228,13 +230,16 @@ private:
     void drawWireframe(const DrawConfig& config) {
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, 1);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, glm::make_vec3(config.wireframeColor));
-        glEnable(GL_POLYGON_OFFSET_LINE); // Enable polygon offset for lines
-        glPolygonOffset(-1.0f, -1.0f); // Offset parameters
+
+        //fixes z-fighting 
+        glEnable(GL_POLYGON_OFFSET_LINE); 
+        glPolygonOffset(-1.0f, -1.0f); 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDisable(GL_POLYGON_OFFSET_LINE); // Disable polygon offset
+        glDisable(GL_POLYGON_OFFSET_LINE); 
+
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, 0);
     }
 
