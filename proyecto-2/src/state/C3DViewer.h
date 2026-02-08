@@ -17,6 +17,7 @@
 
 #include "State.h"
 #include "../utils/Camera.h"
+#include "../utils/FPSCounter.h"
 #include "../utils/Utils.h"
 #include "../utils/Shaders.h"
 
@@ -31,8 +32,9 @@ class State;
 
 class C3DViewer {
 protected:
-    GLFWwindow* window = nullptr;
     State* appState = nullptr;
+    FPSAvgCounter* fpsCounter = nullptr;
+    GLFWwindow* window = nullptr;
     GLuint shaderProgram = 0;
     GLuint normalShaderProgram = 0;
 
@@ -41,11 +43,10 @@ protected:
     bool mouseButtonsDown[2] = { false, false };
     bool firstMouse = false;
     bool isFPSMode = false;
+    bool showFramesSecond = true;
     pair<double,double> mousePos = {0.0,0.0};
     int selectedSubmeshIndex = -1;
 
-    double lastFrameTime = 0.0; // New
-    int frameCount = 0; // New
     char fpsText[16] = "FPS: n/a"; // New
 
     GLuint pickingFBO = 0;
@@ -63,6 +64,7 @@ public:
         ImGui::DestroyContext();
         
         delete appState;
+        delete fpsCounter;
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
         if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
@@ -126,6 +128,8 @@ public:
         setupPickingFBO(); 
 
         appState = new State();
+        // avg of last 5 seconds
+        fpsCounter = new FPSAvgCounter(5);
 
         glViewport(0, 0, width, height);
 
@@ -138,7 +142,7 @@ public:
         return true;
     }
 
-    void processFPS(double deltaTime) {
+    void mouseCameraMovement(double deltaTime) {
         float speed = (float)(1.0 * deltaTime); // Adjust speed constant as needed
 
         if (isFPSMode) {
@@ -153,17 +157,10 @@ public:
     {
         while (!glfwWindowShouldClose(window))
         {
-            double currentFrameTime = glfwGetTime();
-            double deltaTime = currentFrameTime - lastFrameTime; 
+            fpsCounter->framesPerSecondAvg(glfwGetTime());
+            sprintf(fpsText, "FPS: %.1f",fpsCounter->getCount()); 
 
-            frameCount++;
-            if (deltaTime >= 1.0) { 
-                sprintf(fpsText, "FPS: %.1f",(float)frameCount / (float)deltaTime); 
-                frameCount = 0;
-                lastFrameTime = currentFrameTime; 
-            }
-
-            processFPS(deltaTime);
+            mouseCameraMovement(fpsCounter->getDelta(glfwGetTime()));
             glfwPollEvents();
 
             if (appState && appState->lineAntialiasing) {
@@ -438,6 +435,10 @@ private:
                         Camera::getInstance().resetCamera();
                     }
                 }
+                // FPS Display
+                ImGui::Checkbox("Show##FPS", &showFramesSecond);
+                if (showFramesSecond)
+                    ImGui::TextUnformatted(fpsText); // Display FPS
             }
 
             // Other Sections (Vertex, Wireframe, Normals, More)
@@ -468,9 +469,6 @@ private:
                 ImGui::Checkbox("Back-face Culling", &appState->enableBackfaceCulling); // New
                 ImGui::Checkbox("Depth Test", &appState->enableDepthTest); // New
             }
-
-            // FPS Display
-            ImGui::TextUnformatted(fpsText); // Display FPS
 
             // Selected Submesh Controls as a collapsible header
             if (ImGui::CollapsingHeader("Selected Submesh") && selectedSubmeshIndex != -1 && appState && selectedSubmeshIndex < appState->shapes.size())
