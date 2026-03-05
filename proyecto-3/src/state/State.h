@@ -65,7 +65,7 @@ public:
         newObj->updateCenter();
 
         objects.push_back(newObj);
-        selectedObjectIndex = objects.size() - 1; // Auto select new obj
+        selectedObjectIndex = (int)objects.size() - 1; // Auto select new obj
     }
 
     void rescaleAllShapes(glm::vec3 factor)

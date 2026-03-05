@@ -335,7 +335,7 @@ private:
         ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); 
 
         if (appState) {
-            if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs);
                 
