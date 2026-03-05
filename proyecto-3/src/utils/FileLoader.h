@@ -8,10 +8,15 @@
 #include <algorithm>
 #include <limits>
 #include "tinyobjloader.h"
-#include "../submesh/Object.h"
+#include "../submesh/Submesh.h"
 #include "stb/stb_image.h"
 
 using namespace std;
+
+struct LoadedObject {
+    vector<Submesh*> shapes;
+    vector<Vertex> vertices;
+};
 
 class FileLoader {
 private:
@@ -129,8 +134,6 @@ private:
         return vertices;
     }
 
-    // we had a bug with some shapes where scaling wasnt working bc their center was far away from ours. Somehow not even with
-    // transformation matrixes I was able to fix it so I decided to just move all the vertex of the shape to their correct position (center at 0)
     static void normalizeVertexGroups(vector<vector<Vertex>>& allVertexGroups) {
         glm::vec3 minBound(numeric_limits<float>::max());
         glm::vec3 maxBound(numeric_limits<float>::lowest());
@@ -156,7 +159,8 @@ private:
     }
 
 public:
-    static Object3D* loadObject(const std::string& path) {
+    static LoadedObject loadObject(const std::string& path) {
+        LoadedObject loadedObject;
         tinyobj::attrib_t info;
         vector<tinyobj::shape_t> _shapes;
         vector<tinyobj::material_t> materials;
@@ -172,39 +176,31 @@ public:
 
         // Stage A: Extract all vertices first
         vector<vector<Vertex>> allVertexGroups;
+        vector<int> materialIds;
         for (const auto& shape : _shapes) {
             vector<Vertex> group = extractVertices(shape, info, materials, hasNormals, calculatedNormals);
             if (!group.empty()) {
                 allVertexGroups.push_back(group);
+                materialIds.push_back(shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[0]);
             }
         }
 
         normalizeVertexGroups(allVertexGroups);
         
-        struct ShapeInfo {
-            vector<Vertex> vertices;
-            int materialId;
-        };
-        vector<ShapeInfo> shapeInfos;
-        for (size_t i = 0; i < _shapes.size(); ++i) {
-            if (!allVertexGroups[i].empty()) {
-                shapeInfos.push_back({allVertexGroups[i], _shapes[i].mesh.material_ids.empty() ? -1 : _shapes[i].mesh.material_ids[0]});
-            }
-        }
-
-        vector<Submesh*> loadedShapes;
-        for (const auto& si : shapeInfos) {
-            Submesh* newShape = new Submesh(si.vertices);
-            if (si.materialId >= 0 && si.materialId < materials.size()) {
-                const auto& mat = materials[si.materialId];
+        for (size_t i = 0; i < allVertexGroups.size(); ++i) {
+            Submesh* newShape = new Submesh(allVertexGroups[i]);
+            int matId = materialIds[i];
+            if (matId >= 0 && matId < materials.size()) {
+                const auto& mat = materials[matId];
                 if (!mat.diffuse_texname.empty()) newShape->diffuseMap = loadTexture(basedir + mat.diffuse_texname);
                 if (!mat.specular_texname.empty()) newShape->specularMap = loadTexture(basedir + mat.specular_texname);
                 if (!mat.bump_texname.empty()) newShape->normalMap = loadTexture(basedir + mat.bump_texname);
                 if (!mat.ambient_texname.empty()) newShape->ambientMap = loadTexture(basedir + mat.ambient_texname);
             }
-            loadedShapes.push_back(newShape);
+            loadedObject.shapes.push_back(newShape);
+            loadedObject.vertices.insert(loadedObject.vertices.end(), allVertexGroups[i].begin(), allVertexGroups[i].end());
         }
 
-        return new Object3D(loadedShapes);
+        return loadedObject;
     }
 };

@@ -20,6 +20,7 @@
 #include "../utils/FPSCounter.h"
 #include "../utils/Utils.h"
 #include "../utils/Shaders.h"
+#include "../utils/Skybox.h"
 
 using namespace Shaders;
 
@@ -33,9 +34,11 @@ class State;
 class C3DViewer {
 protected:
     State* appState = nullptr;
+    Skybox* skybox = nullptr;
     FPSAvgCounter* fpsCounter = nullptr;
     GLFWwindow* window = nullptr;
     GLuint shaderProgram = 0;
+    GLuint skyboxShaderProgram = 0;
 
     int width = 720;
     int height = 480;
@@ -57,9 +60,11 @@ public:
         ImGui::DestroyContext();
         
         delete appState;
+        delete skybox;
         delete fpsCounter;
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
+        if (skyboxShaderProgram) glDeleteProgram(skyboxShaderProgram);
         if (window) glfwDestroyWindow(window);
         glfwTerminate();
     }
@@ -111,8 +116,10 @@ public:
         });
 
         setupDefaultShader();
+        setupSkyboxShader();
 
         appState = new State();
+        skybox = new Skybox("assets/cubemap/bar.png");
         
         try {
             appState->loadObject("assets/cool-table/cool-table.obj");
@@ -276,6 +283,11 @@ private:
     {
         prepareRendering(shaderProgram, appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]); // Use appState background color
 
+        if (skybox) {
+            skybox->draw(skyboxShaderProgram);
+        }
+
+        glUseProgram(shaderProgram);
         if (appState)
         {
             DrawConfig config;
@@ -335,7 +347,7 @@ private:
         ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); 
 
         if (appState) {
-            if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs);
                 
@@ -380,7 +392,7 @@ private:
     }
 
     void handleFullObjectTranslation(double deltaX, double deltaY) {
-        if (!appState || appState->objects.empty()) return;
+        if (!appState || appState->shapes.empty()) return;
 
         float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); 
         float theta = glm::radians(45.0f / 2.0f);
@@ -408,6 +420,17 @@ private:
         GLuint fragmentShader = setupShader("FRAGMENT", fragmentShaderSrc,GL_FRAGMENT_SHADER);
 
         shaderProgram = setupShaderProgram(vertexShader,fragmentShader);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+    }
+
+    void setupSkyboxShader() 
+    {
+        GLuint vertexShader = setupShader("SKYBOX_VERTEX", skyboxVertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint fragmentShader = setupShader("SKYBOX_FRAGMENT", skyboxFragmentShaderSrc, GL_FRAGMENT_SHADER);
+
+        skyboxShaderProgram = setupShaderProgram(vertexShader, fragmentShader);
 
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
