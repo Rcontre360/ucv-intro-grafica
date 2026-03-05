@@ -9,11 +9,11 @@
 #include <GLFW/glfw3.h>
 
 #include "tinyobjloader.h"
-#include "../submesh/Submesh.h"
+#include "../submesh/Object.h"
 #include "../utils/FileLoader.h"
 #include "../utils/Utils.h"
 #include "../utils/Shaders.h"
-#include "../utils/Camera.h" // Added this line to include Camera.h
+#include "../utils/Camera.h" 
 
 using namespace std;
 
@@ -28,118 +28,81 @@ public:
     float normalColor[3] = { 1.0f, 1.0f, 0.0f };
     float backgroundColor[3] = { 0.5f, 0.5f, 0.5f }; // New
 
-    vector<Submesh*> shapes;
+    vector<Object3D*> objects;
+    int selectedObjectIndex = 0; // Currently selected object for transformations
 
     glm::vec3 uiScale = glm::vec3(1.0f);
-    glm::vec3 center = glm::vec3(1.0f);
-    glm::vec3 oldScale = glm::vec3(1.0f);
 
     State(){}
 
     ~State()
     {
-        for (Submesh* obj : shapes) {
+        for (Object3D* obj : objects) {
             delete obj;
         }
-        shapes.clear();
-    }
-
-    BoundingBox getBoundingBox(){
-        vector<Vertex> allVertices;
-        for (Submesh* shape : shapes) {
-            vector<Vertex> worldVertex = shape->getWorldVertices();
-            allVertices.insert(allVertices.end(), worldVertex.begin(), worldVertex.end());
-        }
-        
-        return makeBoundingBox(allVertices);
+        objects.clear();
     }
 
     void draw(const DrawConfig& config)
     {
-        for (size_t i = 0; i < shapes.size(); ++i) {
-            shapes[i]->draw(config);
+        for (size_t i = 0; i < objects.size(); ++i) {
+            objects[i]->draw(config);
         }
     }
 
     void loadObject(const string& path)
     {
-        for (Submesh* obj : shapes) {
-            delete obj;
-        }
-
-        shapes.clear();
-        resetState();
-
-        LoadedObject loaded = FileLoader::loadObject(path);
-        shapes = loaded.shapes;
-
-        centerOnLoad(loaded);
+        Object3D* newObj = FileLoader::loadObject(path);
         
-        if (!shapes.empty()) {
-            auto [minBound, maxBound, _center] = getBoundingBox();
-            center = _center;
-        }
+        // Center the newly loaded object locally to the camera's front slightly
+        glm::vec3 moveTo = Camera::getInstance().initObjectPos;
+        glm::vec3 size = newObj->getBoundingBox().max - newObj->getBoundingBox().min;
+        float maxDim = std::max({size.x, size.y, size.z});
+        float globalScaleFactor = 1.0f / maxDim;
 
-        for (Submesh* obj : shapes) {
-            obj->initialTransform = obj->getTransform();
-            obj->initialColor[0] = obj->color[0];
-            obj->initialColor[1] = obj->color[1];
-            obj->initialColor[2] = obj->color[2];
-        }
+        newObj->setTranslate(moveTo - newObj->center);
+        newObj->scale *= globalScaleFactor;
+        newObj->updateCenter();
+
+        objects.push_back(newObj);
+        selectedObjectIndex = objects.size() - 1; // Auto select new obj
     }
 
     void rescaleAllShapes(glm::vec3 factor)
     {
-        for (Submesh* obj : shapes) {
-            obj->setScale((factor / oldScale));
+        if (selectedObjectIndex >= 0 && selectedObjectIndex < objects.size()) {
+            objects[selectedObjectIndex]->setScale(factor);
         }
-
-        oldScale = factor;
     }
 
     void translateFullObject(const glm::vec3& offset)
     {
-        if (shapes.empty()) return;
-
-        for (Submesh* obj : shapes) {
-            obj->setTranslate(offset); 
-        }
-        center += offset;
-    }
-
-    void translateSubmesh(int index, const glm::vec3& offset)
-    {
-        if (index >= 0 && index < shapes.size()) {
-            shapes[index]->setTranslate(offset);
+        if (selectedObjectIndex >= 0 && selectedObjectIndex < objects.size()) {
+            objects[selectedObjectIndex]->setTranslate(offset);
         }
     }
 
     void rotateObject(float angleX, float angleY)
     {
-        if (shapes.empty()) return;
-
-        for (Submesh* obj : shapes) {
-            obj->setRotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
-            obj->setRotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+        if (selectedObjectIndex >= 0 && selectedObjectIndex < objects.size()) {
+            objects[selectedObjectIndex]->setRotate(angleX, angleY);
         }
     }
 
     //moves shape to center and scales back to unit cube
     void centerAndScaleBack() {
-        if (shapes.empty()) return;
+        if (selectedObjectIndex >= 0 && selectedObjectIndex < objects.size()) {
+            Object3D* obj = objects[selectedObjectIndex];
+            glm::vec3 moveTo = Camera::getInstance().initObjectPos - obj->center;
+            glm::vec3 size = obj->getBoundingBox().max - obj->getBoundingBox().min;
 
-        BoundingBox box = getBoundingBox();
-        glm::vec3 moveTo = Camera::getInstance().initObjectPos - center;
-        glm::vec3 size = box.max - box.min;
+            float maxDim = std::max({size.x, size.y, size.z});
+            float globalScaleFactor = 1.0f / maxDim;
 
-        float maxDim = std::max({size.x, size.y, size.z});
-        float globalScaleFactor = 1.0f / maxDim;
-
-        for (Submesh* obj : shapes) {
             obj->setTranslate(moveTo);
             obj->scale *= globalScaleFactor;
+            obj->updateCenter();
         }
-        center += moveTo; 
     }
 
     void resetState(){
@@ -147,39 +110,8 @@ public:
         enableBackfaceCulling = false;
         enableDepthTest = true;
 
-        //avoid losing the pointer used on the ui
         uiScale.x = 1.0f;
         uiScale.y = 1.0f;
         uiScale.z = 1.0f;
-        oldScale.x = 1.0f;
-        oldScale.y = 1.0f;
-        oldScale.z = 1.0f;
-    }
-
-private:
-    void centerOnLoad(LoadedObject obj)
-    {
-        if (shapes.empty() || obj.vertices.empty()) {
-            return;
-        }
-
-        BoundingBox box = makeBoundingBox(obj.vertices);
-        centerShape(box);
-    }
-
-    void centerShape(BoundingBox box){
-        glm::vec3 size = box.max - box.min;
-        float maxDim = max({size.x, size.y, size.z});
-        float scaleFactor = 1.0f / maxDim;
-
-        glm::vec3 initialPos = Camera::getInstance().initObjectPos;
-        glm::vec3 translation = initialPos - (box.center * scaleFactor);
-
-        for (Submesh* shape : shapes) {
-            shape->resetTransform();
-
-            shape->scale = glm::vec3(scaleFactor);
-            shape->translate = glm::translate(glm::mat4(1.0f), translation);
-        }
     }
 };

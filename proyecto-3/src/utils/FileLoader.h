@@ -8,15 +8,10 @@
 #include <algorithm>
 #include <limits>
 #include "tinyobjloader.h"
-#include "../submesh/Submesh.h"
+#include "../submesh/Object.h"
 #include "stb/stb_image.h"
 
 using namespace std;
-
-struct LoadedObject {
-    vector<Submesh*> shapes;
-    vector<Vertex> vertices;
-};
 
 class FileLoader {
 private:
@@ -161,8 +156,7 @@ private:
     }
 
 public:
-    static LoadedObject loadObject(const std::string& path) {
-        LoadedObject loadedObject;
+    static Object3D* loadObject(const std::string& path) {
         tinyobj::attrib_t info;
         vector<tinyobj::shape_t> _shapes;
         vector<tinyobj::material_t> materials;
@@ -198,6 +192,7 @@ public:
             }
         }
 
+        vector<Submesh*> loadedShapes;
         for (const auto& si : shapeInfos) {
             Submesh* newShape = new Submesh(si.vertices);
             if (si.materialId >= 0 && si.materialId < materials.size()) {
@@ -207,10 +202,9 @@ public:
                 if (!mat.bump_texname.empty()) newShape->normalMap = loadTexture(basedir + mat.bump_texname);
                 if (!mat.ambient_texname.empty()) newShape->ambientMap = loadTexture(basedir + mat.ambient_texname);
             }
-            loadedObject.shapes.push_back(newShape);
-            loadedObject.vertices.insert(loadedObject.vertices.end(), si.vertices.begin(), si.vertices.end());
+            loadedShapes.push_back(newShape);
         }
 
-        return loadedObject;
+        return new Object3D(loadedShapes);
     }
 };

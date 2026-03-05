@@ -380,7 +380,7 @@ private:
     }
 
     void handleFullObjectTranslation(double deltaX, double deltaY) {
-        if (!appState || appState->shapes.empty()) return;
+        if (!appState || appState->objects.empty()) return;
 
         float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); 
         float theta = glm::radians(45.0f / 2.0f);
