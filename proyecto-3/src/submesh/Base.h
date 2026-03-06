@@ -15,8 +15,8 @@ using namespace std;
 
 struct DrawConfig {
     GLuint shaderProgram;
+    double currentTime = 0.0;
 };
-
 
 class BaseSubmesh 
 {
@@ -127,36 +127,42 @@ public:
 
     // translate
     void setTranslate(const glm::vec3& offset) { 
-        translate = glm::translate(glm::mat4(1.0f), offset) * translate;
+        translate = glm::translate(glm::mat4(1.0f), offset);
     }
 
     // normal rotate
     void setRotate(float angle, const glm::vec3& axis) { 
-        glm::quat q = glm::angleAxis(glm::radians(angle), axis);
-        rotate = q * rotate;
+        rotate = glm::angleAxis(glm::radians(angle), axis);
     }
 
     // rotate over a given center.
     // used bc submeshes might be far from shape center and must rotate around it
     void setRotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
-        // update rotation matrix accordingly
-        glm::quat rotationQuad = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
-        rotate = rotationQuad * rotate;
+        // Absolute rotation
+        rotate = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
 
-        // get the vector from center to the current position
-        glm::vec3 pos = glm::vec3(translate[3]);
+        // For absolute translation around a pivot, we need the base relative position.
+        // Since this is an absolute setter, we assume we calculate the new translation 
+        // purely based on the given rotation and pivot point.
+        glm::vec3 pos = glm::vec3(initialTransform[3]); // Use original position
         glm::vec3 dirToPivot = pos - center;
 
-        // obtain new position and calculate the vector towards it
-        glm::vec3 newDir = rotationQuad * dirToPivot;
+        glm::vec3 newDir = rotate * dirToPivot;
         glm::vec3 delta = (center + newDir) - pos;
 
-        // apply given translation
-        setTranslate(delta);
+        // Set absolute translation based on this delta plus whatever the original translation was
+        translate = glm::translate(glm::mat4(1.0f), glm::vec3(initialTransform[3]) + delta);
     }
 
     void setScale(const glm::vec3& factor) { 
-        scale *= factor;
+        scale = factor;
+    }
+
+    void setRotateEuler(const glm::vec3& eulerDegrees) {
+        glm::quat qx = glm::angleAxis(glm::radians(eulerDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::quat qy = glm::angleAxis(glm::radians(eulerDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::quat qz = glm::angleAxis(glm::radians(eulerDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        rotate = qz * qy * qx;
     }
 
     void updateColor() {

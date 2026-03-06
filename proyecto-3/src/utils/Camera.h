@@ -6,6 +6,8 @@
 enum CameraMovement {
     FORWARD,
     BACKWARD,
+    UP_DIR,
+    DOWN_DIR
 };
 
 class Camera {
@@ -58,6 +60,10 @@ public:
             position += front * velocity;
         if (direction == BACKWARD)
             position -= front * velocity;
+        if (direction == UP_DIR)
+            position += worldUp * velocity;
+        if (direction == DOWN_DIR)
+            position -= worldUp * velocity;
 
         updateCameraVectors();
     }

@@ -7,6 +7,7 @@
 #include "Submesh.h"
 #include "../utils/Utils.h"
 #include "../utils/Camera.h"
+#include "../utils/Animation.h"
 
 class Object {
 public:
@@ -15,6 +16,7 @@ public:
     glm::vec3 center = glm::vec3(0.0f);
     glm::vec3 oldScale = glm::vec3(1.0f);
     BoundingBox localBox; // The box in Blender space
+    Animation* animation = nullptr;
     
     Object() {}
     
@@ -23,9 +25,18 @@ public:
             delete sm;
         }
         submeshes.clear();
+        if (animation) delete animation;
     }
 
     void draw(const DrawConfig& config) {
+        if (animation) {
+            TransformState state = animation->getTransformAt(config.currentTime);
+            for (Submesh* sm : submeshes) {
+                sm->setTranslate(state.translation);
+                sm->setRotateEuler(state.rotation);
+                sm->setScale(state.scale);
+            }
+        }
         for (Submesh* sm : submeshes) {
             sm->draw(config);
         }

@@ -53,15 +53,6 @@ public:
         LoadedScene sceneData = FileLoader::loadScene(path);
         string basedir = path.substr(0, path.find_last_of("/\\" ) + 1);
 
-        float maxDim = max({
-            sceneData.sceneBox.max.x - sceneData.sceneBox.min.x,
-            sceneData.sceneBox.max.y - sceneData.sceneBox.min.y,
-            sceneData.sceneBox.max.z - sceneData.sceneBox.min.z
-        });
-        float scaleFactor = 1.0f / maxDim;
-        glm::vec3 initialPos = Camera::getInstance().initObjectPos;
-        glm::vec3 globalTranslation = initialPos - (sceneData.sceneBox.center * scaleFactor);
-
         for (const auto& objData : sceneData.objects) {
             Object* newObj = new Object();
             newObj->name = objData.name;
@@ -72,8 +63,8 @@ public:
                 FileLoader::applyMaterials(sm, objData.materialIds[i], sceneData.materials, basedir);
                 
                 sm->resetTransform();
-                sm->scale = glm::vec3(scaleFactor);
-                sm->translate = glm::translate(glm::mat4(1.0f), globalTranslation);
+                sm->scale = glm::vec3(1.0f);
+                sm->translate = glm::mat4(1.0f);
                 
                 sm->initialTransform = sm->getTransform();
                 sm->initialColor[0] = sm->color[0];

@@ -119,12 +119,29 @@ public:
         setupSkyboxShader();
 
         appState = new State();
-        skybox = new Skybox("assets/cubemap/bar.png");
+        skybox = new Skybox("assets/cubemap/snow.png");
         
         try {
-            appState->loadScene("assets/all.obj");
+            appState->loadScene("assets/scene/scene.obj");
             // Set initial camera on top of the table edge
             Camera::getInstance().position = glm::vec3(0.0f, 0.6f, -2.6f);
+
+            // Add Test Animation to the first object
+            if (!appState->objects.empty()) {
+                Animation* anim = new Animation(4.0f); // 4 seconds total duration
+                
+                // Keyframe 1: Start (no modification)
+                anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
+                
+                // Keyframe 2: Move UP 1 unit, Scale to 1.5x (after 1.33s)
+                anim->addKeyframe(TransformState(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.5f)));
+                
+                // Keyframe 3: Move back DOWN, return to 1.0 scale (after 2.66s)
+                anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
+
+                appState->objects[0]->animation = anim;
+            }
+
         } catch (const exception& e) {
             cerr << "Error loading default scene: " << e.what() << endl;
         }
@@ -144,7 +161,20 @@ public:
     }
 
     void mouseCameraMovement(double deltaTime) {
-        float speed = (float)(1.0 * deltaTime); 
+        float speed = (float)(1.0 * deltaTime); // Increased base speed
+        float rotSpeed = (float)(10.0 * deltaTime); // Speed for rotation
+
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(FORWARD, speed);
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(BACKWARD, speed);
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+            Camera::getInstance().processMouseMovement(-rotSpeed, 0, false);
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+            Camera::getInstance().processMouseMovement(rotSpeed, 0, false);
+
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(UP_DIR, speed);
 
         if (isFPSMode) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -191,16 +221,8 @@ private:
         {
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
-            if (key == GLFW_KEY_UP)
-                Camera::getInstance().processKeyboard(FORWARD, 1);
-            if (key == GLFW_KEY_DOWN)
-                Camera::getInstance().processKeyboard(BACKWARD, 1);
-            if (key == GLFW_KEY_LEFT)
-                Camera::getInstance().processMouseMovement(-10, 0, false);
-            if (key == GLFW_KEY_RIGHT)
-                Camera::getInstance().processMouseMovement(10, 0, false);
 
-            if (key == GLFW_KEY_SPACE) {
+            if (key == GLFW_KEY_ENTER) {
                 isFPSMode = !isFPSMode;
                 if (isFPSMode) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -270,11 +292,14 @@ private:
         double deltaX = xpos - mousePos.first;
         double deltaY = ypos - mousePos.second;
 
+        // Object rotation and translation disabled
+        /*
         if (mouseButtonsDown[1]){
             handleRotation(deltaX, deltaY);
         } else if (mouseButtonsDown[0]){
             handleFullObjectTranslation(deltaX, -deltaY);
         }
+        */
 
         mousePos = {xpos,ypos};
     }
@@ -292,6 +317,7 @@ private:
         {
             DrawConfig config;
             config.shaderProgram = shaderProgram;
+            config.currentTime = glfwGetTime();
 
             appState->draw(config);
         }
