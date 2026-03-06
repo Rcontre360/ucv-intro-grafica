@@ -48,7 +48,7 @@ protected:
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
 
-    char fpsText[16] = "FPS: n/a"; // New
+    char fpsText[16] = "FPS: n/a";
 
 public:
     C3DViewer() {}
@@ -122,11 +122,11 @@ public:
         skybox = new Skybox("assets/cubemap/bar.png");
         
         try {
-            appState->loadObject("assets/cool-table/cool-table.obj");
+            appState->loadScene("assets/all.obj");
             // Set initial camera on top of the table edge
             Camera::getInstance().position = glm::vec3(0.0f, 0.6f, -2.6f);
         } catch (const exception& e) {
-            cerr << "Error loading default object: " << e.what() << endl;
+            cerr << "Error loading default scene: " << e.what() << endl;
         }
 
         // avg of last 5 seconds
@@ -144,7 +144,7 @@ public:
     }
 
     void mouseCameraMovement(double deltaTime) {
-        float speed = (float)(1.0 * deltaTime); // Adjust speed constant as needed
+        float speed = (float)(1.0 * deltaTime); 
 
         if (isFPSMode) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -177,7 +177,7 @@ public:
                 glDisable(GL_DEPTH_TEST);
             }
 
-            clear(appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]); // Modified clear call
+            clear(appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]);
             render();
 
             glfwSwapBuffers(window);
@@ -263,7 +263,7 @@ private:
         ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
         ImGuiIO& io = ImGui::GetIO();
         if (io.WantCaptureMouse) {
-            mousePos = {xpos, ypos}; // Update position to prevent jumps
+            mousePos = {xpos, ypos};
             return;
         }
 
@@ -281,7 +281,7 @@ private:
 
     void render() 
     {
-        prepareRendering(shaderProgram, appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]); // Use appState background color
+        prepareRendering(shaderProgram, appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]);
 
         if (skybox) {
             skybox->draw(skyboxShaderProgram);
@@ -328,10 +328,10 @@ private:
                     {
                         if (appState) {
                             try {
-                                appState->loadObject(selection[0]);
+                                appState->loadScene(selection[0]);
                                 Camera::getInstance().resetCamera();
                             } catch (const exception& e) {
-                                cerr << "Error loading object: " << e.what() << endl;
+                                cerr << "Error loading scene: " << e.what() << endl;
                             }
                         }
                     }
@@ -351,13 +351,11 @@ private:
             {
                 ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs);
                 
-                // FPS Display
                 ImGui::Checkbox("Show##FPS", &showFramesSecond);
                 if (showFramesSecond)
-                    ImGui::TextUnformatted(fpsText); // Display FPS
+                    ImGui::TextUnformatted(fpsText);
             }
 
-            // Advanced Options Section
             if (ImGui::CollapsingHeader("Advanced"))
             {
                 ImGui::Checkbox("Back-face Culling", &appState->enableBackfaceCulling); 
@@ -382,28 +380,33 @@ private:
     }
 
     void handleRotation(double deltaX, double deltaY){
-        if (!appState) return;
+        if (!appState || appState->objects.empty()) return;
 
         float sensitivity = 0.2f; 
-        float rotationAmountY = deltaX * sensitivity; 
-        float rotationAmountX = deltaY * sensitivity;
+        float rotationAmountY = (float)deltaX * sensitivity; 
+        float rotationAmountX = (float)deltaY * sensitivity;
 
-        appState->rotateObject(rotationAmountX, rotationAmountY);
+        // Rotate the last loaded object or all? For now, all as it was before
+        for (auto obj : appState->objects) {
+            obj->rotate(rotationAmountX, rotationAmountY);
+        }
     }
 
     void handleFullObjectTranslation(double deltaX, double deltaY) {
-        if (!appState || appState->shapes.empty()) return;
+        if (!appState || appState->objects.empty()) return;
 
         float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); 
         float theta = glm::radians(45.0f / 2.0f);
         float halfTan = tanf(theta);
 
         float heightAtDepth = distance * halfTan;
-        float moveFactor = (heightAtDepth * 2.0f) / height;
+        float moveFactor = (heightAtDepth * 2.0f) / (float)height;
 
         glm::vec3 translationVector = (Camera::getInstance().right * (float)deltaX * moveFactor) + (Camera::getInstance().up * (float)deltaY * moveFactor);
 
-        appState->translateFullObject(translationVector);
+        for (auto obj : appState->objects) {
+            obj->translate(translationVector);
+        }
     }
 
     GLuint setupShader(const char* name, const char* src, const GLenum type) {
