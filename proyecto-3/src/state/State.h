@@ -98,10 +98,18 @@ public:
         for (Object* obj : objects) {
             
             if (obj->name == "santa_flight") {
-                float duration = 10.0f;
+                float duration = 20.0f;
                 glm::vec3 centerOffset(0.0f, 0.0f, 20.0f);
                 
-                CircleAnimation* anim = new CircleAnimation(centerOffset, duration, 0.0f, false);
+                CircleAnimation* anim = new CircleAnimation(centerOffset, duration, 0.0f, true);
+                obj->setAnimation(anim);
+            }
+
+            if (obj->name == "santa_ground") {
+                float duration = 10.0f;
+                glm::vec3 centerOffset(-3.0f, 0.0f, 0.0f);
+                
+                CircleAnimation* anim = new CircleAnimation(centerOffset, duration, 0.0f, true);
                 obj->setAnimation(anim);
             }
 
