@@ -126,22 +126,6 @@ public:
             // Set initial camera on top of the table edge
             Camera::getInstance().position = glm::vec3(0.0f, 0.6f, -2.6f);
 
-            // Add Test Animation to the first object
-            if (!appState->objects.empty()) {
-                Animation* anim = new Animation(4.0f); // 4 seconds total duration
-                
-                // Keyframe 1: Start (no modification)
-                anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
-                
-                // Keyframe 2: Move UP 1 unit, Scale to 1.5x (after 1.33s)
-                anim->addKeyframe(TransformState(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.5f)));
-                
-                // Keyframe 3: Move back DOWN, return to 1.0 scale (after 2.66s)
-                anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
-
-                appState->objects[0]->animation = anim;
-            }
-
         } catch (const exception& e) {
             cerr << "Error loading default scene: " << e.what() << endl;
         }
@@ -172,9 +156,6 @@ public:
             Camera::getInstance().processMouseMovement(-rotSpeed, 0, false);
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
             Camera::getInstance().processMouseMovement(rotSpeed, 0, false);
-
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-            Camera::getInstance().processKeyboard(UP_DIR, speed);
 
         if (isFPSMode) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -343,32 +324,8 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (ImGui::BeginMainMenuBar())
-        {
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::MenuItem("Load"))
-                {
-                    auto selection = pfd::open_file("Choose OBJ file", ".", { "OBJ Files (.obj)", "*.obj" }).result();
-                    if (!selection.empty())
-                    {
-                        if (appState) {
-                            try {
-                                appState->loadScene(selection[0]);
-                                Camera::getInstance().resetCamera();
-                            } catch (const exception& e) {
-                                cerr << "Error loading scene: " << e.what() << endl;
-                            }
-                        }
-                    }
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
-
-        ImGui::SetNextWindowPos(ImVec2(0, 20));
-        ImGui::SetNextWindowSize(ImVec2(200, height - 20));
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(200, height));
 
         ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); 
 
