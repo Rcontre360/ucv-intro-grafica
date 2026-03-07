@@ -13,6 +13,7 @@
 #include "../utils/FileLoader.h"
 #include "../utils/Utils.h"
 #include "../utils/Camera.h" 
+#include "../utils/CircleAnimation.h"
 
 using namespace std;
 
@@ -96,18 +97,12 @@ public:
             
             if (obj->name == "santa_flight") {
                 float duration = 10.0f;
-                float radius = 20.0f;
-                Animation* anim = new Animation(duration);
-                int steps = 30; 
+                // centerOffset: vector pointing from the original object position to the circle center.
+                // Since we want the circle to exist in front of the camera, we shift Z forward by 20.
+                glm::vec3 centerOffset(0.0f, 0.0f, 20.0f);
                 
-                for (int i = 0; i <= steps; ++i) {
-                    float t = (float)i / steps;
-                    float angle = t * 2.0f * M_PI; 
-                    
-                    glm::vec3 pos(-radius * cos(angle), 0.0f, -radius * sin(angle) + radius);
-                    glm::vec3 rot(0.0f, -glm::degrees(angle - M_PI / 2), 0.0f);
-                    anim->addKeyframe(TransformState(pos, rot, glm::vec3(1.0f)));
-                }
+                // planeAngleDeg is 0 for a flat X/Z circle. Set clockwise to true.
+                CircleAnimation* anim = new CircleAnimation(centerOffset, duration, 0.0f, false);
 
                 obj->setAnimation(anim);
             }
