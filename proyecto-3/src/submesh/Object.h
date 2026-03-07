@@ -7,7 +7,7 @@
 #include "Submesh.h"
 #include "../utils/Utils.h"
 #include "../utils/Camera.h"
-#include "../utils/Animation.h"
+#include "../animations/Animation.h"
 
 class Object {
 public:

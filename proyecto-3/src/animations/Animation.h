@@ -46,13 +46,20 @@ public:
 
         result.translation = glm::mix(k1.translation, k2.translation, localT);
         
+        // Fix rotation wrapping:
+        // Instead of pure linear mix, we calculate the difference, wrap it to [-180, 180], 
+        // and add it back. This ensures when interpolating from e.g. 240 back to 0, 
+        // the difference is 120 (forward to 360) rather than -240 (backward).
         glm::vec3 rotDiff = k2.rotation - k1.rotation;
-        for (int i = 0; i < 3; ++i) {
-            while (rotDiff[i] < -180.0f) rotDiff[i] += 360.0f;
-            while (rotDiff[i] > 180.0f) rotDiff[i] -= 360.0f;
+        for(int i = 0; i < 3; ++i) {
+            // Ensure diff is between -180 and 180 degrees to always take shortest continuous path
+            rotDiff[i] = fmod(rotDiff[i] + 180.0f, 360.0f);
+            if (rotDiff[i] < 0)
+                rotDiff[i] += 360.0f;
+            rotDiff[i] -= 180.0f;
         }
         result.rotation = k1.rotation + rotDiff * localT;
-
+        
         result.scale = glm::mix(k1.scale, k2.scale, localT);
 
         return result;

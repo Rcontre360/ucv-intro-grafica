@@ -13,7 +13,9 @@
 #include "../utils/FileLoader.h"
 #include "../utils/Utils.h"
 #include "../utils/Camera.h" 
-#include "../utils/CircleAnimation.h"
+#include "../animations/CircleAnimation.h"
+#include "../animations/RotateAnimation.h"
+#include "../animations/ScaleAnimation.h"
 
 using namespace std;
 
@@ -97,33 +99,44 @@ public:
             
             if (obj->name == "santa_flight") {
                 float duration = 10.0f;
-                // centerOffset: vector pointing from the original object position to the circle center.
-                // Since we want the circle to exist in front of the camera, we shift Z forward by 20.
                 glm::vec3 centerOffset(0.0f, 0.0f, 20.0f);
                 
-                // planeAngleDeg is 0 for a flat X/Z circle. Set clockwise to true.
                 CircleAnimation* anim = new CircleAnimation(centerOffset, duration, 0.0f, false);
-
                 obj->setAnimation(anim);
             }
 
-            if (obj->name == "snowman_red_1") {
-                float duration = 2.0f; 
-                Animation* anim = new Animation(duration);
-                // Rotate over the duration on the Y axis
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f)));
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 120.0f, 0.0f), glm::vec3(1.0f)));
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 240.0f, 0.0f), glm::vec3(1.0f)));
+            if (obj->name.rfind("snowman_red_", 0) == 0) {
+                int snowmanId = 1;
+                snowmanId = std::stoi(obj->name.substr(12)); 
+
+                bool clockwise = (snowmanId % 2 == 0);
+                float duration = 2.0f + (snowmanId * 0.2f); 
+
+                RotateAnimation* anim = new RotateAnimation(duration, clockwise); 
                 obj->setAnimation(anim);
             }
 
-            if (obj->name == "pine_4") {
-                float duration = 3.0f;
-                Animation* anim = new Animation(duration);
+            if (obj->name.rfind("snowman_blue_", 0) == 0) {
+                int snowmanId = 1;
+                snowmanId = std::stoi(obj->name.substr(13)); 
 
-                anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
-                anim->addKeyframe(TransformState(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.5f)));
+                bool clockwise = (snowmanId % 2 == 0);
+                float duration = 2.0f + (snowmanId * 0.5f); 
+
+                RotateAnimation* anim = new RotateAnimation(duration, clockwise); 
                 obj->setAnimation(anim);
+            }
+
+            if (obj->name.rfind("pine_", 0) == 0) {
+                int pineId = 0;
+                pineId = std::stoi(obj->name.substr(5)); 
+
+                if (pineId >= 3 && pineId <= 6) {
+                    float duration = 5.0f + (pineId * 0.3f); 
+                    
+                    ScaleAnimation* anim = new ScaleAnimation(duration, 0.5f, 1.0f);
+                    obj->setAnimation(anim);
+                }
             }
         }
     }
