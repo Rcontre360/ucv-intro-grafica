@@ -121,6 +121,23 @@ public:
         appState = new State();
         skybox = new Skybox("assets/cubemap/snow.png");
         
+        // Render a loading screen before loading the heavy scene
+        clear(0.1f, 0.1f, 0.1f);
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowPos(ImVec2(width / 2.0f - 120.0f, height / 2.0f - 50.0f));
+        ImGui::SetNextWindowSize(ImVec2(240, 100));
+        ImGui::Begin("Loading", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+        ImGui::Text("Loading Scene...");
+        ImGui::Text("Please wait...");
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+        
         try {
             appState->loadScene("assets/scene/scene.obj");
             // Set initial camera on top of the table edge

@@ -25,6 +25,7 @@ public:
     glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::mat4 translate = glm::mat4(1.0f);
     glm::mat4 initialTransform;
+    glm::vec3 pivot = glm::vec3(0.0f);
 
     vector<Vertex> vertices;
     float color[3];
@@ -178,7 +179,11 @@ public:
     const glm::mat4 getTransform() const { 
         glm::mat4 R = glm::mat4(rotate);
         glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
-        return translate * R * S;
+        
+        glm::mat4 toOrigin = glm::translate(glm::mat4(1.0f), -pivot);
+        glm::mat4 fromOrigin = glm::translate(glm::mat4(1.0f), pivot);
+
+        return translate * fromOrigin * R * S * toOrigin;
     }
 
     void resetTransform() { 

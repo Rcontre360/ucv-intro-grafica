@@ -79,6 +79,9 @@ public:
             if (!newObj->submeshes.empty()) {
                 // Now that the scale and translation are set, the world center is correct
                 newObj->center = newObj->getBoundingBox().center;
+                for (Submesh* sm : newObj->submeshes) {
+                    sm->pivot = newObj->center;
+                }
                 objects.push_back(newObj);
             } else {
                 delete newObj;
@@ -92,12 +95,12 @@ public:
         for (Object* obj : objects) {
             
             // Example 1: Circular Movement (like a car)
-            if (obj->name == "trineo") {
+            if (obj->name == "santa_flight") {
                 float duration = 4.0f; // 4 seconds per lap
                 float radius = 5.0f;
                 Animation* anim = new Animation(duration);
                 int steps = 16; // The more steps, the smoother the circle
-                for (int i = 0; i <= steps; ++i) {
+                for (int i = 0; i < steps; ++i) {
                     float angle = (float)i / steps * 2.0f * M_PI;
                     // Move in X and Z. Rotation Y makes it point forward along the circle.
                     glm::vec3 pos(cos(angle) * radius, 0.0f, sin(angle) * radius);
@@ -112,10 +115,10 @@ public:
             if (obj->name == "snowman_red_1") {
                 float duration = 2.0f; 
                 Animation* anim = new Animation(duration);
-                // Rotate from 0 to 360 over the duration on the Y axis
+                // Rotate over the duration on the Y axis
                 anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f)));
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 180.0f, 0.0f), glm::vec3(1.0f)));
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 360.0f, 0.0f), glm::vec3(1.0f)));
+                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 120.0f, 0.0f), glm::vec3(1.0f)));
+                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 240.0f, 0.0f), glm::vec3(1.0f)));
                 obj->animation = anim;
             }
 
@@ -123,12 +126,10 @@ public:
             if (obj->name == "pine_4") {
                 float duration = 3.0f;
                 Animation* anim = new Animation(duration);
-                // Base size
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
-                // Grow to 1.5x
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.5f)));
-                // Shrink back to base size
-                anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
+                // Base size and base position
+                anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
+                // Grow to 1.5x and translate upwards slightly on the Y axis
+                anim->addKeyframe(TransformState(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.5f)));
                 obj->animation = anim;
             }
         }

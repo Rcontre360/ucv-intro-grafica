@@ -45,7 +45,14 @@ public:
         const TransformState& k2 = keyframes[nextIndex];
 
         result.translation = glm::mix(k1.translation, k2.translation, localT);
-        result.rotation = glm::mix(k1.rotation, k2.rotation, localT);
+        
+        glm::vec3 rotDiff = k2.rotation - k1.rotation;
+        for (int i = 0; i < 3; ++i) {
+            while (rotDiff[i] < -180.0f) rotDiff[i] += 360.0f;
+            while (rotDiff[i] > 180.0f) rotDiff[i] -= 360.0f;
+        }
+        result.rotation = k1.rotation + rotDiff * localT;
+
         result.scale = glm::mix(k1.scale, k2.scale, localT);
 
         return result;
