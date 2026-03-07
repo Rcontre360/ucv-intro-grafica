@@ -94,24 +94,24 @@ public:
     void initializeAnimations() {
         for (Object* obj : objects) {
             
-            // Example 1: Circular Movement (like a car)
             if (obj->name == "santa_flight") {
-                float duration = 4.0f; // 4 seconds per lap
-                float radius = 5.0f;
+                float duration = 10.0f;
+                float radius = 20.0f;
                 Animation* anim = new Animation(duration);
-                int steps = 16; // The more steps, the smoother the circle
-                for (int i = 0; i < steps; ++i) {
-                    float angle = (float)i / steps * 2.0f * M_PI;
-                    // Move in X and Z. Rotation Y makes it point forward along the circle.
-                    glm::vec3 pos(cos(angle) * radius, 0.0f, sin(angle) * radius);
-                    // Convert radians back to degrees for the Y axis rotation
-                    glm::vec3 rot(0.0f, -glm::degrees(angle), 0.0f);
+                int steps = 30; 
+                
+                for (int i = 0; i <= steps; ++i) {
+                    float t = (float)i / steps;
+                    float angle = t * 2.0f * M_PI; 
+                    
+                    glm::vec3 pos(-radius * cos(angle), 0.0f, -radius * sin(angle) + radius);
+                    glm::vec3 rot(0.0f, -glm::degrees(angle - M_PI / 2), 0.0f);
                     anim->addKeyframe(TransformState(pos, rot, glm::vec3(1.0f)));
                 }
-                obj->animation = anim;
+
+                obj->setAnimation(anim);
             }
 
-            // Example 2: Perpetual Rotation (like a windmill or radar)
             if (obj->name == "snowman_red_1") {
                 float duration = 2.0f; 
                 Animation* anim = new Animation(duration);
@@ -119,18 +119,16 @@ public:
                 anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f)));
                 anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 120.0f, 0.0f), glm::vec3(1.0f)));
                 anim->addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 240.0f, 0.0f), glm::vec3(1.0f)));
-                obj->animation = anim;
+                obj->setAnimation(anim);
             }
 
-            // Example 3: Shrink and Grow (Breathing/Pulsing effect)
             if (obj->name == "pine_4") {
                 float duration = 3.0f;
                 Animation* anim = new Animation(duration);
-                // Base size and base position
+
                 anim->addKeyframe(TransformState(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)));
-                // Grow to 1.5x and translate upwards slightly on the Y axis
-                anim->addKeyframe(TransformState(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.5f)));
-                obj->animation = anim;
+                anim->addKeyframe(TransformState(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.5f)));
+                obj->setAnimation(anim);
             }
         }
     }

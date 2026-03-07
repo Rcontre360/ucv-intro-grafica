@@ -9,6 +9,7 @@ using namespace std;
 class FPSAvgCounter {
 private:
     double lastFrameUpdate = 0.0; 
+    double lastDeltaTimeUpdate = 0.0;
     int frameCount = 0; 
     int lastXsecondsAvg = 0; 
 
@@ -23,11 +24,14 @@ public:
     }
 
     double getCount(){
+        if (lastCumulativeFPS.empty()) return 0.0;
         return accumulate(lastCumulativeFPS.begin(), lastCumulativeFPS.end(), 0.0) / lastCumulativeFPS.size();
     }
 
     double getDelta(double currentFrameTime){
-        return currentFrameTime - lastFrameUpdate; 
+        double delta = currentFrameTime - lastDeltaTimeUpdate;
+        lastDeltaTimeUpdate = currentFrameTime;
+        return delta; 
     }
 
     void framesPerSecondAvg(double currentFrameTime){

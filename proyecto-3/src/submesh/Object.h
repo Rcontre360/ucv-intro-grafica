@@ -42,6 +42,13 @@ public:
         }
     }
 
+    void setAnimation(Animation* anim) {
+        if (animation) {
+            delete animation;
+        }
+        animation = anim;
+    }
+
     // Faster version that transforms the 8 corners of the AABB instead of every vertex
     BoundingBox getBoundingBox() {
         glm::mat4 transform = submeshes[0]->getTransform();

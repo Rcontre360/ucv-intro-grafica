@@ -162,7 +162,7 @@ public:
     }
 
     void mouseCameraMovement(double deltaTime) {
-        float speed = (float)(1.0 * deltaTime); // Increased base speed
+        float speed = (float)(5.0 * deltaTime); // Increased base speed
         float rotSpeed = (float)(10.0 * deltaTime); // Speed for rotation
 
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
@@ -184,12 +184,17 @@ public:
 
     void mainLoop()
     {
+        double lastFrameTime = glfwGetTime();
         while (!glfwWindowShouldClose(window))
         {
-            fpsCounter->framesPerSecondAvg(glfwGetTime());
+            double currentFrameTime = glfwGetTime();
+            double deltaTime = currentFrameTime - lastFrameTime;
+            lastFrameTime = currentFrameTime;
+
+            fpsCounter->framesPerSecondAvg(currentFrameTime);
             sprintf(fpsText, "FPS: %.1f",fpsCounter->getCount()); 
 
-            mouseCameraMovement(fpsCounter->getDelta(glfwGetTime()));
+            mouseCameraMovement(deltaTime);
             glfwPollEvents();
 
             if (appState && appState->enableBackfaceCulling) {
