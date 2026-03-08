@@ -41,6 +41,10 @@ public:
 
     int vertexCount = 0;
 
+    struct CachedLocations {
+        GLint model = -1, hasDiffuse = -1, diffuseMap = -1;
+    } cachedLocs;
+
     BaseSubmesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
     {
@@ -92,15 +96,21 @@ public:
     // Draws the submesh using the provided shader program.
     virtual void draw(const DrawConfig& config)
     {
-        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
+        if (cachedLocs.model == -1) {
+            cachedLocs.model = glGetUniformLocation(config.shaderProgram, Shaders::DefaultShader::model.c_str());
+            cachedLocs.hasDiffuse = glGetUniformLocation(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap.c_str());
+            cachedLocs.diffuseMap = glGetUniformLocation(config.shaderProgram, Shaders::DefaultShader::diffuseMap.c_str());
+        }
+
+        if (cachedLocs.model != -1) glUniformMatrix4fv(cachedLocs.model, 1, GL_FALSE, glm::value_ptr(getTransform()));
 
         if (diffuseMap) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, diffuseMap);
-            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::diffuseMap, 0);
-            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, true);
+            if (cachedLocs.diffuseMap != -1) glUniform1i(cachedLocs.diffuseMap, 0);
+            if (cachedLocs.hasDiffuse != -1) glUniform1i(cachedLocs.hasDiffuse, 1);
         } else {
-            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, false);
+            if (cachedLocs.hasDiffuse != -1) glUniform1i(cachedLocs.hasDiffuse, 0);
         }
         
         glBindVertexArray(vao);

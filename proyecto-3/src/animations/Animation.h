@@ -36,8 +36,9 @@ public:
         // Find which keyframe interval we are currently in
         float scaledT = t * numIntervals;
         int currentIndex = (int)scaledT;
+        if (currentIndex >= numIntervals) currentIndex = numIntervals - 1;
         int nextIndex = (currentIndex + 1) % numIntervals; // Wraps around to 0 for a smooth loop
-        float localT = scaledT - currentIndex; // Factor from 0 to 1 between current and next keyframe
+        float localT = scaledT - (float)currentIndex; // Factor from 0 to 1 between current and next keyframe
 
         // Interpolate between the two keyframes
         TransformState result;

@@ -187,6 +187,7 @@ public:
         double lastFrameTime = glfwGetTime();
         while (!glfwWindowShouldClose(window))
         {
+            glfwPollEvents();
             double currentFrameTime = glfwGetTime();
             double deltaTime = currentFrameTime - lastFrameTime;
             lastFrameTime = currentFrameTime;
@@ -195,7 +196,10 @@ public:
             sprintf(fpsText, "FPS: %.1f",fpsCounter->getCount()); 
 
             mouseCameraMovement(deltaTime);
-            glfwPollEvents();
+
+            if (appState) {
+                appState->update(currentFrameTime);
+            }
 
             if (appState && appState->enableBackfaceCulling) {
                 glEnable(GL_CULL_FACE);
@@ -210,7 +214,6 @@ public:
                 glDisable(GL_DEPTH_TEST);
             }
 
-            clear(appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]);
             render();
 
             glfwSwapBuffers(window);
@@ -365,6 +368,30 @@ private:
             {
                 ImGui::Checkbox("Back-face Culling", &appState->enableBackfaceCulling); 
                 ImGui::Checkbox("Depth Test", &appState->enableDepthTest); 
+                ImGui::Checkbox("Environmental Attenuation (fatt)", &appState->enableFatt);
+            }
+
+            if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                for (int i = 0; i < (int)appState->lights.size(); i++) {
+                    string label = "Light " + to_string(i + 1);
+                    if (ImGui::TreeNode(label.c_str())) {
+                        Light* l = appState->lights[i];
+                        ImGui::Checkbox("Enabled", &l->enabled);
+                        ImGui::ColorEdit3("Ambient", (float*)&l->ambient, ImGuiColorEditFlags_NoInputs);
+                        ImGui::ColorEdit3("Diffuse", (float*)&l->diffuse, ImGuiColorEditFlags_NoInputs);
+                        ImGui::ColorEdit3("Specular", (float*)&l->specular, ImGuiColorEditFlags_NoInputs);
+                        ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
+                        
+                        const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };
+                        int currentMode = (int)l->shadingMode;
+                        if (ImGui::Combo("Shading", &currentMode, modes, IM_ARRAYSIZE(modes))) {
+                            l->shadingMode = (ShadingMode)currentMode;
+                        }
+                        
+                        ImGui::TreePop();
+                    }
+                }
             }
         }
 
