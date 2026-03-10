@@ -1,0 +1,123 @@
+#pragma once
+
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <string>
+#include <vector>
+#include "Object.h"
+#include "Submesh.h"
+#include "../animations/Animation.h"
+#include "../utils/Shaders.h"
+
+enum ShadingMode {
+    PHONG = 0,
+    BLINN_PHONG = 1,
+    FLAT = 2
+};
+
+class Light : public Object {
+public:
+    int id;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+    
+    bool enabled = true;
+    float animationSpeed = 1.0f;
+    ShadingMode shadingMode = PHONG;
+
+    Light(int id, glm::vec3 pos)
+        : id(id)
+    {
+        center = pos;
+        setColor(glm::vec3(0.9f)); 
+        
+        static vector<Vertex> orbVertices = setupLightOrbMesh();
+        Submesh* orb = new Submesh(orbVertices);
+        orb->setTranslate(pos);
+        submeshes.push_back(orb);
+    }
+
+    void setColor(const glm::vec3& color) {
+        diffuse = color;
+        ambient = color * 0.1f;
+        specular = color;
+    }
+
+    void draw(const DrawConfig& config) override {
+        string base = "lights[" + to_string(id) + "].";
+        setGpuVariable(config.shaderProgram, base + "position", getPosition(config.currentTime));
+        setGpuVariable(config.shaderProgram, base + "ambient", ambient);
+        setGpuVariable(config.shaderProgram, base + "diffuse", diffuse);
+        setGpuVariable(config.shaderProgram, base + "specular", specular);
+        setGpuVariable(config.shaderProgram, base + "enabled", enabled);
+        setGpuVariable(config.shaderProgram, base + "shadingMode", (int)shadingMode);
+
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
+        glm::vec3 orbColor = enabled ? diffuse : glm::vec3(0.2f);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
+        
+        Object::draw(config);
+        
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, false);
+    }
+
+    glm::vec3 getPosition(double currentTime) {
+        if (animation) {
+            TransformState state = animation->getTransformAt(currentTime * animationSpeed);
+            return center + state.translation;
+        }
+        return center;
+    }
+
+private:
+    static vector<Vertex> setupLightOrbMesh() {
+        const unsigned int X_SEGMENTS = 16;
+        const unsigned int Y_SEGMENTS = 16;
+        const float radius = 0.15f;
+        vector<Vertex> lightOrbVertices;
+
+        struct TempVertex {
+            glm::vec3 pos;
+            glm::vec2 uv;
+        };
+        vector<vector<TempVertex>> temp_verts;
+
+        for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
+            vector<TempVertex> row;
+            for (unsigned int x = 0; x <= X_SEGMENTS; ++x) {
+                float xSegment = (float)x / (float)X_SEGMENTS;
+                float ySegment = (float)y / (float)Y_SEGMENTS;
+                float xPos = std::cos(xSegment * 2.0f * glm::pi<float>()) * std::sin(ySegment * glm::pi<float>());
+                float yPos = std::cos(ySegment * glm::pi<float>());
+                float zPos = std::sin(xSegment * 2.0f * glm::pi<float>()) * std::sin(ySegment * glm::pi<float>());
+
+                row.push_back({glm::vec3(xPos, yPos, zPos), glm::vec2(xSegment, ySegment)});
+            }
+            temp_verts.push_back(row);
+        }
+
+        for (unsigned int y = 0; y < Y_SEGMENTS; ++y) {
+            for (unsigned int x = 0; x < X_SEGMENTS; ++x) {
+                auto createVertex = [&](unsigned int lat, unsigned int lon) {
+                    Vertex v;
+                    const auto& tv = temp_verts[lat][lon];
+                    v.position = tv.pos * radius;
+                    v.normal = tv.pos;
+                    v.color = glm::vec3(1.0f);
+                    v.texCoords = tv.uv;
+                    return v;
+                };
+
+                lightOrbVertices.push_back(createVertex(y, x));
+                lightOrbVertices.push_back(createVertex(y + 1, x));
+                lightOrbVertices.push_back(createVertex(y + 1, x + 1));
+
+                lightOrbVertices.push_back(createVertex(y, x));
+                lightOrbVertices.push_back(createVertex(y + 1, x + 1));
+                lightOrbVertices.push_back(createVertex(y, x + 1));
+            }
+        }
+        return lightOrbVertices;
+    }
+};

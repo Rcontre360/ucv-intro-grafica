@@ -209,10 +209,6 @@ public:
 
             mouseCameraMovement(deltaTime);
 
-            if (appState) {
-                appState->update(currentFrameTime);
-            }
-
             if (appState && appState->enableBackfaceCulling) {
                 glEnable(GL_CULL_FACE);
                 glCullFace(GL_BACK);

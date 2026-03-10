@@ -21,7 +21,7 @@ public:
     
     Object() {}
     
-    ~Object() {
+    virtual ~Object() {
         for (Submesh* sm : submeshes) {
             delete sm;
         }
@@ -29,7 +29,7 @@ public:
         if (animation) delete animation;
     }
 
-    void draw(const DrawConfig& config) {
+    virtual void draw(const DrawConfig& config) {
         if (animation) {
             TransformState state = animation->getTransformAt(config.currentTime);
             for (Submesh* sm : submeshes) {
