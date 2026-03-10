@@ -86,8 +86,8 @@ namespace Shaders {
             float distance = length(light.position - vFragPos);
             float fatt = 1.0;
             if (uEnableFatt) {
-                // Modified constants for higher intensity and range
-                fatt = 1.0 / (1.0 + 0.045 * distance + 0.0075 * (distance * distance));
+                // Modified constants for lower focal intensity and higher spread
+                fatt = 1.0 / (1.5 + 0.022 * distance + 0.0019 * (distance * distance));
             }
 
             return (ambient + diffuse + specular) * fatt;

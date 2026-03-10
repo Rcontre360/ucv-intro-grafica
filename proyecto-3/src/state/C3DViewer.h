@@ -31,6 +31,11 @@ using namespace std;
 
 class State;
 
+enum MovementMode {
+    FPS_MODE = 0,
+    GOD_MODE = 1
+};
+
 class C3DViewer {
 protected:
     State* appState = nullptr;
@@ -43,10 +48,14 @@ protected:
     int width = 720;
     int height = 480;
     bool firstMouse = false;
-    bool isFPSMode = false;
+    MovementMode movementMode = FPS_MODE;
     bool showFramesSecond = true;
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
+
+    bool isDragging = false;
+    ImVec2 dragStartPos;
+    ImVec2 dragEndPos;
 
     char fpsText[16] = "FPS: n/a";
 
@@ -162,24 +171,27 @@ public:
     }
 
     void mouseCameraMovement(double deltaTime) {
-        float speed = (float)(5.0 * deltaTime); // Increased base speed
-        float rotSpeed = (float)(10.0 * deltaTime); // Speed for rotation
+        if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+            return;
+
+        float speed = (float)(5.0 * deltaTime);
+        float rotSpeed = (float)(10.0 * deltaTime);
+
+        bool ignoreY = (movementMode == FPS_MODE);
 
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            Camera::getInstance().processKeyboard(FORWARD, speed);
+            Camera::getInstance().processKeyboard(FORWARD, speed, ignoreY);
         if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            Camera::getInstance().processKeyboard(BACKWARD, speed);
+            Camera::getInstance().processKeyboard(BACKWARD, speed, ignoreY);
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
             Camera::getInstance().processMouseMovement(-rotSpeed, 0, false);
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
             Camera::getInstance().processMouseMovement(rotSpeed, 0, false);
 
-        if (isFPSMode) {
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                Camera::getInstance().processKeyboard(FORWARD, speed);
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                Camera::getInstance().processKeyboard(BACKWARD, speed);
-        }
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(FORWARD, speed, ignoreY);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(BACKWARD, speed, ignoreY);
     }
 
     void mainLoop()
@@ -223,16 +235,20 @@ public:
 private:
     void onKey(int key, int scancode, int action, int mods) 
     {
-        if (action == GLFW_PRESS || action == GLFW_REPEAT) 
+        if (action == GLFW_PRESS) 
         {
-            if (key == GLFW_KEY_ESCAPE)
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            if (key == GLFW_KEY_ESCAPE) {
+                if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                } else {
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                }
+            }
 
             if (key == GLFW_KEY_ENTER) {
-                isFPSMode = !isFPSMode;
-                if (isFPSMode) {
+                if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                    firstMouse = true; 
+                    firstMouse = true;
                 } else {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 }
@@ -243,7 +259,7 @@ private:
     void onMouseButton(int button, int action, int mods) 
     {
         ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse) {
+        if (io.WantCaptureMouse && !isDragging) {
             return;
         }
 
@@ -253,9 +269,19 @@ private:
             {
                 mouseButtonsDown[0] = true;
                 glfwGetCursorPos(window, &mousePos.first, &mousePos.second);
+                
+                if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
+                    isDragging = true;
+                    dragStartPos = ImVec2((float)mousePos.first, (float)mousePos.second);
+                    dragEndPos = dragStartPos;
+                }
             }
             else if (action == GLFW_RELEASE)
             {
+                if (isDragging) {
+                    performMarqueeSelection();
+                    isDragging = false;
+                }
                 mouseButtonsDown[0] = false;
             }
         }
@@ -273,8 +299,43 @@ private:
         }
     }
 
+    void performMarqueeSelection() {
+        if (!appState) return;
+
+        float minX = std::min(dragStartPos.x, dragEndPos.x);
+        float maxX = std::max(dragStartPos.x, dragEndPos.x);
+        float minY = std::min(dragStartPos.y, dragEndPos.y);
+        float maxY = std::max(dragStartPos.y, dragEndPos.y);
+
+        // Selection is only valid if the box has some size
+        if (std::abs(maxX - minX) < 1.0f || std::abs(maxY - minY) < 1.0f) return;
+
+        glm::mat4 view = Camera::getInstance().getViewMatrix();
+        glm::mat4 projection = Camera::getInstance().projection;
+        glm::vec4 viewport(0, 0, width, height);
+
+        for (auto obj : appState->objects) {
+            BoundingBox box = obj->getBoundingBox();
+            glm::vec3 worldPos = box.center;
+            
+            // Project 3D center to 2D screen space
+            glm::vec3 screenPos = glm::project(worldPos, view, projection, viewport);
+            
+            // OpenGL screen Y is inverted relative to window Y
+            float screenY = (float)height - screenPos.y;
+
+            if (screenPos.x >= minX && screenPos.x <= maxX && screenY >= minY && screenY <= maxY) {
+                obj->isSelected = true;
+            } else {
+                if (!(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)) {
+                    obj->isSelected = false;
+                }
+            }
+        }
+    }
+
     void onCursorPos(double xpos, double ypos) {
-        if (isFPSMode) {
+        if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
             if (firstMouse) {
                 mousePos = {xpos, ypos};
                 firstMouse = false;
@@ -288,24 +349,16 @@ private:
             return; 
         }
 
+        if (isDragging) {
+            dragEndPos = ImVec2((float)xpos, (float)ypos);
+        }
+
         ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
         ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse) {
+        if (io.WantCaptureMouse && !isDragging) {
             mousePos = {xpos, ypos};
             return;
         }
-
-        double deltaX = xpos - mousePos.first;
-        double deltaY = ypos - mousePos.second;
-
-        // Object rotation and translation disabled
-        /*
-        if (mouseButtonsDown[1]){
-            handleRotation(deltaX, deltaY);
-        } else if (mouseButtonsDown[0]){
-            handleFullObjectTranslation(deltaX, -deltaY);
-        }
-        */
 
         mousePos = {xpos,ypos};
     }
@@ -326,6 +379,11 @@ private:
             config.currentTime = glfwGetTime();
 
             appState->draw(config);
+        }
+
+        if (isDragging) {
+            ImGui::GetForegroundDrawList()->AddRect(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f);
+            ImGui::GetForegroundDrawList()->AddRectFilled(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 50));
         }
 
         drawInterface();
@@ -366,9 +424,42 @@ private:
 
             if (ImGui::CollapsingHeader("Advanced"))
             {
+                const char* moveModes[] = { "FPS", "GOD" };
+                int currentMoveMode = (int)movementMode;
+                if (ImGui::Combo("Movement Mode", &currentMoveMode, moveModes, IM_ARRAYSIZE(moveModes))) {
+                    movementMode = (MovementMode)currentMoveMode;
+                }
+
+                if (ImGui::Button("Capture Mouse (ENTER)")) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    firstMouse = true;
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("(?)");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Press ESC to release mouse when captured");
+
                 ImGui::Checkbox("Back-face Culling", &appState->enableBackfaceCulling); 
                 ImGui::Checkbox("Depth Test", &appState->enableDepthTest); 
                 ImGui::Checkbox("Environmental Attenuation (fatt)", &appState->enableFatt);
+            }
+
+            if (ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Text("Hold CTRL + Drag to select");
+                ImGui::Text("Hold SHIFT to add to selection");
+                
+                ImGui::BeginChild("SelectedObjects", ImVec2(0, 100), true);
+                for (auto obj : appState->objects) {
+                    if (obj->isSelected) {
+                        ImGui::BulletText("%s", obj->name.c_str());
+                    }
+                }
+                ImGui::EndChild();
+
+                if (ImGui::Button("Clear Selection")) {
+                    for (auto obj : appState->objects) obj->isSelected = false;
+                }
             }
 
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen))
@@ -378,9 +469,9 @@ private:
                     if (ImGui::TreeNode(label.c_str())) {
                         Light* l = appState->lights[i];
                         ImGui::Checkbox("Enabled", &l->enabled);
-                        ImGui::ColorEdit3("Ambient", (float*)&l->ambient, ImGuiColorEditFlags_NoInputs);
-                        ImGui::ColorEdit3("Diffuse", (float*)&l->diffuse, ImGuiColorEditFlags_NoInputs);
-                        ImGui::ColorEdit3("Specular", (float*)&l->specular, ImGuiColorEditFlags_NoInputs);
+                        ImGui::ColorEdit3("Ambient", (float*)&l->ambient);
+                        ImGui::ColorEdit3("Diffuse", (float*)&l->diffuse);
+                        ImGui::ColorEdit3("Specular", (float*)&l->specular);
                         ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
                         
                         const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };

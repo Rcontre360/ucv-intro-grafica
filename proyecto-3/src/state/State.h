@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <limits>
 #include <algorithm>
+#include <cmath>
 #include <GLFW/glfw3.h>
 
 #include "tinyobjloader.h"
@@ -75,38 +76,99 @@ public:
     }
 
     void setupLightOrbMesh() {
-        // Simple cube vertices for the light orbs
-        float s = 0.1f; // small size
-        vector<glm::vec3> p = {
-            {-s,-s,-s}, {s,-s,-s}, {s,s,-s}, {-s,s,-s},
-            {-s,-s,s}, {s,-s,s}, {s,s,s}, {-s,s,s}
-        };
-        vector<int> indices = {
-            0,1,2, 0,2,3, 4,5,6, 4,6,7, 0,4,7, 0,7,3,
-            1,5,6, 1,6,2, 0,1,5, 0,5,4, 3,2,6, 3,6,7
-        };
+        // Generate a UV sphere for the light orbs
+        const unsigned int X_SEGMENTS = 16;
+        const unsigned int Y_SEGMENTS = 16;
+        const float radius = 0.15f;
+        const float PI = 3.14159265359f;
         vector<Vertex> verts;
-        for(int idx : indices) {
-            Vertex v;
-            v.position = p[idx];
-            v.normal = glm::normalize(p[idx]);
-            v.color = glm::vec3(1.0f);
-            v.texCoords = glm::vec2(0.0f);
-            verts.push_back(v);
+
+        struct TempVertex {
+            glm::vec3 pos;
+            glm::vec2 uv;
+        };
+        vector<vector<TempVertex>> temp_verts;
+
+        for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
+            vector<TempVertex> row;
+            for (unsigned int x = 0; x <= X_SEGMENTS; ++x) {
+                float xSegment = (float)x / (float)X_SEGMENTS;
+                float ySegment = (float)y / (float)Y_SEGMENTS;
+                float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+                float yPos = std::cos(ySegment * PI);
+                float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+                row.push_back({glm::vec3(xPos, yPos, zPos), glm::vec2(xSegment, ySegment)});
+            }
+            temp_verts.push_back(row);
+        }
+
+        for (unsigned int y = 0; y < Y_SEGMENTS; ++y) {
+            for (unsigned int x = 0; x < X_SEGMENTS; ++x) {
+                // First triangle
+                Vertex v1, v2, v3;
+                v1.position = temp_verts[y][x].pos * radius;
+                v1.normal = temp_verts[y][x].pos;
+                v1.color = glm::vec3(1.0f);
+                v1.texCoords = temp_verts[y][x].uv;
+
+                v2.position = temp_verts[y+1][x].pos * radius;
+                v2.normal = temp_verts[y+1][x].pos;
+                v2.color = glm::vec3(1.0f);
+                v2.texCoords = temp_verts[y+1][x].uv;
+
+                v3.position = temp_verts[y+1][x+1].pos * radius;
+                v3.normal = temp_verts[y+1][x+1].pos;
+                v3.color = glm::vec3(1.0f);
+                v3.texCoords = temp_verts[y+1][x+1].uv;
+
+                verts.push_back(v1); verts.push_back(v2); verts.push_back(v3);
+
+                // Second triangle
+                Vertex v4, v5, v6;
+                v4.position = temp_verts[y][x].pos * radius;
+                v4.normal = temp_verts[y][x].pos;
+                v4.color = glm::vec3(1.0f);
+                v4.texCoords = temp_verts[y][x].uv;
+
+                v5.position = temp_verts[y+1][x+1].pos * radius;
+                v5.normal = temp_verts[y+1][x+1].pos;
+                v5.color = glm::vec3(1.0f);
+                v5.texCoords = temp_verts[y+1][x+1].uv;
+
+                v6.position = temp_verts[y][x+1].pos * radius;
+                v6.normal = temp_verts[y][x+1].pos;
+                v6.color = glm::vec3(1.0f);
+                v6.texCoords = temp_verts[y][x+1].uv;
+
+                verts.push_back(v4); verts.push_back(v5); verts.push_back(v6);
+            }
         }
         lightOrbMesh = new BaseSubmesh(verts);
     }
 
     void initializeLights() {
+        // Light 1: Red-ish
         Light* l1 = new Light(glm::vec3(-2.0f, 5.0f, -2.0f));
+        l1->diffuse = glm::vec3(1.0f, 0.196f, 0.098f); // R=255, G=50, B=25
+        l1->ambient = l1->diffuse * 0.1f;
+        l1->specular = l1->diffuse;
         l1->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, true);
         lights.push_back(l1);
 
+        // Light 2: Green-ish
         Light* l2 = new Light(glm::vec3(0.0f, 5.0f, 0.0f));
+        l2->diffuse = glm::vec3(0.196f, 1.0f, 0.098f); // R=50, G=255, B=25
+        l2->ambient = l2->diffuse * 0.1f;
+        l2->specular = l2->diffuse;
         l2->animation = new CircleAnimation(glm::vec3(-2.0f, -2.0f, -2.0f), 7.0f, 0.0f, false);
         lights.push_back(l2);
 
+        // Light 3: Blue-ish
         Light* l3 = new Light(glm::vec3(2.0f, 5.0f, 2.0f));
+        l3->diffuse = glm::vec3(0.098f, 0.196f, 1.0f); // R=25, G=50, B=255
+        l3->ambient = l3->diffuse * 0.1f;
+        l3->specular = l3->diffuse;
         l3->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, false);
         lights.push_back(l3);
     }
@@ -153,10 +215,9 @@ public:
         if (lightOrbMesh) {
             setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
             for (auto light : lights) {
-                if (!light->enabled) continue;
-                
                 lightOrbMesh->setTranslate(light->position);
-                setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, light->diffuse);
+                glm::vec3 orbColor = light->enabled ? light->diffuse : glm::vec3(0.2f);
+                setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
                 lightOrbMesh->draw(config);
             }
             setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, false);

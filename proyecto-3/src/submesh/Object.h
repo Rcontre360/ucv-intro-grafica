@@ -17,6 +17,7 @@ public:
     glm::vec3 oldScale = glm::vec3(1.0f);
     BoundingBox localBox; // The box in Blender space
     Animation* animation = nullptr;
+    bool isSelected = false;
     
     Object() {}
     

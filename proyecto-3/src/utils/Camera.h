@@ -54,12 +54,19 @@ public:
         return glm::lookAt(position, position + front, up);
     }
 
-    void processKeyboard(CameraMovement direction, float deltaTime) {
+    void processKeyboard(CameraMovement direction, float deltaTime, bool ignoreY = false) {
         float velocity = movementSpeed * deltaTime;
+        glm::vec3 moveDir = front;
+        if (ignoreY) {
+            moveDir.y = 0.0f;
+            if (glm::length(moveDir) > 0.0f)
+                moveDir = glm::normalize(moveDir);
+        }
+
         if (direction == FORWARD)
-            position += front * velocity;
+            position += moveDir * velocity;
         if (direction == BACKWARD)
-            position -= front * velocity;
+            position -= moveDir * velocity;
         if (direction == UP_DIR)
             position += worldUp * velocity;
         if (direction == DOWN_DIR)

@@ -31,7 +31,7 @@ struct Light {
 
     Light(glm::vec3 pos)
         : initialPosition(pos), position(pos), 
-          ambient(0.1f), diffuse(0.8f), specular(1.0f) {}
+          ambient(0.4f), diffuse(0.9f), specular(1.0f) {}
 
     ~Light() {
         if (animation) delete animation;
