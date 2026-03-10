@@ -502,36 +502,6 @@ private:
         glViewport(0, 0, width, height);
     }
 
-    void handleRotation(double deltaX, double deltaY){
-        if (!appState || appState->objects.empty()) return;
-
-        float sensitivity = 0.2f; 
-        float rotationAmountY = (float)deltaX * sensitivity; 
-        float rotationAmountX = (float)deltaY * sensitivity;
-
-        // Rotate the last loaded object or all? For now, all as it was before
-        for (auto obj : appState->objects) {
-            obj->rotate(rotationAmountX, rotationAmountY);
-        }
-    }
-
-    void handleFullObjectTranslation(double deltaX, double deltaY) {
-        if (!appState || appState->objects.empty()) return;
-
-        float distance = glm::distance(Camera::getInstance().position, Camera::getInstance().initObjectPos); 
-        float theta = glm::radians(45.0f / 2.0f);
-        float halfTan = tanf(theta);
-
-        float heightAtDepth = distance * halfTan;
-        float moveFactor = (heightAtDepth * 2.0f) / (float)height;
-
-        glm::vec3 translationVector = (Camera::getInstance().right * (float)deltaX * moveFactor) + (Camera::getInstance().up * (float)deltaY * moveFactor);
-
-        for (auto obj : appState->objects) {
-            obj->translate(translationVector);
-        }
-    }
-
     GLuint setupShader(const char* name, const char* src, const GLenum type) {
         GLuint shader = glCreateShader(type);
         glShaderSource(shader, 1, &src, nullptr);

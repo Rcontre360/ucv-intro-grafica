@@ -28,8 +28,8 @@ public:
             flatVertices.push_back(vertex.normal.y);
             flatVertices.push_back(vertex.normal.z);
             flatVertices.push_back(vertex.color.x);
-            flatVertices.push_back(vertex.color.y);
-            flatVertices.push_back(vertex.color.z);
+            flatVertices.push_back(vertex.color.g);
+            flatVertices.push_back(vertex.color.b);
             flatVertices.push_back(vertex.texCoords.x);
             flatVertices.push_back(vertex.texCoords.y);
         }
@@ -43,23 +43,7 @@ struct BoundingBox {
     glm::vec3 center;
 };
 
-inline BoundingBox makeBoundingBox(const vector<Vertex>& vertices){
-    glm::vec3 minBound = glm::vec3(numeric_limits<float>::max());
-    glm::vec3 maxBound = glm::vec3(numeric_limits<float>::lowest());
-    for (const auto& vertex : vertices) {
-        minBound.x = min(minBound.x, vertex.position.x);
-        minBound.y = min(minBound.y, vertex.position.y);
-        minBound.z = min(minBound.z, vertex.position.z);
-        maxBound.x = max(maxBound.x, vertex.position.x);
-        maxBound.y = max(maxBound.y, vertex.position.y);
-        maxBound.z = max(maxBound.z, vertex.position.z);
-    }
-    glm::vec3 center = (maxBound + minBound) / 2.0f;
-
-    return { minBound, maxBound, center };
-}
-
-// I had performance issues because we were searching for the same gpu pointers too many times
+// Internal helper for uniform caching
 inline GLint getCachedUniformLocation(GLuint program, const string& name) {
     static unordered_map<GLuint, unordered_map<string, GLint>> cache;
     auto& programCache = cache[program];
@@ -72,7 +56,7 @@ inline GLint getCachedUniformLocation(GLuint program, const string& name) {
     return location;
 }
 
-// macro to define many setGpuVariables only once
+// Macro to define setGpuVariable overloads
 #define DEFINE_SET_GPU_VAR(Type, GlCall) \
 inline void setGpuVariable(GLuint program, const string& name, Type value) { \
     GLint location = getCachedUniformLocation(program, name); \
@@ -80,10 +64,7 @@ inline void setGpuVariable(GLuint program, const string& name, Type value) { \
 }
 
 DEFINE_SET_GPU_VAR(const glm::mat4&, glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value)))
-DEFINE_SET_GPU_VAR(const glm::mat3&, glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value)))
 DEFINE_SET_GPU_VAR(const glm::vec3&, glUniform3fv(location, 1, glm::value_ptr(value)))
-DEFINE_SET_GPU_VAR(const glm::vec4&, glUniform4fv(location, 1, glm::value_ptr(value)))
-DEFINE_SET_GPU_VAR(float,             glUniform1f(location, value))
 DEFINE_SET_GPU_VAR(int,               glUniform1i(location, value))
 DEFINE_SET_GPU_VAR(bool,              glUniform1i(location, static_cast<int>(value)))
 

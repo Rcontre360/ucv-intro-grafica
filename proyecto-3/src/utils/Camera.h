@@ -36,18 +36,10 @@ public:
     float mouseSensitivity = 0.1f;
     float zoom = 45.0f;
 
-    glm::vec3 initObjectPos = glm::vec3(0.0f, 0.0f, -3.0f);
     glm::mat4 projection = glm::perspective(glm::radians(zoom), (float)720 / (float)480, 0.1f, 100.0f);
 
     void setProjection(int width, int height){
         projection = glm::perspective(glm::radians(zoom), (float)width / (float)height, 0.1f, 100.0f);
-    }
-
-    void resetCamera() {
-        position = glm::vec3(0.0f, 0.0f, 0.0f);
-        yaw = -90.0f;
-        pitch = 0.0f;
-        updateCameraVectors();
     }
 
     glm::mat4 getViewMatrix() {

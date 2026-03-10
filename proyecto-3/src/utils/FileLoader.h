@@ -9,16 +9,24 @@
 #include <algorithm>
 #include <limits>
 #include "tinyobjloader.h"
-#include "../submesh/Submesh.h"
+#include "../objects/Submesh.h"
 #include "stb/stb_image.h"
 
 using namespace std;
 
+struct SubmeshData {
+    vector<Vertex> vertices;
+    int materialId;
+    GLuint diffuseMap = 0;
+    GLuint specularMap = 0;
+    GLuint normalMap = 0;
+    GLuint ambientMap = 0;
+};
+
 // Represents a single Blender object (o tag) which might have multiple materials (submeshes)
 struct ObjectData {
     string name;
-    vector<vector<Vertex>> submeshes;
-    vector<int> materialIds;
+    vector<SubmeshData> submeshes;
     BoundingBox localBox;
 };
 
@@ -59,27 +67,6 @@ private:
         return 0;
     }
 
-    static vector<glm::vec3> calculateNormals(const tinyobj::attrib_t& info, const vector<tinyobj::shape_t>& shapes) {
-        vector<glm::vec3> calculatedNormals(info.vertices.size() / 3, glm::vec3(0.0f));
-        for (const auto& shape : shapes) {
-            for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
-                if (shape.mesh.num_face_vertices[f] != 3) continue;
-                tinyobj::index_t idx0 = shape.mesh.indices[f * 3 + 0];
-                tinyobj::index_t idx1 = shape.mesh.indices[f * 3 + 1];
-                tinyobj::index_t idx2 = shape.mesh.indices[f * 3 + 2];
-                glm::vec3 v0(info.vertices[3 * idx0.vertex_index + 0], info.vertices[3 * idx0.vertex_index + 1], info.vertices[3 * idx0.vertex_index + 2]);
-                glm::vec3 v1(info.vertices[3 * idx1.vertex_index + 0], info.vertices[3 * idx1.vertex_index + 1], info.vertices[3 * idx1.vertex_index + 2]);
-                glm::vec3 v2(info.vertices[3 * idx2.vertex_index + 0], info.vertices[3 * idx2.vertex_index + 1], info.vertices[3 * idx2.vertex_index + 2]);
-                glm::vec3 faceNormal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
-                calculatedNormals[idx0.vertex_index] += faceNormal;
-                calculatedNormals[idx1.vertex_index] += faceNormal;
-                calculatedNormals[idx2.vertex_index] += faceNormal;
-            }
-        }
-        for (auto& normal : calculatedNormals) normal = glm::normalize(normal);
-        return calculatedNormals;
-    }
-
 public:
     static LoadedScene loadScene(const std::string& path) {
         LoadedScene loadedScene;
@@ -90,12 +77,6 @@ public:
 
         if (!tinyobj::LoadObj(&info, &shapes, &loadedScene.materials, &warn, &err, path.c_str(), basedir.c_str())) {
             throw std::runtime_error(warn + err);
-        }
-
-        bool hasNormals = !info.normals.empty();
-        vector<glm::vec3> calculatedNormals;
-        if (!hasNormals) {
-            calculatedNormals = calculateNormals(info, shapes);
         }
 
         glm::vec3 sceneMin(numeric_limits<float>::max());
@@ -123,8 +104,8 @@ public:
                     sceneMin = glm::min(sceneMin, vertex.position);
                     sceneMax = glm::max(sceneMax, vertex.position);
 
-                    if (hasNormals && idx.normal_index >= 0) vertex.normal = { info.normals[3 * idx.normal_index + 0], info.normals[3 * idx.normal_index + 1], info.normals[3 * idx.normal_index + 2] };
-                    else vertex.normal = calculatedNormals[idx.vertex_index];
+                    if (idx.normal_index >= 0) vertex.normal = { info.normals[3 * idx.normal_index + 0], info.normals[3 * idx.normal_index + 1], info.normals[3 * idx.normal_index + 2] };
+                    else vertex.normal = {0.0f, 1.0f, 0.0f};
                     
                     if (!info.texcoords.empty() && idx.texcoord_index >= 0) vertex.texCoords = { info.texcoords[2 * idx.texcoord_index + 0], info.texcoords[2 * idx.texcoord_index + 1] };
                     else vertex.texCoords = {0.0f, 0.0f};
@@ -138,8 +119,19 @@ public:
             }
 
             for (auto const& [matId, vertices] : materialGroups) {
-                objData.submeshes.push_back(vertices);
-                objData.materialIds.push_back(matId);
+                SubmeshData smData;
+                smData.vertices = vertices;
+                smData.materialId = matId;
+
+                if (matId >= 0 && matId < (int)loadedScene.materials.size()) {
+                    const auto& mat = loadedScene.materials[matId];
+                    if (!mat.diffuse_texname.empty()) smData.diffuseMap = loadTexture(basedir + mat.diffuse_texname);
+                    if (!mat.specular_texname.empty()) smData.specularMap = loadTexture(basedir + mat.specular_texname);
+                    if (!mat.bump_texname.empty()) smData.normalMap = loadTexture(basedir + mat.bump_texname);
+                    if (!mat.ambient_texname.empty()) smData.ambientMap = loadTexture(basedir + mat.ambient_texname);
+                }
+
+                objData.submeshes.push_back(smData);
             }
 
             if (!objData.submeshes.empty()) {
@@ -149,15 +141,5 @@ public:
         }
         loadedScene.sceneBox = { sceneMin, sceneMax, (sceneMin + sceneMax) * 0.5f };
         return loadedScene;
-    }
-
-    static void applyMaterials(Submesh* sm, int materialId, const vector<tinyobj::material_t>& materials, const string& basedir) {
-        if (materialId >= 0 && materialId < (int)materials.size()) {
-            const auto& mat = materials[materialId];
-            if (!mat.diffuse_texname.empty()) sm->diffuseMap = loadTexture(basedir + mat.diffuse_texname);
-            if (!mat.specular_texname.empty()) sm->specularMap = loadTexture(basedir + mat.specular_texname);
-            if (!mat.bump_texname.empty()) sm->normalMap = loadTexture(basedir + mat.bump_texname);
-            if (!mat.ambient_texname.empty()) sm->ambientMap = loadTexture(basedir + mat.ambient_texname);
-        }
     }
 };

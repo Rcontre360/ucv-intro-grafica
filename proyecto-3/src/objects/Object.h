@@ -15,7 +15,7 @@ public:
     std::vector<Submesh*> submeshes;
     glm::vec3 center = glm::vec3(0.0f);
     glm::vec3 oldScale = glm::vec3(1.0f);
-    BoundingBox localBox; // The box in Blender space
+    BoundingBox localBox; 
     Animation* animation = nullptr;
     bool isSelected = false;
     
@@ -75,13 +75,6 @@ public:
         }
 
         return { minBound, maxBound, (minBound + maxBound) * 0.5f };
-    }
-
-    void setScale(glm::vec3 factor) {
-        for (Submesh* sm : submeshes) {
-            sm->setScale((factor / oldScale));
-        }
-        oldScale = factor;
     }
 
     void translate(const glm::vec3& offset) {

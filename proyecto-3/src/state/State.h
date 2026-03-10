@@ -29,7 +29,6 @@ public:
     bool enableDepthTest = true;
     bool enableFatt = true;
 
-    float normalColor[3] = { 1.0f, 1.0f, 0.0f };
     float backgroundColor[3] = { 0.1f, 0.1f, 0.1f };
 
     vector<Object*> objects;
@@ -239,39 +238,40 @@ public:
         objects.clear();
 
         LoadedScene sceneData = FileLoader::loadScene(path);
-        string basedir = path.substr(0, path.find_last_of("/\\" ) + 1);
 
-        for (size_t objIdx = 0; objIdx < sceneData.objects.size(); ++objIdx) {
-            const auto& objData = sceneData.objects[objIdx];
+        for (const auto& objData : sceneData.objects) {
             Object* newObj = new Object();
             newObj->name = objData.name;
             newObj->localBox = objData.localBox;
             
-            for (size_t i = 0; i < objData.submeshes.size(); ++i) {
-                Submesh* sm = new Submesh(objData.submeshes[i]);
-                FileLoader::applyMaterials(sm, objData.materialIds[i], sceneData.materials, basedir);
+            for (const auto& smData : objData.submeshes) {
+                Submesh* sm = new Submesh(smData.vertices);
+                sm->diffuseMap = smData.diffuseMap;
+                sm->specularMap = smData.specularMap;
+                sm->normalMap = smData.normalMap;
+                sm->ambientMap = smData.ambientMap;
                 
                 sm->resetTransform();
                 sm->initialTransform = sm->getTransform();
-                sm->initialColor[0] = sm->color[0];
-                sm->initialColor[1] = sm->color[1];
-                sm->initialColor[2] = sm->color[2];
 
                 newObj->submeshes.push_back(sm);
             }
 
-            if (!newObj->submeshes.empty()) {
-                newObj->center = newObj->getBoundingBox().center;
-                for (Submesh* sm : newObj->submeshes) {
-                    sm->pivot = newObj->center;
-                }
-                objects.push_back(newObj);
-            } else {
-                delete newObj;
+            newObj->center = newObj->getBoundingBox().center;
+            for (Submesh* sm : newObj->submeshes) {
+                sm->pivot = newObj->center;
             }
+            objects.push_back(newObj);
         }
         
         initializeAnimations();
+
+        cout << "Loaded Scene: " << path << endl;
+        cout << "Total Objects: " << objects.size() << endl;
+        for (const auto& obj : objects) {
+            cout << " - [Object] " << obj->name << " | Submeshes: " << obj->submeshes.size() << endl;
+        }
+        cout << "------------------------------------------" << endl;
     }
 
     void initializeAnimations() {
@@ -297,11 +297,5 @@ public:
                 }
             }
         }
-    }
-
-    void resetState(){
-        showFPS = false;
-        enableBackfaceCulling = false;
-        enableDepthTest = true;
     }
 };

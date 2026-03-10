@@ -13,6 +13,8 @@
 
 using namespace std;
 
+struct SubmeshData;
+
 struct DrawConfig {
     GLuint shaderProgram;
     double currentTime = 0.0;
@@ -29,7 +31,6 @@ public:
 
     vector<Vertex> vertices;
     float color[3];
-    float initialColor[3];
 
     GLuint vao = 0;
     GLuint vbo = 0;
@@ -44,6 +45,10 @@ public:
     Submesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
     {
+        setupGL();
+    }
+
+    void setupGL() {
         if (!vertices.empty()) {
             color[0] = vertices[0].color.r;
             color[1] = vertices[0].color.g;
@@ -108,24 +113,6 @@ public:
         glBindVertexArray(0);
     }
 
-    // gets vertex object in the world. Basically apply transformations to the vertex we have on cpu
-    vector<Vertex> getWorldVertices() const {
-        glm::mat4 transformMat = getTransform();
-
-        vector<Vertex> worldV;
-        worldV.reserve(vertices.size());
-
-        for (const auto& v : vertices) {
-            Vertex res = v;
-            glm::vec4 worldPos = transformMat * glm::vec4(v.position, 1.0f);
-            res.position = glm::vec3(worldPos);
-
-            worldV.push_back(res);
-        }
-
-        return worldV;
-    }
-
     // translate
     void setTranslate(const glm::vec3& offset) { 
         translate = glm::translate(glm::mat4(1.0f), offset);
@@ -164,16 +151,6 @@ public:
         glm::quat qy = glm::angleAxis(glm::radians(eulerDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
         glm::quat qz = glm::angleAxis(glm::radians(eulerDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
         rotate = qz * qy * qx;
-    }
-
-    void updateColor() {
-        for (auto& vertex : vertices) {
-            vertex.color = {color[0], color[1], color[2]};
-        }
-        vector<float> flatVertices = Vertex::flatten(vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, flatVertices.size() * sizeof(float), flatVertices.data());
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     const glm::mat4 getTransform() const { 
