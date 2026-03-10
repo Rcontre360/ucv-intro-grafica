@@ -10,7 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include "tinyobjloader.h"
-#include "../submesh/Object.h"
+#include "../objects/Object.h"
 #include "../utils/FileLoader.h"
 #include "../utils/Utils.h"
 #include "../utils/Camera.h" 
@@ -34,7 +34,7 @@ public:
 
     vector<Object*> objects;
     vector<Light*> lights;
-    BaseSubmesh* lightOrbMesh = nullptr;
+    Submesh* lightOrbMesh = nullptr;
     GLuint axisVAO = 0, axisVBO = 0;
 
     State(){
@@ -144,7 +144,7 @@ public:
                 verts.push_back(v4); verts.push_back(v5); verts.push_back(v6);
             }
         }
-        lightOrbMesh = new BaseSubmesh(verts);
+        lightOrbMesh = new Submesh(verts);
     }
 
     void initializeLights() {
@@ -187,24 +187,13 @@ public:
 
         for (int i = 0; i < (int)lights.size(); i++) {
             Light* l = lights[i];
-            // Cache locations if not already found
-            if (l->cachedLocs.pos == -1) {
-                string base = "lights[" + to_string(i) + "].";
-                l->cachedLocs.pos = glGetUniformLocation(config.shaderProgram, (base + "position").c_str());
-                l->cachedLocs.amb = glGetUniformLocation(config.shaderProgram, (base + "ambient").c_str());
-                l->cachedLocs.diff = glGetUniformLocation(config.shaderProgram, (base + "diffuse").c_str());
-                l->cachedLocs.spec = glGetUniformLocation(config.shaderProgram, (base + "specular").c_str());
-                l->cachedLocs.enabled = glGetUniformLocation(config.shaderProgram, (base + "enabled").c_str());
-                l->cachedLocs.mode = glGetUniformLocation(config.shaderProgram, (base + "shadingMode").c_str());
-            }
-
-            // Use cached locations directly
-            if (l->cachedLocs.pos != -1) glUniform3fv(l->cachedLocs.pos, 1, glm::value_ptr(l->position));
-            if (l->cachedLocs.amb != -1) glUniform3fv(l->cachedLocs.amb, 1, glm::value_ptr(l->ambient));
-            if (l->cachedLocs.diff != -1) glUniform3fv(l->cachedLocs.diff, 1, glm::value_ptr(l->diffuse));
-            if (l->cachedLocs.spec != -1) glUniform3fv(l->cachedLocs.spec, 1, glm::value_ptr(l->specular));
-            if (l->cachedLocs.enabled != -1) glUniform1i(l->cachedLocs.enabled, l->enabled);
-            if (l->cachedLocs.mode != -1) glUniform1i(l->cachedLocs.mode, (int)l->shadingMode);
+            string base = "lights[" + to_string(i) + "].";
+            setGpuVariable(config.shaderProgram, base + "position", l->position);
+            setGpuVariable(config.shaderProgram, base + "ambient", l->ambient);
+            setGpuVariable(config.shaderProgram, base + "diffuse", l->diffuse);
+            setGpuVariable(config.shaderProgram, base + "specular", l->specular);
+            setGpuVariable(config.shaderProgram, base + "enabled", l->enabled);
+            setGpuVariable(config.shaderProgram, base + "shadingMode", (int)l->shadingMode);
         }
 
         for (Object* obj : objects) {

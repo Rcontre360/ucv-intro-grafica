@@ -18,7 +18,7 @@ struct DrawConfig {
     double currentTime = 0.0;
 };
 
-class BaseSubmesh 
+class Submesh 
 {
 public:
     glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -41,11 +41,7 @@ public:
 
     int vertexCount = 0;
 
-    struct CachedLocations {
-        GLint model = -1, hasDiffuse = -1, diffuseMap = -1;
-    } cachedLocs;
-
-    BaseSubmesh(const vector<Vertex>& vertices) 
+    Submesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
     {
         if (!vertices.empty()) {
@@ -83,7 +79,7 @@ public:
         glBindVertexArray(0);
     }
 
-    virtual ~BaseSubmesh()
+    virtual ~Submesh()
     {
         if (vbo) glDeleteBuffers(1, &vbo);
         if (vao) glDeleteVertexArrays(1, &vao);
@@ -96,21 +92,15 @@ public:
     // Draws the submesh using the provided shader program.
     virtual void draw(const DrawConfig& config)
     {
-        if (cachedLocs.model == -1) {
-            cachedLocs.model = glGetUniformLocation(config.shaderProgram, Shaders::DefaultShader::model.c_str());
-            cachedLocs.hasDiffuse = glGetUniformLocation(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap.c_str());
-            cachedLocs.diffuseMap = glGetUniformLocation(config.shaderProgram, Shaders::DefaultShader::diffuseMap.c_str());
-        }
-
-        if (cachedLocs.model != -1) glUniformMatrix4fv(cachedLocs.model, 1, GL_FALSE, glm::value_ptr(getTransform()));
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
 
         if (diffuseMap) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, diffuseMap);
-            if (cachedLocs.diffuseMap != -1) glUniform1i(cachedLocs.diffuseMap, 0);
-            if (cachedLocs.hasDiffuse != -1) glUniform1i(cachedLocs.hasDiffuse, 1);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::diffuseMap, 0);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, true);
         } else {
-            if (cachedLocs.hasDiffuse != -1) glUniform1i(cachedLocs.hasDiffuse, 0);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, false);
         }
         
         glBindVertexArray(vao);

@@ -25,10 +25,6 @@ struct Light {
     
     Animation* animation = nullptr;
 
-    struct CachedLocations {
-        GLint pos = -1, amb = -1, diff = -1, spec = -1, enabled = -1, mode = -1;
-    } cachedLocs;
-
     Light(glm::vec3 pos)
         : initialPosition(pos), position(pos), 
           ambient(0.4f), diffuse(0.9f), specular(1.0f) {}

@@ -7,8 +7,9 @@
 #include <iostream>
 #include <cstring>
 #include "stb/stb_image.h"
-#include "Shaders.h"
-#include "Camera.h"
+#include "../utils/Shaders.h"
+#include "../utils/Camera.h"
+#include "../utils/Utils.h"
 
 class Skybox {
 public:
@@ -48,7 +49,6 @@ public:
 private:
     void setupMesh() {
         float skyboxVertices[] = {
-            // positions          
             -1.0f,  1.0f, -1.0f,
             -1.0f, -1.0f, -1.0f,
              1.0f, -1.0f, -1.0f,

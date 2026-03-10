@@ -52,6 +52,7 @@ public:
 
     // Faster version that transforms the 8 corners of the AABB instead of every vertex
     BoundingBox getBoundingBox() {
+        if (submeshes.empty()) return localBox;
         glm::mat4 transform = submeshes[0]->getTransform();
         glm::vec3 minBound(numeric_limits<float>::max());
         glm::vec3 maxBound(numeric_limits<float>::lowest());

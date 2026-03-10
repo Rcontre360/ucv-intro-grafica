@@ -20,7 +20,7 @@
 #include "../utils/FPSCounter.h"
 #include "../utils/Utils.h"
 #include "../utils/Shaders.h"
-#include "../utils/Skybox.h"
+#include "../objects/Skybox.h"
 
 using namespace Shaders;
 
@@ -128,7 +128,6 @@ public:
         setupSkyboxShader();
 
         appState = new State();
-        skybox = new Skybox("assets/cubemap/snow.png");
         
         // Render a loading screen before loading the heavy scene
         clear(0.1f, 0.1f, 0.1f);
@@ -139,13 +138,14 @@ public:
         ImGui::SetNextWindowPos(ImVec2(width / 2.0f - 120.0f, height / 2.0f - 50.0f));
         ImGui::SetNextWindowSize(ImVec2(240, 100));
         ImGui::Begin("Loading", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
-        ImGui::Text("Loading Scene...");
-        ImGui::Text("Please wait...");
+        ImGui::Text("...Loading...");
         ImGui::End();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
+
+        skybox = new Skybox("assets/cubemap/snow.png");
         
         try {
             appState->loadScene("assets/scene/scene.obj");
