@@ -65,6 +65,7 @@ inline void setGpuVariable(GLuint program, const string& name, Type value) { \
 
 DEFINE_SET_GPU_VAR(const glm::mat4&, glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value)))
 DEFINE_SET_GPU_VAR(const glm::vec3&, glUniform3fv(location, 1, glm::value_ptr(value)))
+DEFINE_SET_GPU_VAR(float,             glUniform1f(location, value))
 DEFINE_SET_GPU_VAR(int,               glUniform1i(location, value))
 DEFINE_SET_GPU_VAR(bool,              glUniform1i(location, static_cast<int>(value)))
 

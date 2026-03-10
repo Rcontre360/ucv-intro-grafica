@@ -373,6 +373,7 @@ private:
             DrawConfig config;
             config.shaderProgram = shaderProgram;
             config.currentTime = glfwGetTime();
+            if (skybox) config.skyboxTextureID = skybox->textureID;
 
             appState->draw(config);
         }

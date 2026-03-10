@@ -41,33 +41,44 @@ public:
     void setColor(const glm::vec3& _color) {
         diffuse = _color;
         ambient = _color * 0.1f;
-        specular = _color;
+        specular = glm::vec3(1.0f) * 0.5f;
+    }
+
+    // This ensures both the orb mesh and the shader uniforms use the same animated position
+    TransformState getLightTransform(double currentTime) {
+        if (animation) {
+            return animation->getTransformAt(currentTime * animationSpeed);
+        }
+        return TransformState(); // No offset
     }
 
     void draw(const DrawConfig& config) override {
+        TransformState state = getLightTransform(config.currentTime);
+        glm::vec3 currentPos = center + state.translation;
+
+        // 1. Set uniforms for the shader to use this light for OTHER objects
         string base = "lights[" + to_string(id) + "].";
-        setGpuVariable(config.shaderProgram, base + "position", getPosition(config.currentTime));
+        setGpuVariable(config.shaderProgram, base + "position", currentPos);
         setGpuVariable(config.shaderProgram, base + "ambient", ambient);
         setGpuVariable(config.shaderProgram, base + "diffuse", diffuse);
         setGpuVariable(config.shaderProgram, base + "specular", specular);
         setGpuVariable(config.shaderProgram, base + "enabled", enabled);
         setGpuVariable(config.shaderProgram, base + "shadingMode", (int)shadingMode);
 
+        // 2. Draw the debug orb
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
         glm::vec3 orbColor = enabled ? diffuse : glm::vec3(0.2f);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
         
-        Object::draw(config);
+        // Manually apply the transform to submeshes to match the uniform
+        for (Submesh* sm : submeshes) {
+            sm->setTranslate(currentPos);
+            sm->setRotateEuler(state.rotation);
+            sm->setScale(state.scale);
+            sm->draw(config);
+        }
         
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, false);
-    }
-
-    glm::vec3 getPosition(double currentTime) {
-        if (animation) {
-            TransformState state = animation->getTransformAt(currentTime * animationSpeed);
-            return center + state.translation;
-        }
-        return center;
     }
 
 private:

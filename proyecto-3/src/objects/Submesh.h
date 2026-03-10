@@ -18,6 +18,7 @@ struct SubmeshData;
 struct DrawConfig {
     GLuint shaderProgram;
     double currentTime = 0.0;
+    GLuint skyboxTextureID = 0; // Added to pass skybox to reflective submeshes
 };
 
 class Submesh 
@@ -41,6 +42,7 @@ public:
     GLuint ambientMap = 0;
 
     int vertexCount = 0;
+    float reflectivity = 0.0f; // reflectivity strength (0.0 to 1.0)
 
     Submesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
@@ -98,6 +100,13 @@ public:
     virtual void draw(const DrawConfig& config)
     {
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uReflectivity, reflectivity);
+
+        if (reflectivity > 0.0f && config.skyboxTextureID != 0) {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, config.skyboxTextureID);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::skybox, 1);
+        }
 
         if (diffuseMap) {
             glActiveTexture(GL_TEXTURE0);

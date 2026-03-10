@@ -37,6 +37,8 @@ public:
 
     vector<Object*> objects;
     vector<Light*> lights;
+    vector<Vertex> lightOrbVertices;
+    GLuint axisVAO = 0, axisVBO = 0;
 
     State(){
         initializeLights();
@@ -68,6 +70,9 @@ public:
         l3->setColor(glm::vec3(0.098f, 0.196f, 1.0f)); 
         l3->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, false);
         lights.push_back(l3);
+    }
+
+    void update(double currentTime) {
     }
 
     void draw(const DrawConfig& config)
@@ -114,6 +119,12 @@ public:
             for (Submesh* sm : newObj->submeshes) {
                 sm->pivot = newObj->center;
             }
+            
+            // PDF Requirement: Make at least one object reflective
+            if (newObj->name == "pot") {
+                for (auto sm : newObj->submeshes) sm->reflectivity = 0.6f;
+            }
+
             objects.push_back(newObj);
         }
         
