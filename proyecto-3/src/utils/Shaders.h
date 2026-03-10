@@ -91,6 +91,13 @@ namespace Shaders {
 
             // Determine Base Color
             vec3 baseColor = uHasColor ? u_color : vColor;
+            
+            // If it's a light orb (uHasColor), make it emissive (ignore standard lighting)
+            if (uHasColor) {
+                FragColor = vec4(baseColor, 1.0);
+                return;
+            }
+
             if (uHasDiffuseMap) baseColor = texture(diffuseMap, vTexCoords).rgb;
 
             // Calculate Lighting

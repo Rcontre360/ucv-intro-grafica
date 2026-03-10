@@ -24,6 +24,7 @@ public:
     
     bool enabled = true;
     float animationSpeed = 1.0f;
+    float intensity = 1.5f; // Initial intensity
     ShadingMode shadingMode = PHONG;
 
     Light(int _id, glm::vec3 _pos)
@@ -44,12 +45,11 @@ public:
         specular = glm::vec3(1.0f) * 0.5f;
     }
 
-    // This ensures both the orb mesh and the shader uniforms use the same animated position
     TransformState getLightTransform(double currentTime) {
         if (animation) {
             return animation->getTransformAt(currentTime * animationSpeed);
         }
-        return TransformState(); // No offset
+        return TransformState();
     }
 
     void draw(const DrawConfig& config) override {
@@ -59,18 +59,18 @@ public:
         // 1. Set uniforms for the shader to use this light for OTHER objects
         string base = "lights[" + to_string(id) + "].";
         setGpuVariable(config.shaderProgram, base + "position", currentPos);
-        setGpuVariable(config.shaderProgram, base + "ambient", ambient);
-        setGpuVariable(config.shaderProgram, base + "diffuse", diffuse);
-        setGpuVariable(config.shaderProgram, base + "specular", specular);
+        setGpuVariable(config.shaderProgram, base + "ambient", ambient * intensity);
+        setGpuVariable(config.shaderProgram, base + "diffuse", diffuse * intensity);
+        setGpuVariable(config.shaderProgram, base + "specular", specular * intensity);
         setGpuVariable(config.shaderProgram, base + "enabled", enabled);
         setGpuVariable(config.shaderProgram, base + "shadingMode", (int)shadingMode);
 
-        // 2. Draw the debug orb
+        // 2. Draw the debug orb (emissive)
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
-        glm::vec3 orbColor = enabled ? diffuse : glm::vec3(0.2f);
+        // The orb itself looks brighter as intensity increases
+        glm::vec3 orbColor = enabled ? (diffuse * std::min(intensity, 2.0f)) : glm::vec3(0.2f);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
         
-        // Manually apply the transform to submeshes to match the uniform
         for (Submesh* sm : submeshes) {
             sm->setTranslate(currentPos);
             sm->setRotateEuler(state.rotation);

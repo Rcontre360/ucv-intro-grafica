@@ -469,6 +469,7 @@ private:
                         ImGui::ColorEdit3("Ambient", (float*)&l->ambient);
                         ImGui::ColorEdit3("Diffuse", (float*)&l->diffuse);
                         ImGui::ColorEdit3("Specular", (float*)&l->specular);
+                        ImGui::SliderFloat("Intensity", &l->intensity, 0.0f, 10.0f);
                         ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
                         
                         const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };
