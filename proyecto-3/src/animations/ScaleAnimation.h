@@ -2,18 +2,33 @@
 
 #include "Animation.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
 #include <cmath>
 
 class ScaleAnimation : public Animation {
-public:
-    ScaleAnimation(float durationSecs, float minScale, float maxScale) 
-        : Animation(durationSecs) 
-    {
-        // hardcoded since trees are the only ones scaled
-        float yShiftMin = minScale < 1 ? -0.7 : 0.1;
-        float yShiftMax = maxScale < 1 ? -0.7 : 0.1;
+    float minScale;
+    float maxScale;
+    float yShiftMin;
+    float yShiftMax;
 
-        addKeyframe(TransformState(glm::vec3(0.0f, yShiftMax, 0.0f), glm::vec3(0.0f), glm::vec3(maxScale)));
-        addKeyframe(TransformState(glm::vec3(0.0f, yShiftMin, 0.0f), glm::vec3(0.0f), glm::vec3(minScale)));
+public:
+    ScaleAnimation(float _durationSecs, float _minScale, float _maxScale) 
+        : Animation(_durationSecs) 
+    {
+        minScale = _minScale;
+        maxScale = _maxScale;
+        yShiftMin = minScale < 1 ? -0.7f : 0.1f;
+        yShiftMax = maxScale < 1 ? -0.7f : 0.1f;
+    }
+
+    TransformState getTransformAt(double currentTime) override {
+        float t = getNormalizedTime(currentTime);
+        
+        float wave = (sin(t * 2.0f * glm::pi<float>() - glm::pi<float>() / 2.0f) + 1.0f) / 2.0f;
+
+        float currentScale = glm::mix(minScale, maxScale, wave);
+        float currentY = glm::mix(yShiftMin, yShiftMax, wave);
+
+        return TransformState(glm::vec3(0.0f, currentY, 0.0f), glm::vec3(0.0f), glm::vec3(currentScale));
     }
 };

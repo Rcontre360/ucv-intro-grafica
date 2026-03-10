@@ -3,14 +3,18 @@
 #include "Animation.h"
 
 class RotateAnimation : public Animation {
+    bool clockwise;
 public:
-    RotateAnimation(float durationSecs, bool clockwise = true) 
-        : Animation(durationSecs) 
+    RotateAnimation(float _durationSecs, bool _clockwise = true) 
+        : Animation(_durationSecs) 
     {
-        float sign = clockwise ? -1.0f : 1.0f;
+        clockwise = _clockwise;
+    }
 
-        addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 120.0f * sign, 0.0f), glm::vec3(1.0f)));
-        addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 240.0f * sign, 0.0f), glm::vec3(1.0f)));
-        addKeyframe(TransformState(glm::vec3(0.0f), glm::vec3(0.0f, 360.0f * sign, 0.0f), glm::vec3(1.0f)));
+    TransformState getTransformAt(double currentTime) override {
+        float t = getNormalizedTime(currentTime);
+        float angle = t * 360.0f * (clockwise ? -1.0f : 1.0f);
+        
+        return TransformState(glm::vec3(0.0f), glm::vec3(0.0f, angle, 0.0f), glm::vec3(1.0f));
     }
 };

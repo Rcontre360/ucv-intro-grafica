@@ -26,22 +26,22 @@ public:
     float animationSpeed = 1.0f;
     ShadingMode shadingMode = PHONG;
 
-    Light(int id, glm::vec3 pos)
-        : id(id)
+    Light(int _id, glm::vec3 _pos)
     {
-        center = pos;
+        id = _id;
+        center = _pos;
         setColor(glm::vec3(0.9f)); 
         
         static vector<Vertex> orbVertices = setupLightOrbMesh();
         Submesh* orb = new Submesh(orbVertices);
-        orb->setTranslate(pos);
+        orb->setTranslate(_pos);
         submeshes.push_back(orb);
     }
 
-    void setColor(const glm::vec3& color) {
-        diffuse = color;
-        ambient = color * 0.1f;
-        specular = color;
+    void setColor(const glm::vec3& _color) {
+        diffuse = _color;
+        ambient = _color * 0.1f;
+        specular = _color;
     }
 
     void draw(const DrawConfig& config) override {
