@@ -446,13 +446,40 @@ private:
                 ImGui::Text("Hold CTRL + Drag to select");
                 ImGui::Text("Hold SHIFT to add to selection");
                 
+                Object* selected = nullptr;
                 ImGui::BeginChild("SelectedObjects", ImVec2(0, 100), true);
                 for (auto obj : appState->objects) {
                     if (obj->isSelected) {
                         ImGui::BulletText("%s", obj->name.c_str());
+                        selected = obj; // Use the last selected for texture editing
                     }
                 }
                 ImGui::EndChild();
+
+                if (selected) {
+                    ImGui::Separator();
+                    ImGui::Text("Edit: %s", selected->name.c_str());
+                    
+                    if (ImGui::Button("Change Diffuse Map")) {
+                        auto selection = pfd::open_file("Select Diffuse Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
+                        if (!selection.empty()) {
+                            GLuint tex = FileLoader::loadTexture(selection[0]);
+                            if (tex != 0) {
+                                for (auto sm : selected->submeshes) sm->diffuseMap = tex;
+                            }
+                        }
+                    }
+
+                    if (ImGui::Button("Change Bump Map")) {
+                        auto selection = pfd::open_file("Select Normal Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
+                        if (!selection.empty()) {
+                            GLuint tex = FileLoader::loadTexture(selection[0]);
+                            if (tex != 0) {
+                                for (auto sm : selected->submeshes) sm->normalMap = tex;
+                            }
+                        }
+                    }
+                }
 
                 if (ImGui::Button("Clear Selection")) {
                     for (auto obj : appState->objects) obj->isSelected = false;

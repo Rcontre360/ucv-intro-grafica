@@ -22,6 +22,7 @@
 #include "../animations/RotateAnimation.h"
 #include "../animations/ScaleAnimation.h"
 #include "../objects/Light.h"
+#include "../objects/BumpSphere.h"
 
 using namespace std;
 
@@ -37,8 +38,6 @@ public:
 
     vector<Object*> objects;
     vector<Light*> lights;
-    vector<Vertex> lightOrbVertices;
-    GLuint axisVAO = 0, axisVBO = 0;
 
     State(){
         initializeLights();
@@ -97,8 +96,8 @@ public:
         for (auto obj : objects) delete obj;
         objects.clear();
 
+        // 1. Load objects from the OBJ file
         LoadedScene sceneData = FileLoader::loadScene(path);
-
         for (const auto& objData : sceneData.objects) {
             Object* newObj = new Object();
             newObj->name = objData.name;
@@ -119,14 +118,14 @@ public:
             for (Submesh* sm : newObj->submeshes) {
                 sm->pivot = newObj->center;
             }
-            
-            // PDF Requirement: Make at least one object reflective
-            if (newObj->name == "bauble_core") {
-                for (auto sm : newObj->submeshes) sm->reflectivity = 0.6f;
-            }
-
             objects.push_back(newObj);
         }
+
+        // 2. Add the Parametric Bump Sphere (Requirement 5.b)
+        BumpSphere* bumpSphere = new BumpSphere(0.4f, 32, 32);
+        bumpSphere->name = "parametric_bump_sphere";
+        bumpSphere->translate(glm::vec3(0.0f, 0.5f, 0.0f)); // center of table area
+        objects.push_back(bumpSphere);
         
         initializeAnimations();
 
@@ -144,7 +143,7 @@ public:
                 obj->setAnimation(new CircleAnimation(glm::vec3(0.0f, 0.0f, 20.0f), 10.0f, 0.0f, true));
             }
             if (obj->name == "santa_ground") {
-                obj->setAnimation(new CircleAnimation(glm::vec3(-2.0f, 0.0f, 0.0f), 10.0f, 0.0f, true));
+                obj->setAnimation(new CircleAnimation(glm::vec3(-3.0f, 0.0f, 0.0f), 10.0f, 0.0f, true));
             }
             if (obj->name.rfind("snowman_red_", 0) == 0) {
                 int id = std::stoi(obj->name.substr(12)); 
@@ -159,6 +158,10 @@ public:
                 if (id >= 3 && id <= 6) {
                     obj->setAnimation(new ScaleAnimation(5.0f + id * 0.3f, 0.5f, 1.0f));
                 }
+            }
+            // Apply reflectivity
+            if (obj->name == "bauble_core" || obj->name == "pot") {
+                for (auto sm : obj->submeshes) sm->reflectivity = 0.6f;
             }
         }
     }

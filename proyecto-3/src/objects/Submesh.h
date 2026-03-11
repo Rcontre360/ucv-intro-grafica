@@ -18,7 +18,7 @@ struct SubmeshData;
 struct DrawConfig {
     GLuint shaderProgram;
     double currentTime = 0.0;
-    GLuint skyboxTextureID = 0; // Added to pass skybox to reflective submeshes
+    GLuint skyboxTextureID = 0; 
 };
 
 class Submesh 
@@ -42,7 +42,7 @@ public:
     GLuint ambientMap = 0;
 
     int vertexCount = 0;
-    float reflectivity = 0.0f; // reflectivity strength (0.0 to 1.0)
+    float reflectivity = 0.0f; 
 
     Submesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
@@ -67,21 +67,25 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, flatVertices.size() * sizeof(float), flatVertices.data(), GL_STATIC_DRAW);
         
-        // Position attribute (location 0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
+        // Position attribute (location 0) - 3 floats
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
-        // Normal attribute (location 1)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
+        // Normal attribute (location 1) - 3 floats
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
-        // Color attribute (location 2)
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));
+        // Color attribute (location 2) - 3 floats
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
         glEnableVertexAttribArray(2);
 
-        // TexCoord attribute (location 3)
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(9 * sizeof(float)));
+        // TexCoord attribute (location 3) - 2 floats
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(9 * sizeof(float)));
         glEnableVertexAttribArray(3);
+
+        // Tangent attribute (location 4) - 3 floats
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+        glEnableVertexAttribArray(4);
 
         glBindVertexArray(0);
     }
@@ -90,13 +94,13 @@ public:
     {
         if (vbo) glDeleteBuffers(1, &vbo);
         if (vao) glDeleteVertexArrays(1, &vao);
+        // Textures are often shared or managed by State, but if Submesh owns them:
         if (diffuseMap) glDeleteTextures(1, &diffuseMap);
         if (specularMap) glDeleteTextures(1, &specularMap);
         if (normalMap) glDeleteTextures(1, &normalMap);
         if (ambientMap) glDeleteTextures(1, &ambientMap);
     }
 
-    // Draws the submesh using the provided shader program.
     virtual void draw(const DrawConfig& config)
     {
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
@@ -116,38 +120,35 @@ public:
         } else {
             setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, false);
         }
+
+        if (normalMap) {
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, normalMap);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::normalMap, 2);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasNormalMap, true);
+        } else {
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasNormalMap, false);
+        }
         
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         glBindVertexArray(0);
     }
 
-    // translate
     void setTranslate(const glm::vec3& offset) { 
         translate = glm::translate(glm::mat4(1.0f), offset);
     }
 
-    // normal rotate
     void setRotate(float angle, const glm::vec3& axis) { 
         rotate = glm::angleAxis(glm::radians(angle), axis);
     }
 
-    // rotate over a given center.
-    // used bc submeshes might be far from shape center and must rotate around it
     void setRotate(float angle, const glm::vec3& axis, const glm::vec3& center) { 
-        // Absolute rotation
         rotate = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
-
-        // For absolute translation around a pivot, we need the base relative position.
-        // Since this is an absolute setter, we assume we calculate the new translation 
-        // purely based on the given rotation and pivot point.
-        glm::vec3 pos = glm::vec3(initialTransform[3]); // Use original position
+        glm::vec3 pos = glm::vec3(initialTransform[3]); 
         glm::vec3 dirToPivot = pos - center;
-
         glm::vec3 newDir = rotate * dirToPivot;
         glm::vec3 delta = (center + newDir) - pos;
-
-        // Set absolute translation based on this delta plus whatever the original translation was
         translate = glm::translate(glm::mat4(1.0f), glm::vec3(initialTransform[3]) + delta);
     }
 
@@ -165,10 +166,8 @@ public:
     const glm::mat4 getTransform() const { 
         glm::mat4 R = glm::mat4(rotate);
         glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
-        
         glm::mat4 toOrigin = glm::translate(glm::mat4(1.0f), -pivot);
         glm::mat4 fromOrigin = glm::translate(glm::mat4(1.0f), pivot);
-
         return translate * fromOrigin * R * S * toOrigin;
     }
 

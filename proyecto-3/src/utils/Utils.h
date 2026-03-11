@@ -16,10 +16,11 @@ public:
     glm::vec3 normal;
     glm::vec3 color;
     glm::vec2 texCoords;
+    glm::vec3 tangent; // Required for Bump/Normal mapping
 
     static vector<float> flatten(const vector<Vertex>& vertices) {
         vector<float> flatVertices;
-        flatVertices.reserve(vertices.size() * 11);
+        flatVertices.reserve(vertices.size() * 14); // 3+3+3+2+3 = 14 floats
         for (const auto& vertex : vertices) {
             flatVertices.push_back(vertex.position.x);
             flatVertices.push_back(vertex.position.y);
@@ -32,6 +33,9 @@ public:
             flatVertices.push_back(vertex.color.b);
             flatVertices.push_back(vertex.texCoords.x);
             flatVertices.push_back(vertex.texCoords.y);
+            flatVertices.push_back(vertex.tangent.x);
+            flatVertices.push_back(vertex.tangent.y);
+            flatVertices.push_back(vertex.tangent.z);
         }
         return flatVertices;
     }

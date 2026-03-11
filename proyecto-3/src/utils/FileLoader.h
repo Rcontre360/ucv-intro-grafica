@@ -37,7 +37,7 @@ struct LoadedScene {
 };
 
 class FileLoader {
-private:
+public:
     static GLuint loadTexture(const string& path) {
         if (path.empty()) return 0;
         

@@ -9,11 +9,13 @@ namespace Shaders {
         layout(location = 1) in vec3 aNormal;
         layout(location = 2) in vec3 aColor;
         layout(location = 3) in vec2 aTexCoords;
+        layout(location = 4) in vec3 aTangent;
 
         out vec3 vPos;
         out vec3 vNormal;
         out vec3 vColor;
         out vec2 vTexCoords;
+        out mat3 vTBN;
 
         uniform mat4 model;
         uniform mat4 view;
@@ -21,7 +23,18 @@ namespace Shaders {
 
         void main() {
             vPos = vec3(model * vec4(aPos, 1.0));
-            vNormal = mat3(transpose(inverse(model))) * aNormal;
+            
+            mat3 normalMatrix = mat3(transpose(inverse(model)));
+            vNormal = normalMatrix * aNormal;
+            
+            // TBN Matrix calculation for Bump Mapping
+            vec3 T = normalize(normalMatrix * aTangent);
+            vec3 N = normalize(vNormal);
+            // Re-orthogonalize T with respect to N
+            T = normalize(T - dot(T, N) * N);
+            vec3 B = cross(N, T);
+            vTBN = mat3(T, B, N);
+
             vColor = aColor;
             vTexCoords = aTexCoords;
             gl_Position = projection * view * vec4(vPos, 1.0);
@@ -35,6 +48,7 @@ namespace Shaders {
         in vec3 vNormal;
         in vec3 vColor;
         in vec2 vTexCoords;
+        in mat3 vTBN;
 
         out vec4 FragColor;
 
@@ -44,7 +58,7 @@ namespace Shaders {
             vec3 diffuse;
             vec3 specular;
             bool enabled;
-            int shadingMode; // 0: Phong, 1: Blinn-Phong, 2: Flat
+            int shadingMode; 
         };
 
         #define MAX_LIGHTS 3
@@ -53,6 +67,8 @@ namespace Shaders {
         uniform bool uEnableFatt;
         uniform bool uHasDiffuseMap;
         uniform sampler2D diffuseMap;
+        uniform bool uHasNormalMap;
+        uniform sampler2D normalMap;
         uniform bool uHasColor;
         uniform vec3 u_color;
         uniform float uReflectivity;
@@ -63,10 +79,8 @@ namespace Shaders {
 
             vec3 lightDir = normalize(light.position - vPos);
             
-            // Diffuse
             float diff = max(dot(normal, lightDir), 0.0);
             
-            // Specular
             float spec = 0.0;
             if (light.shadingMode == 1) { // Blinn-Phong
                 spec = pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), 32.0);
@@ -78,35 +92,37 @@ namespace Shaders {
 
             if (uEnableFatt) {
                 float d = length(light.position - vPos);
-                result *= 1.0 / (1.0 + 0.09 * d + 0.032 * (d * d));
+                float attenuation = 1.0 / (1.0 + 0.09 * d + 0.032 * (d * d));
+                result *= attenuation;
             }
 
             return result;
         }
 
         void main() {
-            // Determine Normal (Automatic flat normal calculation if shading mode is FLAT)
-            vec3 normal = (lights[0].shadingMode == 2) ? normalize(cross(dFdx(vPos), dFdy(vPos))) : normalize(vNormal);
-            vec3 viewDir = normalize(viewPos - vPos);
-
-            // Determine Base Color
-            vec3 baseColor = uHasColor ? u_color : vColor;
-            
-            // If it's a light orb (uHasColor), make it emissive (ignore standard lighting)
-            if (uHasColor) {
-                FragColor = vec4(baseColor, 1.0);
-                return;
+            vec3 normal;
+            if (uHasNormalMap) {
+                // Sample normal from map and transform from [0,1] to [-1,1]
+                normal = texture(normalMap, vTexCoords).rgb;
+                normal = normalize(vTBN * (normal * 2.0 - 1.0));
+            } else {
+                normal = normalize(vNormal);
             }
 
+            if (lights[0].shadingMode == 2) { // Flat shading
+                normal = normalize(cross(dFdx(vPos), dFdy(vPos)));
+            }
+
+            vec3 viewDir = normalize(viewPos - vPos);
+
+            vec3 baseColor = uHasColor ? u_color : vColor;
             if (uHasDiffuseMap) baseColor = texture(diffuseMap, vTexCoords).rgb;
 
-            // Calculate Lighting
             vec3 totalLight = vec3(0.0);
             for (int i = 0; i < MAX_LIGHTS; i++) {
                 totalLight += calculateLight(lights[i], normal, viewDir, baseColor);
             }
 
-            // Apply Environment Mapping
             if (uReflectivity > 0.0) {
                 totalLight = mix(totalLight, texture(skybox, reflect(-viewDir, normal)).rgb, uReflectivity);
             }
@@ -123,10 +139,30 @@ namespace Shaders {
         inline static const std::string uEnableFatt = "uEnableFatt";
         inline static const std::string uHasDiffuseMap = "uHasDiffuseMap";
         inline static const std::string diffuseMap = "diffuseMap";
+        inline static const std::string uHasNormalMap = "uHasNormalMap";
+        inline static const std::string normalMap = "normalMap";
         inline static const std::string uHasColor = "uHasColor";
         inline static const std::string u_color = "u_color";
         inline static const std::string uReflectivity = "uReflectivity";
         inline static const std::string skybox = "skybox";
+    };
+
+    struct LightbulbShader {
+        inline static const std::string model = "model";
+        inline static const std::string view = "view";
+        inline static const std::string projection = "projection";
+        inline static const std::string viewPos = "viewPos";
+        inline static const std::string u_color = "u_color";
+        inline static const std::string uIntensity = "uIntensity";
+    };
+
+    struct BillboardShader {
+        inline static const std::string model = "model";
+        inline static const std::string view = "view";
+        inline static const std::string projection = "projection";
+        inline static const std::string u_color = "u_color";
+        inline static const std::string uIntensity = "uIntensity";
+        inline static const std::string uSize = "uSize";
     };
 
     const char* skyboxVertexShaderSrc = R"glsl(
