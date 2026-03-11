@@ -1,4 +1,4 @@
-# Blender 5.0.1 MTL File: 'scene_final.blend'
+# Blender 5.0.1 MTL File: 'None'
 # www.blender.org
 
 newmtl BEARD
@@ -30,6 +30,17 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
+
+newmtl Bauble_2018
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Bauble_2018_1K_albedo.png
+map_Ns Bauble_2018_1K_roughness.png
+map_refl Bauble_2018_1K_metalness.png
 
 newmtl DEER
 Ns 250.000000
@@ -191,6 +202,16 @@ d 1.000000
 illum 2
 map_Kd Meshy_AI_A_stylized_evergreen__0305040343_texture.png
 
+newmtl Metal
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
 newmtl PURPLE
 Ns 250.000000
 Ka 1.000000 1.000000 1.000000
@@ -230,6 +251,18 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
+
+newmtl Stand
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Stand_1K_albedo.png
+map_Ns Stand_1K_roughness.png
+map_refl Stand_1K_metalness.png
+map_Bump -bm 1.000000 Stand_1K_normal.png
 
 newmtl WHITE
 Ns 250.000000
@@ -350,16 +383,6 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-
-newmtl beard
-Ns 250.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.800000 0.800000 0.800000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
 
 newmtl beard.001
 Ns 250.000000

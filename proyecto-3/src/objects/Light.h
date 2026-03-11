@@ -16,15 +16,16 @@ enum ShadingMode {
 };
 
 class Light : public Object {
+private:
+    // Pre-calculated uniform names to avoid string allocations every frame
+    std::string uPosName, uAmbName, uDiffName, uSpecName, uEnabledName, uModeName;
+
 public:
     int id;
     glm::vec3 ambient;
     glm::vec3 diffuse;
     glm::vec3 specular;
-    
-    // Helper for UI to hold the single color
     float uiColor[3] = { 0.9f, 0.9f, 0.9f };
-
     bool enabled = true;
     float animationSpeed = 1.0f;
     float intensity = 1.5f; 
@@ -34,6 +35,16 @@ public:
     {
         id = _id;
         center = _pos;
+        
+        // Pre-calculate strings
+        std::string base = "lights[" + std::to_string(id) + "].";
+        uPosName = base + "position";
+        uAmbName = base + "ambient";
+        uDiffName = base + "diffuse";
+        uSpecName = base + "specular";
+        uEnabledName = base + "enabled";
+        uModeName = base + "shadingMode";
+
         setColor(glm::vec3(uiColor[0], uiColor[1], uiColor[2])); 
         
         static vector<Vertex> orbVertices = setupLightOrbMesh();
@@ -43,19 +54,14 @@ public:
     }
 
     void setColor(const glm::vec3& _color) {
-        uiColor[0] = _color.r;
-        uiColor[1] = _color.g;
-        uiColor[2] = _color.b;
-
+        uiColor[0] = _color.r; uiColor[1] = _color.g; uiColor[2] = _color.b;
         diffuse = _color;
-        ambient = _color * 0.1f; // 10% as per PDF
-        specular = glm::vec3(1.0f) * 0.5f; // Coherent neutral specular
+        ambient = _color * 0.1f;
+        specular = glm::vec3(1.0f) * 0.5f;
     }
 
     TransformState getLightTransform(double currentTime) {
-        if (animation) {
-            return animation->getTransformAt(currentTime * animationSpeed);
-        }
+        if (animation) return animation->getTransformAt(currentTime * animationSpeed);
         return TransformState();
     }
 
@@ -63,19 +69,16 @@ public:
         TransformState state = getLightTransform(config.currentTime);
         glm::vec3 currentPos = center + state.translation;
 
-        // 1. Set uniforms for the shader to use this light for OTHER objects
-        string base = "lights[" + to_string(id) + "].";
-        setGpuVariable(config.shaderProgram, base + "position", currentPos);
-        setGpuVariable(config.shaderProgram, base + "ambient", ambient * intensity);
-        setGpuVariable(config.shaderProgram, base + "diffuse", diffuse * intensity);
-        setGpuVariable(config.shaderProgram, base + "specular", specular * intensity);
-        setGpuVariable(config.shaderProgram, base + "enabled", enabled);
-        setGpuVariable(config.shaderProgram, base + "shadingMode", (int)shadingMode);
+        // 1. Set uniforms using pre-calculated strings
+        setGpuVariable(config.shaderProgram, uPosName, currentPos);
+        setGpuVariable(config.shaderProgram, uAmbName, ambient * intensity);
+        setGpuVariable(config.shaderProgram, uDiffName, diffuse * intensity);
+        setGpuVariable(config.shaderProgram, uSpecName, specular * intensity);
+        setGpuVariable(config.shaderProgram, uEnabledName, enabled);
+        setGpuVariable(config.shaderProgram, uModeName, (int)shadingMode);
 
-        // 2. Draw the debug orb (emissive)
+        // 2. Draw the debug orb
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
-        
-        // Use the same base color for the bulb orb
         glm::vec3 orbColor = enabled ? (diffuse * std::min(intensity, 2.0f)) : glm::vec3(0.2f);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
         
@@ -85,7 +88,6 @@ public:
             sm->setScale(state.scale);
             sm->draw(config);
         }
-        
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, false);
     }
 
@@ -95,13 +97,8 @@ private:
         const unsigned int Y_SEGMENTS = 16;
         const float radius = 0.15f;
         vector<Vertex> lightOrbVertices;
-
-        struct TempVertex {
-            glm::vec3 pos;
-            glm::vec2 uv;
-        };
+        struct TempVertex { glm::vec3 pos; glm::vec2 uv; };
         vector<vector<TempVertex>> temp_verts;
-
         for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
             vector<TempVertex> row;
             for (unsigned int x = 0; x <= X_SEGMENTS; ++x) {
@@ -110,28 +107,21 @@ private:
                 float xPos = std::cos(xSegment * 2.0f * glm::pi<float>()) * std::sin(ySegment * glm::pi<float>());
                 float yPos = std::cos(ySegment * glm::pi<float>());
                 float zPos = std::sin(xSegment * 2.0f * glm::pi<float>()) * std::sin(ySegment * glm::pi<float>());
-
                 row.push_back({glm::vec3(xPos, yPos, zPos), glm::vec2(xSegment, ySegment)});
             }
             temp_verts.push_back(row);
         }
-
         for (unsigned int y = 0; y < Y_SEGMENTS; ++y) {
             for (unsigned int x = 0; x < X_SEGMENTS; ++x) {
                 auto createVertex = [&](unsigned int lat, unsigned int lon) {
-                    Vertex v;
-                    const auto& tv = temp_verts[lat][lon];
-                    v.position = tv.pos * radius;
-                    v.normal = tv.pos;
-                    v.color = glm::vec3(1.0f);
-                    v.texCoords = tv.uv;
+                    Vertex v; const auto& tv = temp_verts[lat][lon];
+                    v.position = tv.pos * radius; v.normal = tv.pos;
+                    v.color = glm::vec3(1.0f); v.texCoords = tv.uv;
                     return v;
                 };
-
                 lightOrbVertices.push_back(createVertex(y, x));
                 lightOrbVertices.push_back(createVertex(y + 1, x));
                 lightOrbVertices.push_back(createVertex(y + 1, x + 1));
-
                 lightOrbVertices.push_back(createVertex(y, x));
                 lightOrbVertices.push_back(createVertex(y + 1, x + 1));
                 lightOrbVertices.push_back(createVertex(y, x + 1));
