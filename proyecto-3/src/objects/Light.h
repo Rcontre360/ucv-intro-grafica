@@ -22,16 +22,19 @@ public:
     glm::vec3 diffuse;
     glm::vec3 specular;
     
+    // Helper for UI to hold the single color
+    float uiColor[3] = { 0.9f, 0.9f, 0.9f };
+
     bool enabled = true;
     float animationSpeed = 1.0f;
-    float intensity = 1.5f; // Initial intensity
+    float intensity = 1.5f; 
     ShadingMode shadingMode = PHONG;
 
     Light(int _id, glm::vec3 _pos)
     {
         id = _id;
         center = _pos;
-        setColor(glm::vec3(0.9f)); 
+        setColor(glm::vec3(uiColor[0], uiColor[1], uiColor[2])); 
         
         static vector<Vertex> orbVertices = setupLightOrbMesh();
         Submesh* orb = new Submesh(orbVertices);
@@ -40,9 +43,13 @@ public:
     }
 
     void setColor(const glm::vec3& _color) {
+        uiColor[0] = _color.r;
+        uiColor[1] = _color.g;
+        uiColor[2] = _color.b;
+
         diffuse = _color;
-        ambient = _color * 0.1f;
-        specular = glm::vec3(1.0f) * 0.5f;
+        ambient = _color * 0.1f; // 10% as per PDF
+        specular = glm::vec3(1.0f) * 0.5f; // Coherent neutral specular
     }
 
     TransformState getLightTransform(double currentTime) {
@@ -67,7 +74,8 @@ public:
 
         // 2. Draw the debug orb (emissive)
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
-        // The orb itself looks brighter as intensity increases
+        
+        // Use the same base color for the bulb orb
         glm::vec3 orbColor = enabled ? (diffuse * std::min(intensity, 2.0f)) : glm::vec3(0.2f);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
         

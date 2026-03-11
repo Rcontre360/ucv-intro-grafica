@@ -466,9 +466,9 @@ private:
                     if (ImGui::TreeNode(label.c_str())) {
                         Light* l = appState->lights[i];
                         ImGui::Checkbox("Enabled", &l->enabled);
-                        ImGui::ColorEdit3("Ambient", (float*)&l->ambient);
-                        ImGui::ColorEdit3("Diffuse", (float*)&l->diffuse);
-                        ImGui::ColorEdit3("Specular", (float*)&l->specular);
+                        if (ImGui::ColorEdit3("Light Color", l->uiColor)) {
+                            l->setColor(glm::vec3(l->uiColor[0], l->uiColor[1], l->uiColor[2]));
+                        }
                         ImGui::SliderFloat("Intensity", &l->intensity, 0.0f, 10.0f);
                         ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
                         
