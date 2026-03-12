@@ -75,12 +75,16 @@ namespace Shaders {
         uniform bool uHasAmbientMap;
         uniform sampler2D ambientMap;
 
+        uniform bool uHasSpecularMap;
+        uniform sampler2D specularMap;
+
         uniform bool uHasColor;
         uniform vec3 u_color;
         uniform float uReflectivity;
         uniform samplerCube skybox;
+        uniform float uShininess; // Controllable shininess power
 
-        vec3 calculateLight(Light light, vec3 normal, vec3 viewDir, vec3 baseColor) {
+        vec3 calculateLight(Light light, vec3 normal, vec3 viewDir, vec3 baseColor, float specFactor) {
             if (!light.enabled) return vec3(0.0);
 
             vec3 lightDir = normalize(light.position - vPos);
@@ -91,14 +95,16 @@ namespace Shaders {
             // Specular
             float spec = 0.0;
             if (light.shadingMode == 1) { // Blinn-Phong
-                spec = pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), 32.0);
+                vec3 halfwayDir = normalize(lightDir + viewDir);
+                spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
             } else { // Phong
-                spec = pow(max(dot(viewDir, reflect(-lightDir, normal)), 0.0), 32.0);
+                vec3 reflectDir = reflect(-lightDir, normal);
+                spec = pow(max(dot(viewDir, reflectDir), 0.0), uShininess);
             }
 
             vec3 ambient = light.ambient * baseColor;
             vec3 diffuse = (light.diffuse * diff) * baseColor;
-            vec3 specular = (light.specular * spec);
+            vec3 specular = (light.specular * spec) * specFactor;
 
             vec3 result = ambient + diffuse + specular;
 
@@ -130,13 +136,17 @@ namespace Shaders {
             vec3 baseColor = uHasColor ? u_color : vColor;
             if (uHasDiffuseMap) baseColor = texture(diffuseMap, vTexCoords).rgb;
 
-            // 2. Calculate Lighting
+            // 2. Specular Factor (Default to very low if no map exists)
+            // If map exists, we multiply by 2.0 to make it extra shiny as requested
+            float specFactor = uHasSpecularMap ? texture(specularMap, vTexCoords).r * 2.0 : 0.1;
+
+            // 3. Calculate Lighting
             vec3 totalLight = vec3(0.0);
             for (int i = 0; i < MAX_LIGHTS; i++) {
-                totalLight += calculateLight(lights[i], normal, viewDir, baseColor);
+                totalLight += calculateLight(lights[i], normal, viewDir, baseColor, specFactor);
             }
 
-            // 3. Apply Ambient Occlusion (AO) from map
+            // 4. Apply Ambient Occlusion (AO) from map
             if (uHasAmbientMap) {
                 float ao = texture(ambientMap, vTexCoords).r;
                 totalLight *= ao;
@@ -162,9 +172,12 @@ namespace Shaders {
         inline static const std::string normalMap = "normalMap";
         inline static const std::string uHasAmbientMap = "uHasAmbientMap";
         inline static const std::string ambientMap = "ambientMap";
+        inline static const std::string uHasSpecularMap = "uHasSpecularMap";
+        inline static const std::string specularMap = "specularMap";
         inline static const std::string uHasColor = "uHasColor";
         inline static const std::string u_color = "u_color";
         inline static const std::string uReflectivity = "uReflectivity";
+        inline static const std::string uShininess = "uShininess";
         inline static const std::string skybox = "skybox";
     };
 

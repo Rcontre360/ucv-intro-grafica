@@ -43,6 +43,7 @@ public:
 
     int vertexCount = 0;
     float reflectivity = 0.0f; 
+    float shininess = 16.0f; // Lower power = larger highlights
 
     Submesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
@@ -104,6 +105,7 @@ public:
     {
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uReflectivity, reflectivity);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uShininess, shininess);
 
         if (reflectivity > 0.0f && config.skyboxTextureID != 0) {
             glActiveTexture(GL_TEXTURE1);
@@ -129,7 +131,15 @@ public:
             setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasNormalMap, false);
         }
 
-        // Texture Unit 4: Ambient (AO)
+        if (specularMap) {
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, specularMap);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::specularMap, 3);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasSpecularMap, true);
+        } else {
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasSpecularMap, false);
+        }
+
         if (ambientMap) {
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_2D, ambientMap);
@@ -175,8 +185,10 @@ public:
     const glm::mat4 getTransform() const { 
         glm::mat4 R = glm::mat4(rotate);
         glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
+        
         glm::mat4 toOrigin = glm::translate(glm::mat4(1.0f), -pivot);
         glm::mat4 fromOrigin = glm::translate(glm::mat4(1.0f), pivot);
+
         return translate * fromOrigin * R * S * toOrigin;
     }
 

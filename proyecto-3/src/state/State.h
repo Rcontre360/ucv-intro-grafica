@@ -111,7 +111,6 @@ public:
                 sm->ambientMap = smData.ambientMap;
                 sm->resetTransform();
                 sm->initialTransform = sm->getTransform();
-                if (sm->ambientMap) cout << "   - Found Ambient (AO) Map for submesh" << endl;
                 newObj->submeshes.push_back(sm);
             }
 
@@ -134,6 +133,13 @@ public:
         cout << "Total Objects: " << objects.size() << endl;
         for (const auto& obj : objects) {
             cout << " - [Object] " << obj->name << " | Submeshes: " << obj->submeshes.size() << endl;
+            for (size_t i = 0; i < obj->submeshes.size(); ++i) {
+                Submesh* sm = obj->submeshes[i];
+                if (sm->diffuseMap)  cout << "    > Submesh " << i << ": Found Diffuse Map" << endl;
+                if (sm->ambientMap)  cout << "    > Submesh " << i << ": Found Ambient (AO) Map" << endl;
+                if (sm->specularMap) cout << "    > Submesh " << i << ": Found Specular Map" << endl;
+                if (sm->normalMap)   cout << "    > Submesh " << i << ": Found Normal (Bump) Map" << endl;
+            }
         }
         cout << "------------------------------------------" << endl;
     }
@@ -161,7 +167,7 @@ public:
                 }
             }
             // Apply reflectivity
-            if (obj->name == "bauble_core" || obj->name == "pot") {
+            if (obj->name == "bauble_core") {
                 for (auto sm : obj->submeshes) sm->reflectivity = 0.6f;
             }
         }

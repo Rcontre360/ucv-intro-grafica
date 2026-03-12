@@ -112,6 +112,7 @@ d 1.000000
 illum 2
 map_Kd Meshy_AI_A_stylish_high_quali_0305034049_texture.png
 map_Ka ../ao_maps/ao_snowman_blue.png
+map_Ks ../specular_maps/specular_snowman_blue.png
 
 newmtl Material.004
 Ns 250.000000
@@ -451,6 +452,7 @@ map_Ns pot_enamel_01_rough_2k.exr
 map_refl pot_enamel_01_metal_2k.exr
 map_Bump -bm 1.000000 pot_enamel_01_nor_gl_2k.exr
 map_Ka ../ao_maps/ao_pot.png
+map_Ks ../specular_maps/specular_pot.png
 
 newmtl tree
 Ns 250.000000
