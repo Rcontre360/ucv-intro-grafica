@@ -111,6 +111,7 @@ public:
                 sm->ambientMap = smData.ambientMap;
                 sm->resetTransform();
                 sm->initialTransform = sm->getTransform();
+                if (sm->ambientMap) cout << "   - Found Ambient (AO) Map for submesh" << endl;
                 newObj->submeshes.push_back(sm);
             }
 

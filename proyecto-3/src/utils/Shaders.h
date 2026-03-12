@@ -65,10 +65,16 @@ namespace Shaders {
         uniform Light lights[MAX_LIGHTS];
         uniform vec3 viewPos;
         uniform bool uEnableFatt;
+        
         uniform bool uHasDiffuseMap;
         uniform sampler2D diffuseMap;
+        
         uniform bool uHasNormalMap;
         uniform sampler2D normalMap;
+
+        uniform bool uHasAmbientMap;
+        uniform sampler2D ambientMap;
+
         uniform bool uHasColor;
         uniform vec3 u_color;
         uniform float uReflectivity;
@@ -90,7 +96,11 @@ namespace Shaders {
                 spec = pow(max(dot(viewDir, reflect(-lightDir, normal)), 0.0), 32.0);
             }
 
-            vec3 result = (light.ambient + light.diffuse * diff) * baseColor + (light.specular * spec);
+            vec3 ambient = light.ambient * baseColor;
+            vec3 diffuse = (light.diffuse * diff) * baseColor;
+            vec3 specular = (light.specular * spec);
+
+            vec3 result = ambient + diffuse + specular;
 
             if (uEnableFatt) {
                 float d = length(light.position - vPos);
@@ -116,12 +126,20 @@ namespace Shaders {
 
             vec3 viewDir = normalize(viewPos - vPos);
 
+            // 1. Determine Base Color
             vec3 baseColor = uHasColor ? u_color : vColor;
             if (uHasDiffuseMap) baseColor = texture(diffuseMap, vTexCoords).rgb;
 
+            // 2. Calculate Lighting
             vec3 totalLight = vec3(0.0);
             for (int i = 0; i < MAX_LIGHTS; i++) {
                 totalLight += calculateLight(lights[i], normal, viewDir, baseColor);
+            }
+
+            // 3. Apply Ambient Occlusion (AO) from map
+            if (uHasAmbientMap) {
+                float ao = texture(ambientMap, vTexCoords).r;
+                totalLight *= ao;
             }
 
             if (uReflectivity > 0.0) {
@@ -142,6 +160,8 @@ namespace Shaders {
         inline static const std::string diffuseMap = "diffuseMap";
         inline static const std::string uHasNormalMap = "uHasNormalMap";
         inline static const std::string normalMap = "normalMap";
+        inline static const std::string uHasAmbientMap = "uHasAmbientMap";
+        inline static const std::string ambientMap = "ambientMap";
         inline static const std::string uHasColor = "uHasColor";
         inline static const std::string u_color = "u_color";
         inline static const std::string uReflectivity = "uReflectivity";
@@ -192,6 +212,15 @@ namespace Shaders {
         inline static const std::string viewPos = "viewPos";
         inline static const std::string u_color = "u_color";
         inline static const std::string uIntensity = "uIntensity";
+    };
+
+    struct BillboardShader {
+        inline static const std::string model = "model";
+        inline static const std::string view = "view";
+        inline static const std::string projection = "projection";
+        inline static const std::string u_color = "u_color";
+        inline static const std::string uIntensity = "uIntensity";
+        inline static const std::string uSize = "uSize";
     };
 
     const char* skyboxVertexShaderSrc = R"glsl(

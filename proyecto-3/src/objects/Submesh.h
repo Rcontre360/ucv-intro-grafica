@@ -67,18 +67,23 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, flatVertices.size() * sizeof(float), flatVertices.data(), GL_STATIC_DRAW);
         
+        // Position attribute (location 0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
+        // Normal attribute (location 1)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
+        // Color attribute (location 2)
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
         glEnableVertexAttribArray(2);
 
+        // TexCoord attribute (location 3)
         glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(9 * sizeof(float)));
         glEnableVertexAttribArray(3);
 
+        // Tangent attribute (location 4)
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
         glEnableVertexAttribArray(4);
 
@@ -123,6 +128,16 @@ public:
         } else {
             setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasNormalMap, false);
         }
+
+        // Texture Unit 4: Ambient (AO)
+        if (ambientMap) {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, ambientMap);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::ambientMap, 4);
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasAmbientMap, true);
+        } else {
+            setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasAmbientMap, false);
+        }
         
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
@@ -160,10 +175,8 @@ public:
     const glm::mat4 getTransform() const { 
         glm::mat4 R = glm::mat4(rotate);
         glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
-        
         glm::mat4 toOrigin = glm::translate(glm::mat4(1.0f), -pivot);
         glm::mat4 fromOrigin = glm::translate(glm::mat4(1.0f), pivot);
-
         return translate * fromOrigin * R * S * toOrigin;
     }
 
