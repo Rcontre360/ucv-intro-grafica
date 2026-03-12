@@ -111,6 +111,7 @@ Ni 1.500000
 d 1.000000
 illum 2
 map_Kd Meshy_AI_A_stylish_high_quali_0305034049_texture.png
+map_Ka ../ao_maps/ao_snowman_blue.png
 
 newmtl Material.004
 Ns 250.000000
@@ -201,6 +202,7 @@ Ni 1.500000
 d 1.000000
 illum 2
 map_Kd Meshy_AI_A_stylized_evergreen__0305040343_texture.png
+map_Ka ../ao_maps/ao_tree_snow.png
 
 newmtl Metal
 Ns 250.000000
@@ -293,6 +295,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface11
 Ns 250.000000
@@ -303,6 +306,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface12
 Ns 250.000000
@@ -313,6 +317,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface14
 Ns 250.000000
@@ -323,6 +328,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface15
 Ns 250.000000
@@ -333,6 +339,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface16
 Ns 250.000000
@@ -343,6 +350,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface17
 Ns 250.000000
@@ -353,6 +361,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface18
 Ns 250.000000
@@ -363,6 +372,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface19
 Ns 250.000000
@@ -373,6 +383,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl aiStandardSurface9
 Ns 250.000000
@@ -383,6 +394,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
+map_Ka ../ao_maps/ao_snowman_red.png
 
 newmtl beard.001
 Ns 250.000000
@@ -425,6 +437,7 @@ d 1.000000
 illum 2
 map_Kd Cottage Texture.jpg
 map_Bump -bm 1.000000 Cottage Texture Bump.jpg
+map_Ka ../ao_maps/ao_map_house.png
 
 newmtl pot_enamel_01
 Ka 1.000000 1.000000 1.000000
@@ -437,6 +450,7 @@ map_Kd pot_enamel_01_diff_2k.jpg
 map_Ns pot_enamel_01_rough_2k.exr
 map_refl pot_enamel_01_metal_2k.exr
 map_Bump -bm 1.000000 pot_enamel_01_nor_gl_2k.exr
+map_Ka ../ao_maps/ao_pot.png
 
 newmtl tree
 Ns 250.000000
