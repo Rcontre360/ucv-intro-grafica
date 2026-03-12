@@ -56,7 +56,7 @@ public:
     void setColor(const glm::vec3& _color) {
         uiColor[0] = _color.r; uiColor[1] = _color.g; uiColor[2] = _color.b;
         diffuse = _color;
-        ambient = _color * 0.1f;
+        ambient = _color * 0.12f; // Increased by 20% (0.1 -> 0.12)
         specular = glm::vec3(1.0f) * 0.5f;
     }
 

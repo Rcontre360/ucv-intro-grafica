@@ -79,8 +79,10 @@ namespace Shaders {
 
             vec3 lightDir = normalize(light.position - vPos);
             
+            // Diffuse
             float diff = max(dot(normal, lightDir), 0.0);
             
+            // Specular
             float spec = 0.0;
             if (light.shadingMode == 1) { // Blinn-Phong
                 spec = pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), 32.0);
@@ -102,14 +104,13 @@ namespace Shaders {
         void main() {
             vec3 normal;
             if (uHasNormalMap) {
-                // Sample normal from map and transform from [0,1] to [-1,1]
                 normal = texture(normalMap, vTexCoords).rgb;
                 normal = normalize(vTBN * (normal * 2.0 - 1.0));
             } else {
                 normal = normalize(vNormal);
             }
 
-            if (lights[0].shadingMode == 2) { // Flat shading
+            if (lights[0].shadingMode == 2) { 
                 normal = normalize(cross(dFdx(vPos), dFdy(vPos)));
             }
 
@@ -147,6 +148,43 @@ namespace Shaders {
         inline static const std::string skybox = "skybox";
     };
 
+    const char* lightbulbVertexShaderSrc = R"glsl(
+        #version 330 core
+        layout(location = 0) in vec3 aPos;
+        layout(location = 1) in vec3 aNormal;
+        out vec3 vNormal;
+        out vec3 vViewDir;
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
+        uniform vec3 viewPos;
+        void main() {
+            vec3 worldPos = vec3(model * vec4(aPos, 1.0));
+            vNormal = normalize(mat3(transpose(inverse(model))) * aNormal);
+            vViewDir = normalize(viewPos - worldPos);
+            gl_Position = projection * view * vec4(worldPos, 1.0);
+        }
+    )glsl";
+
+    const char* lightbulbFragmentShaderSrc = R"glsl(
+        #version 330 core
+        in vec3 vNormal;
+        in vec3 vViewDir;
+        out vec4 FragColor;
+        uniform vec3 u_color;
+        uniform float uIntensity;
+        void main() {
+            float dotNV = max(dot(vNormal, vViewDir), 0.0);
+            vec3 color = u_color * uIntensity;
+            vec3 whiteHot = vec3(1.0) * (uIntensity + 1.0);
+            float coreFactor = pow(dotNV, 2.0);
+            vec3 finalColor = mix(color * 0.5, whiteHot, coreFactor);
+            float haloFactor = pow(1.0 - dotNV, 3.0);
+            finalColor = mix(finalColor, u_color * uIntensity * 0.2, haloFactor);
+            FragColor = vec4(finalColor, 1.0);
+        }
+    )glsl";
+
     struct LightbulbShader {
         inline static const std::string model = "model";
         inline static const std::string view = "view";
@@ -154,15 +192,6 @@ namespace Shaders {
         inline static const std::string viewPos = "viewPos";
         inline static const std::string u_color = "u_color";
         inline static const std::string uIntensity = "uIntensity";
-    };
-
-    struct BillboardShader {
-        inline static const std::string model = "model";
-        inline static const std::string view = "view";
-        inline static const std::string projection = "projection";
-        inline static const std::string u_color = "u_color";
-        inline static const std::string uIntensity = "uIntensity";
-        inline static const std::string uSize = "uSize";
     };
 
     const char* skyboxVertexShaderSrc = R"glsl(

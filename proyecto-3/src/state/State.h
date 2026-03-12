@@ -143,7 +143,7 @@ public:
                 obj->setAnimation(new CircleAnimation(glm::vec3(0.0f, 0.0f, 20.0f), 10.0f, 0.0f, true));
             }
             if (obj->name == "santa_ground") {
-                obj->setAnimation(new CircleAnimation(glm::vec3(-3.0f, 0.0f, 0.0f), 10.0f, 0.0f, true));
+                obj->setAnimation(new CircleAnimation(glm::vec3(-2.0f, 0.0f, 0.0f), 10.0f, 0.0f, true));
             }
             if (obj->name.rfind("snowman_red_", 0) == 0) {
                 int id = std::stoi(obj->name.substr(12)); 
