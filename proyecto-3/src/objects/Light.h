@@ -79,6 +79,7 @@ public:
 
         // 2. Draw the debug orb
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, false);
         glm::vec3 orbColor = enabled ? (diffuse * std::min(intensity, 2.0f)) : glm::vec3(0.2f);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, orbColor);
         

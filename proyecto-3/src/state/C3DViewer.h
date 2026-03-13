@@ -460,18 +460,15 @@ private:
 
             if (ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::Text("Hold CTRL + Drag to select");
+                ImGui::Text("Click and Drag to select");
                 ImGui::Text("Hold SHIFT to add to selection");
                 
                 Object* selected = nullptr;
-                ImGui::BeginChild("SelectedObjects", ImVec2(0, 100), true);
                 for (auto obj : appState->objects) {
                     if (obj->isSelected) {
-                        ImGui::BulletText("%s", obj->name.c_str());
                         selected = obj; // Use the last selected for texture editing
                     }
                 }
-                ImGui::EndChild();
 
                 if (selected) {
                     ImGui::Separator();

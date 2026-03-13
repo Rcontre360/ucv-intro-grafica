@@ -129,6 +129,7 @@ public:
 
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, glm::mat4(1.0f));
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, false);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::u_color, glm::vec3(0.0f, 1.0f, 0.0f));
 
         glDrawArrays(GL_LINES, 0, 24);

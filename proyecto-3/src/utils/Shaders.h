@@ -134,7 +134,7 @@ namespace Shaders {
 
             // 1. Determine Base Color
             vec3 baseColor = uHasColor ? u_color : vColor;
-            if (uHasDiffuseMap) baseColor = texture(diffuseMap, vTexCoords).rgb;
+            if (uHasDiffuseMap && !uHasColor) baseColor = texture(diffuseMap, vTexCoords).rgb;
 
             // 2. Specular Factor (Default to very low if no map exists)
             // If map exists, we multiply by 2.0 to make it extra shiny as requested
@@ -142,8 +142,12 @@ namespace Shaders {
 
             // 3. Calculate Lighting
             vec3 totalLight = vec3(0.0);
-            for (int i = 0; i < MAX_LIGHTS; i++) {
-                totalLight += calculateLight(lights[i], normal, viewDir, baseColor, specFactor);
+            if (uHasColor) {
+                totalLight = baseColor;
+            } else {
+                for (int i = 0; i < MAX_LIGHTS; i++) {
+                    totalLight += calculateLight(lights[i], normal, viewDir, baseColor, specFactor);
+                }
             }
 
             // 4. Apply Ambient Occlusion (AO) from map
