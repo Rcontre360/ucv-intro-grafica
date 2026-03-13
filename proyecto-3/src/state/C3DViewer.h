@@ -302,17 +302,21 @@ private:
         float minY = std::min(dragStartPos.y, dragEndPos.y);
         float maxY = std::max(dragStartPos.y, dragEndPos.y);
 
-        // Selection is only valid if the box has some size
         if (std::abs(maxX - minX) < 1.0f || std::abs(maxY - minY) < 1.0f) return;
 
         glm::mat4 view = Camera::getInstance().getViewMatrix();
         glm::mat4 projection = Camera::getInstance().projection;
         glm::vec4 viewport(0, 0, width, height);
 
+        struct Candidate {
+            Object* obj;
+            float depth;
+            float minX, maxX, minY, maxY;
+        };
+        vector<Candidate> candidates;
+
         for (auto obj : appState->objects) {
             BoundingBox box = obj->getBoundingBox();
-            
-            // Project all 8 corners to screen space
             glm::vec3 corners[8] = {
                 {box.min.x, box.min.y, box.min.z}, {box.max.x, box.min.y, box.min.z},
                 {box.max.x, box.max.y, box.min.z}, {box.min.x, box.max.y, box.min.z},
@@ -324,25 +328,55 @@ private:
             float objMaxX = std::numeric_limits<float>::lowest();
             float objMinY = std::numeric_limits<float>::max();
             float objMaxY = std::numeric_limits<float>::lowest();
+            float objMinZ = 1.0f;
+            bool anyVisible = false;
 
             for (int i = 0; i < 8; ++i) {
                 glm::vec3 screenPos = glm::project(corners[i], view, projection, viewport);
+                if (screenPos.z < 0.0f || screenPos.z > 1.0f) continue;
+                
+                anyVisible = true;
                 float screenY = (float)height - screenPos.y;
                 objMinX = std::min(objMinX, screenPos.x);
                 objMaxX = std::max(objMaxX, screenPos.x);
                 objMinY = std::min(objMinY, screenY);
                 objMaxY = std::max(objMaxY, screenY);
+                objMinZ = std::min(objMinZ, screenPos.z);
             }
 
-            // AABB intersection check in 2D
-            bool intersects = (objMinX <= maxX && objMaxX >= minX && objMinY <= maxY && objMaxY >= minY);
+            if (anyVisible && objMinX <= maxX && objMaxX >= minX && objMinY <= maxY && objMaxY >= minY) {
+                candidates.push_back({obj, objMinZ, objMinX, objMaxX, objMinY, objMaxY});
+            }
+        }
 
-            if (intersects) {
-                obj->isSelected = true;
-            } else {
-                if (!(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)) {
-                    obj->isSelected = false;
+        // Sort candidates by depth (closest first)
+        std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) {
+            return a.depth < b.depth;
+        });
+
+        bool shiftPressed = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
+        
+        // Reset selection if not shifting
+        if (!shiftPressed) {
+            for (auto obj : appState->objects) obj->isSelected = false;
+        }
+
+        for (size_t i = 0; i < candidates.size(); ++i) {
+            bool occluded = false;
+            float centerX = (candidates[i].minX + candidates[i].maxX) * 0.5f;
+            float centerY = (candidates[i].minY + candidates[i].maxY) * 0.5f;
+
+            for (size_t j = 0; j < i; ++j) {
+                // Check if closer candidate j occludes candidate i's center
+                if (centerX >= candidates[j].minX && centerX <= candidates[j].maxX &&
+                    centerY >= candidates[j].minY && centerY <= candidates[j].maxY) {
+                    occluded = true;
+                    break;
                 }
+            }
+
+            if (!occluded) {
+                candidates[i].obj->isSelected = true;
             }
         }
     }
@@ -495,6 +529,30 @@ private:
                             GLuint tex = FileLoader::loadTexture(selection[0]);
                             if (tex != 0) {
                                 for (auto sm : selected->submeshes) sm->normalMap = tex;
+                            }
+                        }
+                    }
+
+                    ImGui::Separator();
+                    ImGui::Text("Texture Mapping");
+                    const char* sMappings[] = { "Standard", "Spherical", "Cylindrical" };
+                    const char* oMappings[] = { "Position", "Normal" };
+
+                    // Apply to all selected objects
+                    int currentS = selected->submeshes.empty() ? 0 : selected->submeshes[0]->sMappingMode;
+                    if (ImGui::Combo("s-mapping", &currentS, sMappings, IM_ARRAYSIZE(sMappings))) {
+                        for (auto obj : appState->objects) {
+                            if (obj->isSelected) {
+                                for (auto sm : obj->submeshes) sm->sMappingMode = currentS;
+                            }
+                        }
+                    }
+
+                    int currentO = selected->submeshes.empty() ? 0 : selected->submeshes[0]->oMappingMode;
+                    if (ImGui::Combo("o-mapping", &currentO, oMappings, IM_ARRAYSIZE(oMappings))) {
+                        for (auto obj : appState->objects) {
+                            if (obj->isSelected) {
+                                for (auto sm : obj->submeshes) sm->oMappingMode = currentO;
                             }
                         }
                     }

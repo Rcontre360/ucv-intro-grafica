@@ -83,6 +83,9 @@ namespace Shaders {
         uniform float uReflectivity;
         uniform samplerCube skybox;
         uniform float uShininess; // Controllable shininess power
+        uniform int uSMappingMode; // 0: Standard, 1: Spherical, 2: Cylindrical
+        uniform int uOMappingMode; // 0: Position, 1: Normal
+        uniform vec3 uObjCenter;
 
         vec3 calculateLight(Light light, vec3 normal, vec3 viewDir, vec3 baseColor, float specFactor) {
             if (!light.enabled) return vec3(0.0);
@@ -118,27 +121,40 @@ namespace Shaders {
         }
 
         void main() {
-            vec3 normal;
+            vec3 normal = normalize(vNormal);
             if (uHasNormalMap) {
-                normal = texture(normalMap, vTexCoords).rgb;
-                normal = normalize(vTBN * (normal * 2.0 - 1.0));
-            } else {
-                normal = normalize(vNormal);
+                vec3 mappedNormal = texture(normalMap, vTexCoords).rgb;
+                normal = normalize(vTBN * (mappedNormal * 2.0 - 1.0));
             }
 
             if (lights[0].shadingMode == 2) { 
                 normal = normalize(cross(dFdx(vPos), dFdy(vPos)));
             }
 
+            vec2 texCoords = vTexCoords;
+            if (uSMappingMode > 0) {
+                vec3 p = (uOMappingMode == 0) ? (vPos - uObjCenter) : normal;
+                p = normalize(p);
+                float PI = 3.14159265359;
+                
+                if (uSMappingMode == 1) { // Spherical
+                    texCoords.x = (atan(p.z, p.x) / (2.0 * PI)) + 0.5;
+                    texCoords.y = (asin(p.y) / PI) + 0.5;
+                } else if (uSMappingMode == 2) { // Cylindrical
+                    texCoords.x = (atan(p.z, p.x) / (2.0 * PI)) + 0.5;
+                    texCoords.y = (p.y + 1.0) / 2.0;
+                }
+            }
+
             vec3 viewDir = normalize(viewPos - vPos);
 
             // 1. Determine Base Color
             vec3 baseColor = uHasColor ? u_color : vColor;
-            if (uHasDiffuseMap && !uHasColor) baseColor = texture(diffuseMap, vTexCoords).rgb;
+            if (uHasDiffuseMap && !uHasColor) baseColor = texture(diffuseMap, texCoords).rgb;
 
             // 2. Specular Factor (Default to very low if no map exists)
             // If map exists, we multiply by 2.0 to make it extra shiny as requested
-            float specFactor = uHasSpecularMap ? texture(specularMap, vTexCoords).r * 2.0 : 0.1;
+            float specFactor = uHasSpecularMap ? texture(specularMap, texCoords).r * 2.0 : 0.1;
 
             // 3. Calculate Lighting
             vec3 totalLight = vec3(0.0);
@@ -152,7 +168,7 @@ namespace Shaders {
 
             // 4. Apply Ambient Occlusion (AO) from map
             if (uHasAmbientMap && !uHasColor) {
-                float ao = texture(ambientMap, vTexCoords).r;
+                float ao = texture(ambientMap, texCoords).r;
                 totalLight *= ao;
             }
 
@@ -183,6 +199,9 @@ namespace Shaders {
         inline static const std::string uReflectivity = "uReflectivity";
         inline static const std::string uShininess = "uShininess";
         inline static const std::string skybox = "skybox";
+        inline static const std::string uSMappingMode = "uSMappingMode";
+        inline static const std::string uOMappingMode = "uOMappingMode";
+        inline static const std::string uObjCenter = "uObjCenter";
     };
 
     const char* lightbulbVertexShaderSrc = R"glsl(

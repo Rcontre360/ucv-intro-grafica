@@ -44,6 +44,8 @@ public:
     int vertexCount = 0;
     float reflectivity = 0.0f; 
     float shininess = 16.0f; // Lower power = larger highlights
+    int sMappingMode = 0; // 0: Standard, 1: Spherical, 2: Cylindrical
+    int oMappingMode = 0; // 0: Position, 1: Normal
 
     Submesh(const vector<Vertex>& vertices) 
         : vertices(vertices), vertexCount(vertices.size())
@@ -106,6 +108,10 @@ public:
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uReflectivity, reflectivity);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uShininess, shininess);
+
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uSMappingMode, sMappingMode);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uOMappingMode, oMappingMode);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uObjCenter, pivot);
 
         if (reflectivity > 0.0f && config.skyboxTextureID != 0) {
             glActiveTexture(GL_TEXTURE1);
