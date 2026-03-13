@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
 #include <vector>
+#include <limits>
 #include <unordered_map>
 
 using namespace std;
@@ -16,51 +17,55 @@ public:
     glm::vec3 normal;
     glm::vec3 color;
     glm::vec2 texCoords;
-    glm::vec3 tangent; // Required for Bump/Normal mapping
+    glm::vec3 tangent;
 
     static vector<float> flatten(const vector<Vertex>& vertices) {
-        vector<float> flatVertices;
-        flatVertices.reserve(vertices.size() * 14); // 3+3+3+2+3 = 14 floats
-        for (const auto& vertex : vertices) {
-            flatVertices.push_back(vertex.position.x);
-            flatVertices.push_back(vertex.position.y);
-            flatVertices.push_back(vertex.position.z);
-            flatVertices.push_back(vertex.normal.x);
-            flatVertices.push_back(vertex.normal.y);
-            flatVertices.push_back(vertex.normal.z);
-            flatVertices.push_back(vertex.color.x);
-            flatVertices.push_back(vertex.color.g);
-            flatVertices.push_back(vertex.color.b);
-            flatVertices.push_back(vertex.texCoords.x);
-            flatVertices.push_back(vertex.texCoords.y);
-            flatVertices.push_back(vertex.tangent.x);
-            flatVertices.push_back(vertex.tangent.y);
-            flatVertices.push_back(vertex.tangent.z);
+        vector<float> flat;
+        flat.reserve(vertices.size() * 14);
+        for (const auto& v : vertices) {
+            flat.push_back(v.position.x); flat.push_back(v.position.y); flat.push_back(v.position.z);
+            flat.push_back(v.normal.x);   flat.push_back(v.normal.y);   flat.push_back(v.normal.z);
+            flat.push_back(v.color.x);    flat.push_back(v.color.g);    flat.push_back(v.color.b);
+            flat.push_back(v.texCoords.x); flat.push_back(v.texCoords.y);
+            flat.push_back(v.tangent.x);  flat.push_back(v.tangent.y);  flat.push_back(v.tangent.z);
         }
-        return flatVertices;
+        return flat;
     }
 };
-            
+
 struct BoundingBox {
-    glm::vec3 min;
-    glm::vec3 max;
-    glm::vec3 center;
+    glm::vec3 min, max, center;
+    glm::vec3 corners[8];
+
+    void recalcCorners() {
+        corners[0] = {min.x, min.y, min.z}; corners[1] = {max.x, min.y, min.z};
+        corners[2] = {max.x, max.y, min.z}; corners[3] = {min.x, max.y, min.z};
+        corners[4] = {min.x, min.y, max.z}; corners[5] = {max.x, min.y, max.z};
+        corners[6] = {max.x, max.y, max.z}; corners[7] = {min.x, max.y, max.z};
+    }
 };
 
-// Internal helper for uniform caching
+inline BoundingBox getBoundingBox(const vector<Vertex>& vertices) {
+    BoundingBox box;
+    box.min = glm::vec3(numeric_limits<float>::max());
+    box.max = glm::vec3(numeric_limits<float>::lowest());
+    for (const auto& v : vertices)
+        box.min = glm::min(box.min, v.position), box.max = glm::max(box.max, v.position);
+    box.center = (box.min + box.max) * 0.5f;
+    box.recalcCorners();
+    return box;
+}
+
 inline GLint getCachedUniformLocation(GLuint program, const string& name) {
     static unordered_map<GLuint, unordered_map<string, GLint>> cache;
     auto& programCache = cache[program];
     auto it = programCache.find(name);
-    if (it != programCache.end()) {
-        return it->second;
-    }
+    if (it != programCache.end()) return it->second;
     GLint location = glGetUniformLocation(program, name.c_str());
     programCache[name] = location;
     return location;
 }
 
-// Macro to define setGpuVariable overloads
 #define DEFINE_SET_GPU_VAR(Type, GlCall) \
 inline void setGpuVariable(GLuint program, const string& name, Type value) { \
     GLint location = getCachedUniformLocation(program, name); \
@@ -75,4 +80,4 @@ DEFINE_SET_GPU_VAR(bool,              glUniform1i(location, static_cast<int>(val
 
 #undef DEFINE_SET_GPU_VAR
 
-#endif 
+#endif

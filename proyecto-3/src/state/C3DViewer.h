@@ -40,7 +40,7 @@ class C3DViewer {
 protected:
     State* appState = nullptr;
     Skybox* skybox = nullptr;
-    FPSAvgCounter* fpsCounter = nullptr;
+    FPSCounter* fpsCounter = nullptr;
     GLFWwindow* window = nullptr;
     GLuint shaderProgram = 0;
     GLuint skyboxShaderProgram = 0;
@@ -152,7 +152,7 @@ public:
             cerr << "Error loading scene: " << e.what() << endl;
         }
 
-        fpsCounter = new FPSAvgCounter(5);
+        fpsCounter = new FPSCounter();
 
         glViewport(0, 0, width, height);
 
@@ -199,9 +199,9 @@ public:
             double deltaTime = currentFrameTime - lastFrameTime;
             lastFrameTime = currentFrameTime;
 
-            fpsCounter->framesPerSecondAvg(currentFrameTime);
+            fpsCounter->tick(currentFrameTime);
             char title[64];
-            sprintf(title, "PROYECTO - 3 | FPS: %.1f", fpsCounter->getCount());
+            sprintf(title, "PROYECTO - 3 | FPS: %.1f", fpsCounter->get());
             glfwSetWindowTitle(window, title);
 
             if (isFalling) {
@@ -340,12 +340,9 @@ private:
                         Light* l = appState->lights[i];
                         ImGui::Checkbox("Enabled", &l->enabled);
                         ImGui::SliderFloat("Intensity", &l->intensity, 0.0f, 5.0f);
-                        if (ImGui::ColorEdit3("Diffuse",  l->uiDiffuse))
-                            l->setDiffuse(glm::vec3(l->uiDiffuse[0],  l->uiDiffuse[1],  l->uiDiffuse[2]));
-                        if (ImGui::ColorEdit3("Ambient",  l->uiAmbient))
-                            l->setAmbient(glm::vec3(l->uiAmbient[0],  l->uiAmbient[1],  l->uiAmbient[2]));
-                        if (ImGui::ColorEdit3("Specular", l->uiSpecular))
-                            l->setSpecular(glm::vec3(l->uiSpecular[0], l->uiSpecular[1], l->uiSpecular[2]));
+                        ImGui::ColorEdit3("Diffuse",  &l->diffuse.x);
+                        ImGui::ColorEdit3("Ambient",  &l->ambient.x);
+                        ImGui::ColorEdit3("Specular", &l->specular.x);
                         ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
                         const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };
                         int currentMode = (int)l->shadingMode;

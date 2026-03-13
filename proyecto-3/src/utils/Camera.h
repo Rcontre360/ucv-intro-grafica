@@ -32,7 +32,7 @@ public:
     float yaw = -90.0f;
     float pitch = 0.0f;
 
-    float movementSpeed = 0.5f;
+    float movementSpeed = 0.8f;
     float mouseSensitivity = 0.1f;
     float zoom = 45.0f;
 

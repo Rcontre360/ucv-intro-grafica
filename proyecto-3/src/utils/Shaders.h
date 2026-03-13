@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+using namespace std;
+
 namespace Shaders {
 
     const char* vertexShaderSrc = R"glsl(
@@ -141,26 +144,26 @@ namespace Shaders {
     )glsl";
 
     struct DefaultShader {
-        inline static const std::string model         = "model";
-        inline static const std::string view          = "view";
-        inline static const std::string projection    = "projection";
-        inline static const std::string viewPos       = "viewPos";
-        inline static const std::string uHasDiffuseMap  = "uHasDiffuseMap";
-        inline static const std::string diffuseMap      = "diffuseMap";
-        inline static const std::string uHasNormalMap   = "uHasNormalMap";
-        inline static const std::string normalMap       = "normalMap";
-        inline static const std::string uHasAmbientMap  = "uHasAmbientMap";
-        inline static const std::string ambientMap      = "ambientMap";
-        inline static const std::string uHasSpecularMap = "uHasSpecularMap";
-        inline static const std::string specularMap     = "specularMap";
-        inline static const std::string uHasColor    = "uHasColor";
-        inline static const std::string u_color      = "u_color";
-        inline static const std::string uReflectivity = "uReflectivity";
-        inline static const std::string uShininess   = "uShininess";
-        inline static const std::string skybox       = "skybox";
-        inline static const std::string uSMappingMode = "uSMappingMode";
-        inline static const std::string uOMappingMode = "uOMappingMode";
-        inline static const std::string uObjCenter   = "uObjCenter";
+        inline static const string model         = "model";
+        inline static const string view          = "view";
+        inline static const string projection    = "projection";
+        inline static const string viewPos       = "viewPos";
+        inline static const string uHasDiffuseMap  = "uHasDiffuseMap";
+        inline static const string diffuseMap      = "diffuseMap";
+        inline static const string uHasNormalMap   = "uHasNormalMap";
+        inline static const string normalMap       = "normalMap";
+        inline static const string uHasAmbientMap  = "uHasAmbientMap";
+        inline static const string ambientMap      = "ambientMap";
+        inline static const string uHasSpecularMap = "uHasSpecularMap";
+        inline static const string specularMap     = "specularMap";
+        inline static const string uHasColor    = "uHasColor";
+        inline static const string u_color      = "u_color";
+        inline static const string uReflectivity = "uReflectivity";
+        inline static const string uShininess   = "uShininess";
+        inline static const string skybox       = "skybox";
+        inline static const string uSMappingMode = "uSMappingMode";
+        inline static const string uOMappingMode = "uOMappingMode";
+        inline static const string uObjCenter   = "uObjCenter";
     };
 
     const char* skyboxVertexShaderSrc = R"glsl(
@@ -186,7 +189,7 @@ namespace Shaders {
     )glsl";
 
     struct SkyboxShader {
-        inline static const std::string projection = "projection";
-        inline static const std::string view       = "view";
+        inline static const string projection = "projection";
+        inline static const string view       = "view";
     };
 }

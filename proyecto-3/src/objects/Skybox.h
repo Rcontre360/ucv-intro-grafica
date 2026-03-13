@@ -16,7 +16,7 @@ public:
     unsigned int textureID;
     unsigned int vao, vbo;
 
-    Skybox(const std::string& path) {
+    Skybox(const string& path) {
         setupMesh();
         textureID = loadCubemapFromGrid(path);
     }
@@ -101,7 +101,7 @@ private:
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     }
 
-    unsigned int loadCubemapFromGrid(const std::string& path) {
+    unsigned int loadCubemapFromGrid(const string& path) {
         unsigned int texID;
         glGenTextures(1, &texID);
         glBindTexture(GL_TEXTURE_CUBE_MAP, texID);
@@ -119,7 +119,7 @@ private:
             // [   ] [Bottom] [   ] [   ]
             
             struct FacePos { int col, row; GLenum target; };
-            std::vector<FacePos> faces = {
+            vector<FacePos> faces = {
                 {2, 1, GL_TEXTURE_CUBE_MAP_POSITIVE_X}, // Right
                 {0, 1, GL_TEXTURE_CUBE_MAP_NEGATIVE_X}, // Left
                 {1, 0, GL_TEXTURE_CUBE_MAP_POSITIVE_Y}, // Top
@@ -148,7 +148,7 @@ private:
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         } else {
-            std::cerr << "Cubemap grid failed to load at path: " << path << std::endl;
+            cerr << "Cubemap grid failed to load at path: " << path << endl;
             stbi_image_free(data);
         }
 
