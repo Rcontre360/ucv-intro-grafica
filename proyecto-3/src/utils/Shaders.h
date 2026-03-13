@@ -140,9 +140,16 @@ namespace Shaders {
                 if (uSMappingMode == 1) { // Spherical
                     texCoords.x = (atan(p.z, p.x) / (2.0 * PI)) + 0.5;
                     texCoords.y = (asin(p.y) / PI) + 0.5;
-                } else if (uSMappingMode == 2) { // Cylindrical
-                    texCoords.x = (atan(p.z, p.x) / (2.0 * PI)) + 0.5;
-                    texCoords.y = (p.y + 1.0) / 2.0;
+                } else if (uSMappingMode == 2) { // Squared (Box)
+                    vec3 absP = abs(p);
+                    if (absP.x >= absP.y && absP.x >= absP.z) {
+                        texCoords = vec2(p.z, p.y);
+                    } else if (absP.y >= absP.x && absP.y >= absP.z) {
+                        texCoords = vec2(p.x, p.z);
+                    } else {
+                        texCoords = vec2(p.x, p.y);
+                    }
+                    texCoords = (texCoords + 1.0) * 0.5;
                 }
             }
 

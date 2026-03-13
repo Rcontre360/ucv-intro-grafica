@@ -105,13 +105,17 @@ public:
 
     virtual void draw(const DrawConfig& config)
     {
-        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, getTransform());
+        glm::mat4 model = getTransform();
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::model, model);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uReflectivity, reflectivity);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uShininess, shininess);
 
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uSMappingMode, sMappingMode);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uOMappingMode, oMappingMode);
-        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uObjCenter, pivot);
+        
+        // Transform local pivot to world space to get the true center
+        glm::vec3 worldCenter = glm::vec3(model * glm::vec4(pivot, 1.0f));
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uObjCenter, worldCenter);
 
         if (reflectivity > 0.0f && config.skyboxTextureID != 0) {
             glActiveTexture(GL_TEXTURE1);

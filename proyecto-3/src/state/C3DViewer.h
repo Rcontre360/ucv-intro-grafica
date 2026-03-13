@@ -48,7 +48,7 @@ protected:
     int width = 720;
     int height = 480;
     bool firstMouse = false;
-    MovementMode movementMode = FPS_MODE;
+    MovementMode movementMode = GOD_MODE;
     bool showFramesSecond = true;
     bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
@@ -58,6 +58,13 @@ protected:
     ImVec2 dragEndPos;
 
     char fpsText[16] = "FPS: n/a";
+
+    // Falling logic
+    bool isFalling = false;
+    float verticalVelocity = 0.0f;
+    const float gravity = -9.8f;
+    const float targetY = -1.5; // Top of the table
+    glm::vec3 initialCameraPos;
 
 public:
     C3DViewer() {}
@@ -150,7 +157,8 @@ public:
         try {
             appState->loadScene("assets/scene/scene.obj");
             // Set initial camera on top of the table edge
-            Camera::getInstance().position = glm::vec3(0.0f, 0.6f, -2.6f);
+            initialCameraPos = glm::vec3(0.0f, 0.6f, -2.6f);
+            Camera::getInstance().position = initialCameraPos;
 
         } catch (const exception& e) {
             cerr << "Error loading default scene: " << e.what() << endl;
@@ -206,6 +214,16 @@ public:
 
             fpsCounter->framesPerSecondAvg(currentFrameTime);
             sprintf(fpsText, "FPS: %.1f",fpsCounter->getCount()); 
+
+            if (isFalling) {
+                verticalVelocity += gravity * (float)deltaTime;
+                Camera::getInstance().position.y += verticalVelocity * (float)deltaTime;
+                if (Camera::getInstance().position.y <= targetY) {
+                    Camera::getInstance().position.y = targetY;
+                    isFalling = false;
+                    verticalVelocity = 0.0f;
+                }
+            }
 
             mouseCameraMovement(deltaTime);
 
@@ -475,7 +493,17 @@ private:
                 const char* moveModes[] = { "FPS", "GOD" };
                 int currentMoveMode = (int)movementMode;
                 if (ImGui::Combo("Movement Mode", &currentMoveMode, moveModes, IM_ARRAYSIZE(moveModes))) {
-                    movementMode = (MovementMode)currentMoveMode;
+                    MovementMode newMode = (MovementMode)currentMoveMode;
+                    if (movementMode == GOD_MODE && newMode == FPS_MODE) {
+                        float curY = Camera::getInstance().position.y;
+                        if (curY > targetY) {
+                            isFalling = true;
+                            verticalVelocity = 0.0f;
+                        } else if (curY < targetY - 0.01f) { // Tiny epsilon
+                            Camera::getInstance().position = initialCameraPos;
+                        }
+                    }
+                    movementMode = newMode;
                 }
 
                 if (ImGui::Button("Capture Mouse (ENTER)")) {
@@ -535,7 +563,7 @@ private:
 
                     ImGui::Separator();
                     ImGui::Text("Texture Mapping");
-                    const char* sMappings[] = { "Standard", "Spherical", "Cylindrical" };
+                    const char* sMappings[] = { "Standard", "Spherical", "Squared" };
                     const char* oMappings[] = { "Position", "Normal" };
 
                     // Apply to all selected objects
