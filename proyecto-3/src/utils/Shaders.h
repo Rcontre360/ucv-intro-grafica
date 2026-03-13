@@ -151,12 +151,12 @@ namespace Shaders {
             }
 
             // 4. Apply Ambient Occlusion (AO) from map
-            if (uHasAmbientMap) {
+            if (uHasAmbientMap && !uHasColor) {
                 float ao = texture(ambientMap, vTexCoords).r;
                 totalLight *= ao;
             }
 
-            if (uReflectivity > 0.0) {
+            if (uReflectivity > 0.0 && !uHasColor) {
                 totalLight = mix(totalLight, texture(skybox, reflect(-viewDir, normal)).rgb, uReflectivity);
             }
 

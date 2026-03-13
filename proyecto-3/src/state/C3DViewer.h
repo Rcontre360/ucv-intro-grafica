@@ -460,6 +460,11 @@ private:
 
             if (ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen))
             {
+                if (ImGui::Button("Clear All Selection", ImVec2(-1, 0))) {
+                    for (auto obj : appState->objects) obj->isSelected = false;
+                }
+                ImGui::Separator();
+
                 ImGui::Text("Click and Drag to select");
                 ImGui::Text("Hold SHIFT to add to selection");
                 
@@ -493,10 +498,6 @@ private:
                             }
                         }
                     }
-                }
-
-                if (ImGui::Button("Clear Selection")) {
-                    for (auto obj : appState->objects) obj->isSelected = false;
                 }
             }
 
