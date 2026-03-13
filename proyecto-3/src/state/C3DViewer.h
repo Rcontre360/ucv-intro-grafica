@@ -266,11 +266,10 @@ private:
                 mouseButtonsDown[0] = true;
                 glfwGetCursorPos(window, &mousePos.first, &mousePos.second);
                 
-                if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
-                    isDragging = true;
-                    dragStartPos = ImVec2((float)mousePos.first, (float)mousePos.second);
-                    dragEndPos = dragStartPos;
-                }
+                // Start marquee selection regardless of CTRL
+                isDragging = true;
+                dragStartPos = ImVec2((float)mousePos.first, (float)mousePos.second);
+                dragEndPos = dragStartPos;
             }
             else if (action == GLFW_RELEASE)
             {
@@ -312,15 +311,33 @@ private:
 
         for (auto obj : appState->objects) {
             BoundingBox box = obj->getBoundingBox();
-            glm::vec3 worldPos = box.center;
             
-            // Project 3D center to 2D screen space
-            glm::vec3 screenPos = glm::project(worldPos, view, projection, viewport);
-            
-            // OpenGL screen Y is inverted relative to window Y
-            float screenY = (float)height - screenPos.y;
+            // Project all 8 corners to screen space
+            glm::vec3 corners[8] = {
+                {box.min.x, box.min.y, box.min.z}, {box.max.x, box.min.y, box.min.z},
+                {box.max.x, box.max.y, box.min.z}, {box.min.x, box.max.y, box.min.z},
+                {box.min.x, box.min.y, box.max.z}, {box.max.x, box.min.y, box.max.z},
+                {box.max.x, box.max.y, box.max.z}, {box.min.x, box.max.y, box.max.z}
+            };
 
-            if (screenPos.x >= minX && screenPos.x <= maxX && screenY >= minY && screenY <= maxY) {
+            float objMinX = std::numeric_limits<float>::max();
+            float objMaxX = std::numeric_limits<float>::lowest();
+            float objMinY = std::numeric_limits<float>::max();
+            float objMaxY = std::numeric_limits<float>::lowest();
+
+            for (int i = 0; i < 8; ++i) {
+                glm::vec3 screenPos = glm::project(corners[i], view, projection, viewport);
+                float screenY = (float)height - screenPos.y;
+                objMinX = std::min(objMinX, screenPos.x);
+                objMaxX = std::max(objMaxX, screenPos.x);
+                objMinY = std::min(objMinY, screenY);
+                objMaxY = std::max(objMaxY, screenY);
+            }
+
+            // AABB intersection check in 2D
+            bool intersects = (objMinX <= maxX && objMaxX >= minX && objMinY <= maxY && objMaxY >= minY);
+
+            if (intersects) {
                 obj->isSelected = true;
             } else {
                 if (!(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)) {
@@ -378,11 +395,6 @@ private:
             appState->draw(config);
         }
 
-        if (isDragging) {
-            ImGui::GetForegroundDrawList()->AddRect(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f);
-            ImGui::GetForegroundDrawList()->AddRectFilled(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 50));
-        }
-
         drawInterface();
     }
 
@@ -403,6 +415,11 @@ private:
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        if (isDragging) {
+            ImGui::GetForegroundDrawList()->AddRect(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f);
+            ImGui::GetForegroundDrawList()->AddRectFilled(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 50));
+        }
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(200, height));
