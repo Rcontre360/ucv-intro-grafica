@@ -17,7 +17,7 @@ enum ShadingMode {
 
 class Light : public Object {
 private:
-    // Pre-calculated uniform names to avoid string allocations every frame
+    // uniform name strings are pre-built to avoid per-frame allocations
     std::string uPosName, uAmbName, uDiffName, uSpecName, uEnabledName, uModeName;
 
 public:
@@ -25,7 +25,9 @@ public:
     glm::vec3 ambient;
     glm::vec3 diffuse;
     glm::vec3 specular;
-    float uiColor[3] = { 0.9f, 0.9f, 0.9f };
+    float uiDiffuse[3]  = { 0.9f, 0.9f, 0.9f };
+    float uiAmbient[3]  = { 0.1f, 0.1f, 0.1f };
+    float uiSpecular[3] = { 0.5f, 0.5f, 0.5f };
     bool enabled = true;
     float animationSpeed = 1.0f;
     float intensity = 1.5f; 
@@ -35,8 +37,7 @@ public:
     {
         id = _id;
         center = _pos;
-        
-        // Pre-calculate strings
+
         std::string base = "lights[" + std::to_string(id) + "].";
         uPosName = base + "position";
         uAmbName = base + "ambient";
@@ -45,19 +46,29 @@ public:
         uEnabledName = base + "enabled";
         uModeName = base + "shadingMode";
 
-        setColor(glm::vec3(uiColor[0], uiColor[1], uiColor[2])); 
-        
+        diffuse  = glm::vec3(uiDiffuse[0],  uiDiffuse[1],  uiDiffuse[2]);
+        ambient  = glm::vec3(uiAmbient[0],  uiAmbient[1],  uiAmbient[2]);
+        specular = glm::vec3(uiSpecular[0], uiSpecular[1], uiSpecular[2]);
+
         static vector<Vertex> orbVertices = setupLightOrbMesh();
         Submesh* orb = new Submesh(orbVertices);
         orb->setTranslate(_pos);
         submeshes.push_back(orb);
     }
 
-    void setColor(const glm::vec3& _color) {
-        uiColor[0] = _color.r; uiColor[1] = _color.g; uiColor[2] = _color.b;
-        diffuse = _color;
-        ambient = _color * 0.12f; // Increased by 20% (0.1 -> 0.12)
-        specular = glm::vec3(1.0f) * 0.5f;
+    void setDiffuse(const glm::vec3& c) {
+        diffuse = c;
+        uiDiffuse[0] = c.r; uiDiffuse[1] = c.g; uiDiffuse[2] = c.b;
+    }
+
+    void setAmbient(const glm::vec3& c) {
+        ambient = c;
+        uiAmbient[0] = c.r; uiAmbient[1] = c.g; uiAmbient[2] = c.b;
+    }
+
+    void setSpecular(const glm::vec3& c) {
+        specular = c;
+        uiSpecular[0] = c.r; uiSpecular[1] = c.g; uiSpecular[2] = c.b;
     }
 
     TransformState getLightTransform(double currentTime) {
@@ -69,7 +80,6 @@ public:
         TransformState state = getLightTransform(config.currentTime);
         glm::vec3 currentPos = center + state.translation;
 
-        // 1. Set uniforms using pre-calculated strings
         setGpuVariable(config.shaderProgram, uPosName, currentPos);
         setGpuVariable(config.shaderProgram, uAmbName, ambient * intensity);
         setGpuVariable(config.shaderProgram, uDiffName, diffuse * intensity);
@@ -77,7 +87,6 @@ public:
         setGpuVariable(config.shaderProgram, uEnabledName, enabled);
         setGpuVariable(config.shaderProgram, uModeName, (int)shadingMode);
 
-        // 2. Draw the debug orb
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasColor, true);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uHasDiffuseMap, false);
         glm::vec3 orbColor = enabled ? (diffuse * std::min(intensity, 2.0f)) : glm::vec3(0.2f);

@@ -29,13 +29,6 @@ using namespace std;
 class State
 {
 public:
-    bool showFPS = true;
-    bool enableBackfaceCulling = false;
-    bool enableDepthTest = true;
-    bool enableFatt = true;
-
-    float backgroundColor[3] = { 0.1f, 0.1f, 0.1f };
-
     vector<Object*> objects;
     vector<Light*> lights;
 
@@ -52,40 +45,36 @@ public:
     }
 
     void initializeLights() {
-        // Light 1: Red-ish
         Light* l1 = new Light(0, glm::vec3(-2.0f, 5.0f, -2.0f));
-        l1->setColor(glm::vec3(1.0f, 0.196f, 0.098f)); 
+        l1->setDiffuse(glm::vec3(1.0f, 0.196f, 0.098f));
+        l1->setAmbient(glm::vec3(1.0f, 0.196f, 0.098f) * 0.12f);
+        l1->setSpecular(glm::vec3(0.5f));
         l1->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, true);
         lights.push_back(l1);
 
-        // Light 2: Green-ish
         Light* l2 = new Light(1, glm::vec3(0.0f, 5.0f, 0.0f));
-        l2->setColor(glm::vec3(0.196f, 1.0f, 0.098f)); 
+        l2->setDiffuse(glm::vec3(0.196f, 1.0f, 0.098f));
+        l2->setAmbient(glm::vec3(0.196f, 1.0f, 0.098f) * 0.12f);
+        l2->setSpecular(glm::vec3(0.5f));
         l2->animation = new CircleAnimation(glm::vec3(-2.0f, -2.0f, -2.0f), 7.0f, 0.0f, false);
         lights.push_back(l2);
 
-        // Light 3: Blue-ish
         Light* l3 = new Light(2, glm::vec3(2.0f, 5.0f, 2.0f));
-        l3->setColor(glm::vec3(0.098f, 0.196f, 1.0f)); 
+        l3->setDiffuse(glm::vec3(0.098f, 0.196f, 1.0f));
+        l3->setAmbient(glm::vec3(0.098f, 0.196f, 1.0f) * 0.12f);
+        l3->setSpecular(glm::vec3(0.5f));
         l3->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, false);
         lights.push_back(l3);
-    }
-
-    void update(double currentTime) {
     }
 
     void draw(const DrawConfig& config)
     {
         glUseProgram(config.shaderProgram);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::viewPos, Camera::getInstance().position);
-        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uEnableFatt, enableFatt);
 
-        // Draw lights first (this sets the uniforms for other objects)
-        for (Light* l : lights) {
+        for (Light* l : lights)
             l->draw(config);
-        }
 
-        // Draw normal objects
         for (Object* obj : objects) {
             obj->draw(config);
             if (obj->isSelected) {
@@ -109,9 +98,9 @@ public:
         };
 
         unsigned int indices[] = {
-            0, 1, 1, 2, 2, 3, 3, 0, // Bottom
-            4, 5, 5, 6, 6, 7, 7, 4, // Top
-            0, 4, 1, 5, 2, 6, 3, 7  // Verticals
+            0, 1, 1, 2, 2, 3, 3, 0,
+            4, 5, 5, 6, 6, 7, 7, 4,
+            0, 4, 1, 5, 2, 6, 3, 7
         };
 
         vector<float> data;
@@ -143,7 +132,6 @@ public:
         for (auto obj : objects) delete obj;
         objects.clear();
 
-        // 1. Load objects from the OBJ file
         LoadedScene sceneData = FileLoader::loadScene(path);
         for (const auto& objData : sceneData.objects) {
             Object* newObj = new Object();
@@ -168,27 +156,13 @@ public:
             objects.push_back(newObj);
         }
 
-        // 2. Add the Parametric Bump Sphere (Requirement 5.b)
         BumpSphere* bumpSphere = new BumpSphere(0.4f, 32, 32);
         bumpSphere->name = "parametric_bump_sphere";
-        bumpSphere->translate(glm::vec3(0.0f, 0.5f, 0.0f)); // center of table area
+        bumpSphere->translate(glm::vec3(0.0f, 0.5f, 0.0f));
         objects.push_back(bumpSphere);
         
         initializeAnimations();
 
-        cout << "Loaded Scene: " << path << endl;
-        cout << "Total Objects: " << objects.size() << endl;
-        for (const auto& obj : objects) {
-            cout << " - [Object] " << obj->name << " | Submeshes: " << obj->submeshes.size() << endl;
-            for (size_t i = 0; i < obj->submeshes.size(); ++i) {
-                Submesh* sm = obj->submeshes[i];
-                if (sm->diffuseMap)  cout << "    > Submesh " << i << ": Found Diffuse Map" << endl;
-                if (sm->ambientMap)  cout << "    > Submesh " << i << ": Found Ambient (AO) Map" << endl;
-                if (sm->specularMap) cout << "    > Submesh " << i << ": Found Specular Map" << endl;
-                if (sm->normalMap)   cout << "    > Submesh " << i << ": Found Normal (Bump) Map" << endl;
-            }
-        }
-        cout << "------------------------------------------" << endl;
     }
 
     void initializeAnimations() {
@@ -213,7 +187,6 @@ public:
                     obj->setAnimation(new ScaleAnimation(5.0f + id * 0.3f, 0.5f, 1.0f));
                 }
             }
-            // Apply reflectivity
             if (obj->name == "bauble_core") {
                 for (auto sm : obj->submeshes) sm->reflectivity = 0.6f;
             }

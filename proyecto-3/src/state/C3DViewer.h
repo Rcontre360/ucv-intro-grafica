@@ -49,21 +49,12 @@ protected:
     int height = 480;
     bool firstMouse = false;
     MovementMode movementMode = GOD_MODE;
-    bool showFramesSecond = true;
-    bool mouseButtonsDown[2] = { false, false };
     pair<double,double> mousePos = {0.0,0.0};
 
-    bool isDragging = false;
-    ImVec2 dragStartPos;
-    ImVec2 dragEndPos;
-
-    char fpsText[16] = "FPS: n/a";
-
-    // Falling logic
     bool isFalling = false;
     float verticalVelocity = 0.0f;
     const float gravity = -9.8f;
-    const float targetY = -1.5; // Top of the table
+    const float targetY = -1.5f;
     glm::vec3 initialCameraPos;
 
 public:
@@ -95,7 +86,7 @@ public:
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_SAMPLES, 4);
 
-        window = glfwCreateWindow(width, height, "C3DViewer Window: Hello Triangle", NULL, NULL);
+        window = glfwCreateWindow(width, height, "PROYECTO - 3", NULL, NULL);
         if (!window) 
         {
             glfwTerminate();
@@ -135,8 +126,7 @@ public:
         setupSkyboxShader();
 
         appState = new State();
-        
-        // Render a loading screen before loading the heavy scene
+
         clear(0.1f, 0.1f, 0.1f);
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -156,15 +146,12 @@ public:
         
         try {
             appState->loadScene("assets/scene/scene.obj");
-            // Set initial camera on top of the table edge
             initialCameraPos = glm::vec3(0.0f, 0.6f, -2.6f);
             Camera::getInstance().position = initialCameraPos;
-
         } catch (const exception& e) {
-            cerr << "Error loading default scene: " << e.what() << endl;
+            cerr << "Error loading scene: " << e.what() << endl;
         }
 
-        // avg of last 5 seconds
         fpsCounter = new FPSAvgCounter(5);
 
         glViewport(0, 0, width, height);
@@ -213,7 +200,9 @@ public:
             lastFrameTime = currentFrameTime;
 
             fpsCounter->framesPerSecondAvg(currentFrameTime);
-            sprintf(fpsText, "FPS: %.1f",fpsCounter->getCount()); 
+            char title[64];
+            sprintf(title, "PROYECTO - 3 | FPS: %.1f", fpsCounter->getCount());
+            glfwSetWindowTitle(window, title);
 
             if (isFalling) {
                 verticalVelocity += gravity * (float)deltaTime;
@@ -226,20 +215,7 @@ public:
             }
 
             mouseCameraMovement(deltaTime);
-
-            if (appState && appState->enableBackfaceCulling) {
-                glEnable(GL_CULL_FACE);
-                glCullFace(GL_BACK);
-            } else {
-                glDisable(GL_CULL_FACE);
-            }
-
-            if (appState && appState->enableDepthTest) {
-                glEnable(GL_DEPTH_TEST);
-            } else {
-                glDisable(GL_DEPTH_TEST);
-            }
-
+            glEnable(GL_DEPTH_TEST);
             render();
 
             glfwSwapBuffers(window);
@@ -270,132 +246,20 @@ private:
         }
     }
 
-    void onMouseButton(int button, int action, int mods) 
+    void onMouseButton(int button, int action, int mods)
     {
         ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse && !isDragging) {
-            return;
-        }
+        if (io.WantCaptureMouse) return;
 
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
             if (action == GLFW_PRESS)
-            {
-                mouseButtonsDown[0] = true;
                 glfwGetCursorPos(window, &mousePos.first, &mousePos.second);
-                
-                // Start marquee selection regardless of CTRL
-                isDragging = true;
-                dragStartPos = ImVec2((float)mousePos.first, (float)mousePos.second);
-                dragEndPos = dragStartPos;
-            }
-            else if (action == GLFW_RELEASE)
-            {
-                if (isDragging) {
-                    performMarqueeSelection();
-                    isDragging = false;
-                }
-                mouseButtonsDown[0] = false;
-            }
         }
         else if (button == GLFW_MOUSE_BUTTON_RIGHT)
         {
             if (action == GLFW_PRESS)
-            {
-                mouseButtonsDown[1] = true;
-                glfwGetCursorPos(window, &mousePos.first, &mousePos.second); 
-            }
-            else if (action == GLFW_RELEASE)
-            {
-                mouseButtonsDown[1] = false;
-            }
-        }
-    }
-
-    void performMarqueeSelection() {
-        if (!appState) return;
-
-        float minX = std::min(dragStartPos.x, dragEndPos.x);
-        float maxX = std::max(dragStartPos.x, dragEndPos.x);
-        float minY = std::min(dragStartPos.y, dragEndPos.y);
-        float maxY = std::max(dragStartPos.y, dragEndPos.y);
-
-        if (std::abs(maxX - minX) < 1.0f || std::abs(maxY - minY) < 1.0f) return;
-
-        glm::mat4 view = Camera::getInstance().getViewMatrix();
-        glm::mat4 projection = Camera::getInstance().projection;
-        glm::vec4 viewport(0, 0, width, height);
-
-        struct Candidate {
-            Object* obj;
-            float depth;
-            float minX, maxX, minY, maxY;
-        };
-        vector<Candidate> candidates;
-
-        for (auto obj : appState->objects) {
-            BoundingBox box = obj->getBoundingBox();
-            glm::vec3 corners[8] = {
-                {box.min.x, box.min.y, box.min.z}, {box.max.x, box.min.y, box.min.z},
-                {box.max.x, box.max.y, box.min.z}, {box.min.x, box.max.y, box.min.z},
-                {box.min.x, box.min.y, box.max.z}, {box.max.x, box.min.y, box.max.z},
-                {box.max.x, box.max.y, box.max.z}, {box.min.x, box.max.y, box.max.z}
-            };
-
-            float objMinX = std::numeric_limits<float>::max();
-            float objMaxX = std::numeric_limits<float>::lowest();
-            float objMinY = std::numeric_limits<float>::max();
-            float objMaxY = std::numeric_limits<float>::lowest();
-            float objMinZ = 1.0f;
-            bool anyVisible = false;
-
-            for (int i = 0; i < 8; ++i) {
-                glm::vec3 screenPos = glm::project(corners[i], view, projection, viewport);
-                if (screenPos.z < 0.0f || screenPos.z > 1.0f) continue;
-                
-                anyVisible = true;
-                float screenY = (float)height - screenPos.y;
-                objMinX = std::min(objMinX, screenPos.x);
-                objMaxX = std::max(objMaxX, screenPos.x);
-                objMinY = std::min(objMinY, screenY);
-                objMaxY = std::max(objMaxY, screenY);
-                objMinZ = std::min(objMinZ, screenPos.z);
-            }
-
-            if (anyVisible && objMinX <= maxX && objMaxX >= minX && objMinY <= maxY && objMaxY >= minY) {
-                candidates.push_back({obj, objMinZ, objMinX, objMaxX, objMinY, objMaxY});
-            }
-        }
-
-        // Sort candidates by depth (closest first)
-        std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) {
-            return a.depth < b.depth;
-        });
-
-        bool shiftPressed = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
-        
-        // Reset selection if not shifting
-        if (!shiftPressed) {
-            for (auto obj : appState->objects) obj->isSelected = false;
-        }
-
-        for (size_t i = 0; i < candidates.size(); ++i) {
-            bool occluded = false;
-            float centerX = (candidates[i].minX + candidates[i].maxX) * 0.5f;
-            float centerY = (candidates[i].minY + candidates[i].maxY) * 0.5f;
-
-            for (size_t j = 0; j < i; ++j) {
-                // Check if closer candidate j occludes candidate i's center
-                if (centerX >= candidates[j].minX && centerX <= candidates[j].maxX &&
-                    centerY >= candidates[j].minY && centerY <= candidates[j].maxY) {
-                    occluded = true;
-                    break;
-                }
-            }
-
-            if (!occluded) {
-                candidates[i].obj->isSelected = true;
-            }
+                glfwGetCursorPos(window, &mousePos.first, &mousePos.second);
         }
     }
 
@@ -414,13 +278,9 @@ private:
             return; 
         }
 
-        if (isDragging) {
-            dragEndPos = ImVec2((float)xpos, (float)ypos);
-        }
-
         ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
         ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse && !isDragging) {
+        if (io.WantCaptureMouse) {
             mousePos = {xpos, ypos};
             return;
         }
@@ -428,9 +288,9 @@ private:
         mousePos = {xpos,ypos};
     }
 
-    void render() 
+    void render()
     {
-        prepareRendering(shaderProgram, appState->backgroundColor[0], appState->backgroundColor[1], appState->backgroundColor[2]);
+        prepareRendering(shaderProgram, 0.1f, 0.1f, 0.1f);
 
         if (skybox) {
             skybox->draw(skyboxShaderProgram);
@@ -468,152 +328,107 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (isDragging) {
-            ImGui::GetForegroundDrawList()->AddRect(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f);
-            ImGui::GetForegroundDrawList()->AddRectFilled(dragStartPos, dragEndPos, IM_COL32(0, 255, 0, 50));
-        }
-
         ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(200, height));
-
-        ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar); 
+        ImGui::SetNextWindowSize(ImVec2(300, height));
+        ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
 
         if (appState) {
-            if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGui::ColorEdit3("Background", appState->backgroundColor, ImGuiColorEditFlags_NoInputs);
-                
-                ImGui::Checkbox("Show##FPS", &showFramesSecond);
-                if (showFramesSecond)
-                    ImGui::TextUnformatted(fpsText);
+            if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
+                for (int i = 0; i < (int)appState->lights.size(); i++) {
+                    string label = "Light " + to_string(i + 1);
+                    if (ImGui::TreeNode(label.c_str())) {
+                        Light* l = appState->lights[i];
+                        ImGui::Checkbox("Enabled", &l->enabled);
+                        ImGui::SliderFloat("Intensity", &l->intensity, 0.0f, 5.0f);
+                        if (ImGui::ColorEdit3("Diffuse",  l->uiDiffuse))
+                            l->setDiffuse(glm::vec3(l->uiDiffuse[0],  l->uiDiffuse[1],  l->uiDiffuse[2]));
+                        if (ImGui::ColorEdit3("Ambient",  l->uiAmbient))
+                            l->setAmbient(glm::vec3(l->uiAmbient[0],  l->uiAmbient[1],  l->uiAmbient[2]));
+                        if (ImGui::ColorEdit3("Specular", l->uiSpecular))
+                            l->setSpecular(glm::vec3(l->uiSpecular[0], l->uiSpecular[1], l->uiSpecular[2]));
+                        ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
+                        const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };
+                        int currentMode = (int)l->shadingMode;
+                        if (ImGui::Combo("Shading", &currentMode, modes, IM_ARRAYSIZE(modes)))
+                            l->shadingMode = (ShadingMode)currentMode;
+                        ImGui::TreePop();
+                    }
+                }
             }
 
-            if (ImGui::CollapsingHeader("Advanced"))
-            {
+            if (ImGui::CollapsingHeader("Movement")) {
                 const char* moveModes[] = { "FPS", "GOD" };
                 int currentMoveMode = (int)movementMode;
-                if (ImGui::Combo("Movement Mode", &currentMoveMode, moveModes, IM_ARRAYSIZE(moveModes))) {
+                if (ImGui::Combo("Mode", &currentMoveMode, moveModes, IM_ARRAYSIZE(moveModes))) {
                     MovementMode newMode = (MovementMode)currentMoveMode;
                     if (movementMode == GOD_MODE && newMode == FPS_MODE) {
                         float curY = Camera::getInstance().position.y;
                         if (curY > targetY) {
                             isFalling = true;
                             verticalVelocity = 0.0f;
-                        } else if (curY < targetY - 0.01f) { // Tiny epsilon
+                        } else if (curY < targetY - 0.01f) {
                             Camera::getInstance().position = initialCameraPos;
                         }
                     }
                     movementMode = newMode;
                 }
-
-                if (ImGui::Button("Capture Mouse (ENTER)")) {
+                if (ImGui::Button("Mouse Camera")) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                     firstMouse = true;
                 }
                 ImGui::SameLine();
                 ImGui::TextDisabled("(?)");
                 if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Press ESC to release mouse when captured");
-
-                ImGui::Checkbox("Back-face Culling", &appState->enableBackfaceCulling); 
-                ImGui::Checkbox("Depth Test", &appState->enableDepthTest); 
-                ImGui::Checkbox("Environmental Attenuation (fatt)", &appState->enableFatt);
+                    ImGui::SetTooltip("Press ESC to release");
             }
 
-            if (ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                if (ImGui::Button("Clear All Selection", ImVec2(-1, 0))) {
-                    for (auto obj : appState->objects) obj->isSelected = false;
-                }
-                ImGui::Separator();
-
-                ImGui::Text("Click and Drag to select");
-                ImGui::Text("Hold SHIFT to add to selection");
-                
-                Object* selected = nullptr;
+            if (ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::BeginChild("obj_list", ImVec2(-1, 200), false);
                 for (auto obj : appState->objects) {
-                    if (obj->isSelected) {
-                        selected = obj; // Use the last selected for texture editing
+                    bool sel = obj->isSelected;
+                    if (ImGui::Selectable(obj->name.c_str(), sel)) {
+                        for (auto o : appState->objects) o->isSelected = false;
+                        if (!sel) obj->isSelected = true;
                     }
                 }
+                ImGui::EndChild();
+            }
 
-                if (selected) {
-                    ImGui::Separator();
-                    ImGui::Text("Edit: %s", selected->name.c_str());
-                    
-                    if (ImGui::Button("Change Diffuse Map")) {
-                        auto selection = pfd::open_file("Select Diffuse Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
-                        if (!selection.empty()) {
-                            GLuint tex = FileLoader::loadTexture(selection[0]);
-                            if (tex != 0) {
-                                for (auto sm : selected->submeshes) sm->diffuseMap = tex;
-                            }
+            Object* selected = nullptr;
+            for (auto obj : appState->objects)
+                if (obj->isSelected) { selected = obj; break; }
+
+            if (selected) {
+                string editLabel = "Edit - " + selected->name;
+                if (ImGui::CollapsingHeader(editLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+                    if (ImGui::Button("Set Diffuse Map", ImVec2(-1, 0))) {
+                        auto res = pfd::open_file("Select Diffuse Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
+                        if (!res.empty()) {
+                            GLuint tex = FileLoader::loadTexture(res[0]);
+                            if (tex) for (auto sm : selected->submeshes) sm->diffuseMap = tex;
                         }
                     }
-
-                    if (ImGui::Button("Change Bump Map")) {
-                        auto selection = pfd::open_file("Select Normal Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
-                        if (!selection.empty()) {
-                            GLuint tex = FileLoader::loadTexture(selection[0]);
-                            if (tex != 0) {
-                                for (auto sm : selected->submeshes) sm->normalMap = tex;
-                            }
+                    if (ImGui::Button("Set Bump Map", ImVec2(-1, 0))) {
+                        auto res = pfd::open_file("Select Bump Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
+                        if (!res.empty()) {
+                            GLuint tex = FileLoader::loadTexture(res[0]);
+                            if (tex) for (auto sm : selected->submeshes) sm->normalMap = tex;
                         }
                     }
-
                     ImGui::Separator();
-                    ImGui::Text("Texture Mapping");
                     const char* sMappings[] = { "Standard", "Spherical", "Squared" };
                     const char* oMappings[] = { "Position", "Normal" };
-
-                    // Apply to all selected objects
                     int currentS = selected->submeshes.empty() ? 0 : selected->submeshes[0]->sMappingMode;
-                    if (ImGui::Combo("s-mapping", &currentS, sMappings, IM_ARRAYSIZE(sMappings))) {
-                        for (auto obj : appState->objects) {
-                            if (obj->isSelected) {
-                                for (auto sm : obj->submeshes) sm->sMappingMode = currentS;
-                            }
-                        }
-                    }
-
+                    if (ImGui::Combo("s-mapping", &currentS, sMappings, IM_ARRAYSIZE(sMappings)))
+                        for (auto sm : selected->submeshes) sm->sMappingMode = currentS;
                     int currentO = selected->submeshes.empty() ? 0 : selected->submeshes[0]->oMappingMode;
-                    if (ImGui::Combo("o-mapping", &currentO, oMappings, IM_ARRAYSIZE(oMappings))) {
-                        for (auto obj : appState->objects) {
-                            if (obj->isSelected) {
-                                for (auto sm : obj->submeshes) sm->oMappingMode = currentO;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                for (int i = 0; i < (int)appState->lights.size(); i++) {
-                    string label = "Light " + to_string(i + 1);
-                    if (ImGui::TreeNode(label.c_str())) {
-                        Light* l = appState->lights[i];
-                        ImGui::Checkbox("Enabled", &l->enabled);
-                        if (ImGui::ColorEdit3("Light Color", l->uiColor)) {
-                            l->setColor(glm::vec3(l->uiColor[0], l->uiColor[1], l->uiColor[2]));
-                        }
-                        ImGui::SliderFloat("Intensity", &l->intensity, 0.0f, 10.0f);
-                        ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
-                        
-                        const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };
-                        int currentMode = (int)l->shadingMode;
-                        if (ImGui::Combo("Shading", &currentMode, modes, IM_ARRAYSIZE(modes))) {
-                            l->shadingMode = (ShadingMode)currentMode;
-                        }
-                        
-                        ImGui::TreePop();
-                    }
+                    if (ImGui::Combo("o-mapping", &currentO, oMappings, IM_ARRAYSIZE(oMappings)))
+                        for (auto sm : selected->submeshes) sm->oMappingMode = currentO;
                 }
             }
         }
 
-        ImGui::End(); 
-
+        ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -628,34 +443,27 @@ private:
         glViewport(0, 0, width, height);
     }
 
-    GLuint setupShader(const char* name, const char* src, const GLenum type) {
+    GLuint setupShader(const char* src, GLenum type) {
         GLuint shader = glCreateShader(type);
         glShaderSource(shader, 1, &src, nullptr);
         glCompileShader(shader);
-
         return shader;
     }
 
-    void setupDefaultShader() 
-    {
-        GLuint vertexShader = setupShader("VERTEX", vertexShaderSrc, GL_VERTEX_SHADER);
-        GLuint fragmentShader = setupShader("FRAGMENT", fragmentShaderSrc,GL_FRAGMENT_SHADER);
-
-        shaderProgram = setupShaderProgram(vertexShader,fragmentShader);
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
+    void setupDefaultShader() {
+        GLuint vs = setupShader(vertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint fs = setupShader(fragmentShaderSrc, GL_FRAGMENT_SHADER);
+        shaderProgram = setupShaderProgram(vs, fs);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
     }
 
-    void setupSkyboxShader() 
-    {
-        GLuint vertexShader = setupShader("SKYBOX_VERTEX", skyboxVertexShaderSrc, GL_VERTEX_SHADER);
-        GLuint fragmentShader = setupShader("SKYBOX_FRAGMENT", skyboxFragmentShaderSrc, GL_FRAGMENT_SHADER);
-
-        skyboxShaderProgram = setupShaderProgram(vertexShader, fragmentShader);
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
+    void setupSkyboxShader() {
+        GLuint vs = setupShader(skyboxVertexShaderSrc, GL_VERTEX_SHADER);
+        GLuint fs = setupShader(skyboxFragmentShaderSrc, GL_FRAGMENT_SHADER);
+        skyboxShaderProgram = setupShaderProgram(vs, fs);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
     }
 
     void clear(float r, float g, float b){
@@ -663,15 +471,11 @@ private:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    GLuint setupShaderProgram(GLuint vertexShader, GLuint fragmentShader, GLuint geometryShader = 0){
+    GLuint setupShaderProgram(GLuint vs, GLuint fs) {
         GLuint program = glCreateProgram();
-        glAttachShader(program, vertexShader);
-        glAttachShader(program, fragmentShader);
-        if (geometryShader) {
-            glAttachShader(program, geometryShader);
-        }
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
         glLinkProgram(program);
-
         return program;
     }
 
