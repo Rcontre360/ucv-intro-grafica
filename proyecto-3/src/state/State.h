@@ -79,17 +79,26 @@ public:
     void loadScene(const string& path)
     {
         vector<ObjectData> sceneData = FileLoader::loadScene(path);
-        for (const auto& objData : sceneData) {
+        createFromData(sceneData);
+    }
+
+    void createFromData(vector<ObjectData>& sceneData) {
+        for (auto& objData : sceneData) {
             Object* newObj = new Object();
             newObj->name = objData.name;
             newObj->localBox = objData.localBox;
 
-            for (const auto& smData : objData.submeshes) {
+            for (auto& smData : objData.submeshes) {
                 Submesh* sm = new Submesh(smData.vertices);
-                sm->diffuseMap = smData.diffuseMap;
-                sm->specularMap = smData.specularMap;
-                sm->normalMap = smData.normalMap;
-                sm->ambientMap = smData.ambientMap;
+                sm->diffuseMap  = FileLoader::uploadTexture(smData.diffuseMap);
+                smData.diffuseMap.free();
+                sm->specularMap = FileLoader::uploadTexture(smData.specularMap);
+                smData.specularMap.free();
+                sm->normalMap   = FileLoader::uploadTexture(smData.normalMap);
+                smData.normalMap.free();
+                sm->ambientMap  = FileLoader::uploadTexture(smData.ambientMap);
+                smData.ambientMap.free();
+
                 sm->resetTransform();
                 sm->initialTransform = sm->getTransform();
                 newObj->submeshes.push_back(sm);

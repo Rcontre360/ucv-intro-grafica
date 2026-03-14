@@ -14,13 +14,25 @@
 
 using namespace std;
 
+struct RawTextureData {
+    unsigned char* data = nullptr;
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+
+    void free() {
+        if (data) stbi_image_free(data);
+        data = nullptr;
+    }
+};
+
 struct SubmeshData {
     vector<Vertex> vertices;
     int materialId;
-    GLuint diffuseMap = 0;
-    GLuint specularMap = 0;
-    GLuint normalMap = 0;
-    GLuint ambientMap = 0;
+    RawTextureData diffuseMap;
+    RawTextureData specularMap;
+    RawTextureData normalMap;
+    RawTextureData ambientMap;
 };
 
 struct ObjectData {
@@ -31,32 +43,13 @@ struct ObjectData {
 
 class FileLoader {
 public:
-    static GLuint loadTexture(const string& path) {
-        if (path.empty()) return 0;
+    static RawTextureData loadTextureData(const string& path) {
+        RawTextureData raw;
+        if (path.empty()) return raw;
 
         stbi_set_flip_vertically_on_load(true);
-        int width, height, nrComponents;
-        unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrComponents, 0);
-        if (data) {
-            GLenum format = GL_RGB;
-            if (nrComponents == 1) format = GL_RED;
-            else if (nrComponents == 4) format = GL_RGBA;
-
-            GLuint textureID;
-            glGenTextures(1, &textureID);
-            glBindTexture(GL_TEXTURE_2D, textureID);
-            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            stbi_image_free(data);
-            return textureID;
-        }
-        return 0;
+        raw.data = stbi_load(path.c_str(), &raw.width, &raw.height, &raw.channels, 0);
+        return raw;
     }
 
     static vector<ObjectData> loadScene(const string& path) {
@@ -101,7 +94,6 @@ public:
                 indexOffset += fv;
             }
 
-            vector<Vertex> allVerts;
             for (auto const& [matId, vertices] : materialGroups) {
                 SubmeshData smData;
                 smData.vertices = vertices;
@@ -109,21 +101,49 @@ public:
 
                 if (matId >= 0 && matId < (int)materials.size()) {
                     const auto& mat = materials[matId];
-                    if (!mat.diffuse_texname.empty())  smData.diffuseMap  = loadTexture(basedir + mat.diffuse_texname);
-                    if (!mat.specular_texname.empty()) smData.specularMap = loadTexture(basedir + mat.specular_texname);
-                    if (!mat.bump_texname.empty())     smData.normalMap   = loadTexture(basedir + mat.bump_texname);
-                    if (!mat.ambient_texname.empty())  smData.ambientMap  = loadTexture(basedir + mat.ambient_texname);
+                    if (!mat.diffuse_texname.empty())  smData.diffuseMap  = loadTextureData(basedir + mat.diffuse_texname);
+                    if (!mat.specular_texname.empty()) smData.specularMap = loadTextureData(basedir + mat.specular_texname);
+                    if (!mat.bump_texname.empty())     smData.normalMap   = loadTextureData(basedir + mat.bump_texname);
+                    if (!mat.ambient_texname.empty())  smData.ambientMap  = loadTextureData(basedir + mat.ambient_texname);
                 }
 
                 objData.submeshes.push_back(smData);
-                allVerts.insert(allVerts.end(), vertices.begin(), vertices.end());
             }
 
             if (!objData.submeshes.empty()) {
+                vector<Vertex> allVerts;
+                for (const auto& sm : objData.submeshes) allVerts.insert(allVerts.end(), sm.vertices.begin(), sm.vertices.end());
                 objData.localBox = getBoundingBox(allVerts);
                 result.push_back(objData);
             }
         }
         return result;
+    }
+
+    static GLuint uploadTexture(const RawTextureData& raw) {
+        if (!raw.data) return 0;
+        GLenum format = GL_RGB;
+        if (raw.channels == 1) format = GL_RED;
+        else if (raw.channels == 4) format = GL_RGBA;
+
+        GLuint textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, raw.width, raw.height, 0, format, GL_UNSIGNED_BYTE, raw.data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        return textureID;
+    }
+
+    static GLuint loadTexture(const string& path) {
+        RawTextureData raw = loadTextureData(path);
+        GLuint id = uploadTexture(raw);
+        raw.free();
+        return id;
     }
 };

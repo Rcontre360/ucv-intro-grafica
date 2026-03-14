@@ -4,6 +4,10 @@
 #include <utility>
 #include <iostream>
 #include <cmath>
+#include <thread>
+#include <atomic>
+#include <mutex>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -57,11 +61,19 @@ protected:
     const float targetY = -1.5f;
     glm::vec3 initialCameraPos;
 
+    // Async Loading State
+    atomic<bool> isLoading{true};
+    vector<ObjectData> loadedSceneData;
+    thread loadingThread;
+    mutex dataMutex;
+
 public:
     C3DViewer() {}
 
     ~C3DViewer()
     {
+        if (loadingThread.joinable()) loadingThread.join();
+
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -126,36 +138,22 @@ public:
         setupSkyboxShader();
 
         appState = new State();
-
-        clear(0.1f, 0.1f, 0.1f);
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::SetNextWindowPos(ImVec2(width / 2.0f - 120.0f, height / 2.0f - 50.0f));
-        ImGui::SetNextWindowSize(ImVec2(240, 100));
-        ImGui::Begin("Loading", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
-        ImGui::Text("...Loading...");
-        ImGui::End();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
-
         skybox = new Skybox("assets/cubemap/snow.png");
-        
-        try {
-            appState->loadScene("assets/scene/scene.obj");
-            initialCameraPos = glm::vec3(0.0f, 0.6f, -2.6f);
-            Camera::getInstance().position = initialCameraPos;
-        } catch (const exception& e) {
-            cerr << "Error loading scene: " << e.what() << endl;
-        }
-
         fpsCounter = new FPSCounter();
-
         glViewport(0, 0, width, height);
 
+        // Start loading scene in a background thread
+        loadingThread = thread([this]() {
+            try {
+                auto data = FileLoader::loadScene("assets/scene/scene.obj");
+                lock_guard<mutex> lock(dataMutex);
+                loadedSceneData = std::move(data);
+                isLoading = false;
+            } catch (const exception& e) {
+                cerr << "Error loading scene: " << e.what() << endl;
+                isLoading = false;
+            }
+        });
 
         glfwSetWindowUserPointer(window, this);
         glfwSetKeyCallback(window, keyCallback);
@@ -166,7 +164,7 @@ public:
     }
 
     void mouseCameraMovement(double deltaTime) {
-        if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+        if (isLoading || glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
             return;
 
         float speed = (float)(5.0 * deltaTime);
@@ -199,12 +197,22 @@ public:
             double deltaTime = currentFrameTime - lastFrameTime;
             lastFrameTime = currentFrameTime;
 
+            if (!isLoading && !loadedSceneData.empty()) {
+                lock_guard<mutex> lock(dataMutex);
+                if (!loadedSceneData.empty()) {
+                    appState->createFromData(loadedSceneData);
+                    loadedSceneData.clear();
+                    initialCameraPos = glm::vec3(0.0f, 0.6f, -2.6f);
+                    Camera::getInstance().position = initialCameraPos;
+                }
+            }
+
             fpsCounter->tick(currentFrameTime);
             char title[64];
             sprintf(title, "PROYECTO - 3 | FPS: %.1f", fpsCounter->get());
             glfwSetWindowTitle(window, title);
 
-            if (isFalling) {
+            if (!isLoading && isFalling) {
                 verticalVelocity += gravity * (float)deltaTime;
                 Camera::getInstance().position.y += verticalVelocity * (float)deltaTime;
                 if (Camera::getInstance().position.y <= targetY) {
@@ -297,7 +305,7 @@ private:
         }
 
         glUseProgram(shaderProgram);
-        if (appState)
+        if (appState && !isLoading)
         {
             DrawConfig config;
             config.shaderProgram = shaderProgram;
@@ -328,11 +336,18 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(300, height));
-        ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+        if (isLoading) {
+            ImGui::SetNextWindowPos(ImVec2(width / 2.0f - 120.0f, height / 2.0f - 50.0f));
+            ImGui::SetNextWindowSize(ImVec2(240, 100));
+            ImGui::Begin("Loading", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+            ImGui::SetCursorPos(ImVec2(80, 40));
+            ImGui::Text("...Loading...");
+            ImGui::End();
+        } else if (appState) {
+            ImGui::SetNextWindowPos(ImVec2(0, 0));
+            ImGui::SetNextWindowSize(ImVec2(300, height));
+            ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
 
-        if (appState) {
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
                 for (int i = 0; i < (int)appState->lights.size(); i++) {
                     string label = "Light " + to_string(i + 1);
@@ -423,9 +438,9 @@ private:
                         for (auto sm : selected->submeshes) sm->oMappingMode = currentO;
                 }
             }
+            ImGui::End();
         }
 
-        ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
