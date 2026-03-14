@@ -1,76 +1,70 @@
-# Proyecto 3 
+# Project #3 - 3D Rendering Engine (Miniature Scene)
 
-Este es un visor de modelos 3D que permite cargar, ver y editar archivos en formato OBJ.
+## 🌟 Introduction
+Welcome to **Project #3**, a 3D visualization experience designed to immerse the user in a "miniature" thematic world. The entire scene is set atop a wooden table, where common objects like a house, a pot, and Christmas decorations take on a colossal scale relative to the viewer. You take on the role of a "mini-man" exploring this desktop landscape, navigating through a snowy atmosphere illuminated by dancing light sources.
 
-## Cómo ejecutar el proyecto
+![Application Preview](assets/app.png)
 
-1.  Abre una terminal en el directorio raíz del proyecto.
-2.  Ejecuta el comando `make`. Esto compilará el proyecto y creará un ejecutable en `build/proy3`.
-3.  Ejecuta el programa con `./build/proy3`.
+A high-performance C++ 3D rendering engine built with OpenGL 3.3, featuring advanced lighting, texture mapping, and an interactive UI.
 
-## Características
+---
 
-### Menú de Archivo
+## 🚀 How to Run
 
-*   **Load**: Abre un explorador de archivos para seleccionar un archivo `.obj`.
-*   **Save**: Guarda el estado actual del objeto (incluyendo traslaciones, rotaciones, escalas y colores de sub-mallas) en un nuevo archivo `.obj` y su `.mtl` correspondiente.
+### Linux
+1. **Prerequisites**: Install GLFW and GLM (e.g., `sudo apt install libglfw3-dev libglm-dev`).
+2. **Build**: Run `make` in the root directory.
+3. **Execute**: Run `./build/proy3`.
 
-### Controles del Ratón
+### Windows
+1. **Prerequisites**: Ensure you have a C++ compiler (like MinGW/GCC or MSVC) and the GLFW development files.
+2. **Build**: Use the provided `Makefile` with `make` (via MinGW) or link the files in `src/` manually in an IDE.
+3. **Execute**: Run the generated `.exe` in the `build/` folder.
 
-*   **Click Izquierdo**: Selecciona una sub-malla del objeto. La sub-malla seleccionada se resaltará con su caja envolvente.
-*   **Arrastrar con Click Izquierdo**:
-    *   Si el modo "Move full object" está desactivado, traslada la sub-malla seleccionada.
-    *   Si el modo "Move full object" está activado, traslada el objeto completo.
-*   **Arrastrar con Click Derecho**: Rota el objeto sobre su centro.
+---
 
-### Controles del Teclado
+## 🛠️ Feature Map (PDF Requirements)
 
-*   **Flechas Arriba/Abajo**: Mueve la cámara hacia adelante y hacia atrás.
-*   **Flechas Izquierda/Derecha**: Rota la cámara.
-*   **Barra Espaciadora**: Activa/desactiva el modo "FPS", donde el movimiento del ratón controla la rotación de la cámara.
-*   **W/S (en modo FPS)**: Mueve la cámara hacia adelante y hacia atrás.
-*   **ESC**: Cierra la aplicación.
+### 1. The Miniature Scene (Mini-man)
+* **Concept**: The entire scene is set on a wooden table. The camera starts in **FPS Mode** at a height of `-1.5` (`targetY`), simulating a "miniature human" walking on the table surface.
+* **Reflective Sphere**: Found at the center of the scene. Note that while it appears as one object, it is a complex entity composed of multiple parts (Submeshes).
 
-### Panel de Configuración
+### 2. Illumination & Lights
+* **Three RGB Lights**: Three spheres (Red, Green, Blue) orbit the table in "harmonious" circular trajectories.
+* **UI Controls**:
+  * **Location**: Found under the **"Lights"** collapsing header.
+  * **RGB/Intensity**: Use the Color Edit and Intensity sliders to modify each light.
+  * **Attenuation (f_att)**: The "Global Attenuation" checkbox toggles the distance-based light falloff (worth 0.5pts).
+  * **Animation Speed**: Modify how fast the "fireflies" move using the "Anim Speed" slider.
+  * **Shading Modes**: Change each light between **Phong**, **Blinn-Phong**, and **Flat** using the dropdown menu.
 
-El panel de la izquierda contiene varias secciones para modificar el objeto y la visualización:
+### 3. Movement & Camera
+* **Modes**: Switch between **FPS** (ignores Y) and **GOD** (fly mode) in the **"Movement"** header.
+* **Controls**: Use `W/A/S/D` or `Arrow Keys` to move. Press `ENTER` to lock the mouse for camera rotation, and `ESC` to release it.
 
-#### Basic
+### 4. Animated Scene
+* **Santa**: Flying and ground-based circular paths.
+* **Snowmen**: Rotating animations on both red and blue variants.
+* **Pines**: Dynamic scaling animations on specific trees.
 
-*   **Show fill**: Muestra/oculta el relleno de los triángulos del objeto.
-*   **Move full object**: Alterna entre mover el objeto completo o una sub-malla individual con el ratón.
-*   **Background**: Cambia el color de fondo de la escena.
-*   **Scale X, Y, Z**: Escala el objeto en los ejes X, Y o Z.
-*   **Center**: Centra el objeto en la escena y restaura su escala original.
-*   **Show FPS**: Muestra/oculta el contador de fotogramas por segundo. El calculo lo realiza FPSCounter
+### 5. Texture Mapping & Materials
+* **Automatic Loading**: Textures from OBJ/MTL files are loaded automatically.
+* **Interactive Mapping**:
+  * **Location**: Select an object in the **"Selection"** box to open the **"Edit"** panel.
+  * **s-mapping**: Choose between **Standard** (UV), **Spherical**, and **Squared**. To best see this effect, select the **Parametric Sphere** (giant floating snowball) at the center of the scene.
+  * **o-mapping**: Switch between **Position** and **Normal** based coordinate generation.
+* **Bump Mapping**: Use the "Set Bump Map" button in the Edit panel. Best visualized on the central **Parametric Sphere** to see the surface "crags" without changing the actual geometry.
+* **Skybox**: A snowy environment map is used for the room background and reflections.
 
-#### Vertex
+---
 
-*   **Show**: Muestra/oculta los vértices del objeto.
-*   **Size**: ajusta el tamaño de los vértices.
-*   **Color**: Cambia el color de los vértices.
+## ✨ Extra Features (Beyond the PDF)
 
-#### Wireframe
-
-*   **Show**: Muestra/oculta el modo de alambre (wireframe) del objeto.
-*   **Color**: Cambia el color del wireframe.
-
-#### Normals
-
-*   **Show**: Muestra/oculta las normales de los vértices.
-*   **Color**: Cambia el color de las normales.
-*   **Size**: ajusta la longitud de las normales. 1-100 siendo el porcentaje de la longitud de la diagonal.
-
-#### Advanced
-
-*   **Antialiasing**: Activa/desactiva el antialiasing para las líneas.
-*   **Back-face Culling**: Activa/desactiva el descarte de caras traseras.
-*   **Depth Test**: Activa/desactiva el test de profundidad.
-
-#### Selected Submesh
-
-Esta sección aparece cuando se selecciona una sub-malla.
-
-*   **Delete Submesh**: Elimina la sub-malla seleccionada.
-*   **Color**: Cambia el color de la sub-malla seleccionada.
-*   **Bounding Box Color**: Cambia el color de la caja envolvente de la sub-malla seleccionada.
+* **Asynchronous Loading**: The engine uses a **separate worker thread** to load the OBJ scene and textures. This prevents the OS from "hanging" or freezing the window during the heavy I/O phase. A loading screen is shown until the GPU upload is ready.
+* **Ambient Occlusion (AO)**: We utilize the **Ambient Texture** slot to render pre-baked AO maps. You can see these subtle, realistic shadows in the corners of the **Pot**, the **Trees**, the **House**, and the **Snowmen**.
+* **Specular Mapping**: Specific objects like the **Pot** and **Blue Snowmen** use specular maps to define which parts are shinier than others (e.g., the enamel of the pot vs. the metal rim).
+* **Environment Reflections**: The **Bauble/Decoration Ball** on the Christmas tree has a high reflectivity factor, acting as an opaque mirror that reflects the Skybox in real-time.
+* **Custom Textures**: The UI allows you to **add any image file** as a Diffuse or Bump map to **any object** in the scene.
+* **Light Shininess**: Each light's "focus" (shininess) can be adjusted, affecting how sharp or broad the specular reflections appear on surfaces.
+* **Submesh Abstraction**: To keep things simple for the user, applying a texture at the Object level automatically updates every submesh within that model simultaneously.
+* **High Complexity**: A large-scale scene with dozens of animated objects and complex hierarchies, all running at high FPS.
