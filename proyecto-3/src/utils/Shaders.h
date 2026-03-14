@@ -63,6 +63,7 @@ namespace Shaders {
         #define MAX_LIGHTS 3
         uniform Light lights[MAX_LIGHTS];
         uniform vec3 viewPos;
+        uniform bool uUseAttenuation;
 
         uniform bool uHasDiffuseMap;  uniform sampler2D diffuseMap;
         uniform bool uHasNormalMap;   uniform sampler2D normalMap;
@@ -99,8 +100,11 @@ namespace Shaders {
                         + light.diffuse * diff * baseColor
                         + light.specular * spec * specFactor;
 
-            float d = length(light.position - vPos);
-            return result / (1.0 + 0.09 * d + 0.032 * d * d);
+            if (uUseAttenuation) {
+                float d = length(light.position - vPos);
+                result /= (1.0 + 0.09 * d + 0.032 * d * d);
+            }
+            return result;
         }
 
         vec2 remapTexCoords(vec3 normal) {
@@ -149,6 +153,7 @@ namespace Shaders {
         inline static const string view          = "view";
         inline static const string projection    = "projection";
         inline static const string viewPos       = "viewPos";
+        inline static const string uUseAttenuation = "uUseAttenuation";
         inline static const string uHasDiffuseMap  = "uHasDiffuseMap";
         inline static const string diffuseMap      = "diffuseMap";
         inline static const string uHasNormalMap   = "uHasNormalMap";

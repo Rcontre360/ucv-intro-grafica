@@ -55,6 +55,8 @@ namespace UI {
 
         if (appState) {
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("Global Attenuation", &appState->useAttenuation);
+                ImGui::Separator();
                 for (int i = 0; i < (int)appState->lights.size(); i++) {
                     std::string label = "Light " + std::to_string(i + 1);
                     if (ImGui::TreeNode(label.c_str())) {

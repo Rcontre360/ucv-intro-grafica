@@ -31,6 +31,7 @@ class State
 public:
     vector<Object*> objects;
     vector<Light*> lights;
+    bool useAttenuation = true;
 
     State(){
         initializeLights();
@@ -77,6 +78,7 @@ public:
     {
         glUseProgram(config.shaderProgram);
         setGpuVariable(config.shaderProgram, Shaders::DefaultShader::viewPos, Camera::getInstance().position);
+        setGpuVariable(config.shaderProgram, Shaders::DefaultShader::uUseAttenuation, useAttenuation);
 
         for (Light* l : lights) l->draw(config);
         for (Object* obj : objects) obj->draw(config);
