@@ -1,70 +1,70 @@
-# Project #3 - 3D Rendering Engine (Miniature Scene)
+# Proyecto #3 - Motor de Renderizado 3D (Escena en Miniatura)
 
-## 🌟 Introduction
-Welcome to **Project #3**, a 3D visualization experience designed to immerse the user in a "miniature" thematic world. The entire scene is set atop a wooden table, where common objects like a house, a pot, and Christmas decorations take on a colossal scale relative to the viewer. You take on the role of a "mini-man" exploring this desktop landscape, navigating through a snowy atmosphere illuminated by dancing light sources.
+## Introducción
+Bienvenidos al **Proyecto #3**, una experiencia de visualización 3D diseñada para sumergir al usuario en un mundo temático "en miniatura". Toda la escena está situada sobre una mesa de madera, donde objetos comunes como una casa, una maceta y decoraciones navideñas adquieren una escala colosal en relación con el espectador. Asumes el papel de un "hombre miniatura" explorando este paisaje de escritorio, navegando a través de una atmósfera nevada iluminada por fuentes de luz danzantes.
 
-![Application Preview](assets/app.png)
+![Vista previa de la aplicación](assets/app.png)
 
-A high-performance C++ 3D rendering engine built with OpenGL 3.3, featuring advanced lighting, texture mapping, and an interactive UI.
+Un motor de renderizado 3D en C++ de alto rendimiento construido con OpenGL 3.3, que cuenta con iluminación avanzada, mapeo de texturas y una interfaz de usuario interactiva.
 
 ---
 
-## 🚀 How to Run
+## Cómo ejecutar
 
 ### Linux
-1. **Prerequisites**: Install GLFW and GLM (e.g., `sudo apt install libglfw3-dev libglm-dev`).
-2. **Build**: Run `make` in the root directory.
-3. **Execute**: Run `./build/proy3`.
+1. **Prerrequisitos**: Instalar GLFW y GLM (ej. `sudo apt install libglfw3-dev libglm-dev`).
+2. **Compilar**: Ejecutar `make` en el directorio raíz.
+3. **Ejecutar**: Ejecutar `./build/proy3`.
 
 ### Windows
-1. **Prerequisites**: Ensure you have a C++ compiler (like MinGW/GCC or MSVC) and the GLFW development files.
-2. **Build**: Use the provided `Makefile` with `make` (via MinGW) or link the files in `src/` manually in an IDE.
-3. **Execute**: Run the generated `.exe` in the `build/` folder.
+1. **Prerrequisitos**: Asegurarse de tener un compilador de C++ (como MinGW/GCC o MSVC) y los archivos de desarrollo de GLFW.
+2. **Compilar**: Usar el `Makefile` proporcionado con `make` (vía MinGW) o enlazar los archivos en `src/` manualmente en un IDE.
+3. **Ejecutar**: Ejecutar el archivo `.exe` generado en la carpeta `build/`.
 
 ---
 
-## 🛠️ Feature Map (PDF Requirements)
+## Mapa de Funcionalidades (Requerimientos del PDF)
 
-### 1. The Miniature Scene (Mini-man)
-* **Concept**: The entire scene is set on a wooden table. The camera starts in **FPS Mode** at a height of `-1.5` (`targetY`), simulating a "miniature human" walking on the table surface.
-* **Reflective Sphere**: Found at the center of the scene. Note that while it appears as one object, it is a complex entity composed of multiple parts (Submeshes).
+### 1. La Escena en Miniatura (Mini-man)
+* **Concepto**: Toda la escena está sobre una mesa de madera. La cámara comienza en **Modo FPS** a una altura de `-1.5` (`targetY`), simulando a un "humano miniatura" caminando sobre la superficie de la mesa.
+* **Esfera Reflectiva**: Se encuentra en el centro de la escena. Tenga en cuenta que, aunque aparece como un solo objeto, es una entidad compleja compuesta por múltiples partes (Submeshes).
 
-### 2. Illumination & Lights
-* **Three RGB Lights**: Three spheres (Red, Green, Blue) orbit the table in "harmonious" circular trajectories.
-* **UI Controls**:
-  * **Location**: Found under the **"Lights"** collapsing header.
-  * **RGB/Intensity**: Use the Color Edit and Intensity sliders to modify each light.
-  * **Attenuation (f_att)**: The "Global Attenuation" checkbox toggles the distance-based light falloff (worth 0.5pts).
-  * **Animation Speed**: Modify how fast the "fireflies" move using the "Anim Speed" slider.
-  * **Shading Modes**: Change each light between **Phong**, **Blinn-Phong**, and **Flat** using the dropdown menu.
+### 2. Iluminación y Luces
+* **Tres Luces RGB**: Tres esferas (Roja, Verde, Azul) orbitan la mesa en trayectorias circulares "armoniosas".
+* **Controles de la Interfaz (UI)**:
+  * **Ubicación**: Se encuentran bajo el encabezado desplegable **"Lights"**.
+  * **RGB/Intensidad**: Use los editores de color y los deslizadores de intensidad para modificar cada luz.
+  * **Atenuación (f_att)**: La casilla "Global Attenuation" activa o desactiva la caída de luz basada en la distancia (valor: 0.5pts).
+  * **Velocidad de Animación**: Modifique qué tan rápido se mueven las "luciernagas" usando el deslizador "Anim Speed".
+  * **Modelos de Sombreado**: Cambie cada luz entre **Phong**, **Blinn-Phong** y **Flat** usando el menú desplegable.
 
-### 3. Movement & Camera
-* **Modes**: Switch between **FPS** (ignores Y) and **GOD** (fly mode) in the **"Movement"** header.
-* **Controls**: Use `W/A/S/D` or `Arrow Keys` to move. Press `ENTER` to lock the mouse for camera rotation, and `ESC` to release it.
+### 3. Movimiento y Cámara
+* **Modos**: Cambie entre **FPS** (ignora el eje Y) y **GOD** (modo de vuelo) en el encabezado **"Movement"**.
+* **Controles**: Use `W/A/S/D` o las `teclas de dirección` para moverse. Presione `ENTER` para bloquear el ratón y rotar la cámara, y `ESC` para liberarlo.
 
-### 4. Animated Scene
-* **Santa**: Flying and ground-based circular paths.
-* **Snowmen**: Rotating animations on both red and blue variants.
-* **Pines**: Dynamic scaling animations on specific trees.
+### 4. Escena Animada
+* **Santa**: Trayectorias circulares tanto volando como en el suelo.
+* **Muñecos de Nieve**: Animaciones de rotación en las variantes rojas y azules.
+* **Pinos**: Animaciones de escalado dinámico en árboles específicos.
 
-### 5. Texture Mapping & Materials
-* **Automatic Loading**: Textures from OBJ/MTL files are loaded automatically.
-* **Interactive Mapping**:
-  * **Location**: Select an object in the **"Selection"** box to open the **"Edit"** panel.
-  * **s-mapping**: Choose between **Standard** (UV), **Spherical**, and **Squared**. To best see this effect, select the **Parametric Sphere** (giant floating snowball) at the center of the scene.
-  * **o-mapping**: Switch between **Position** and **Normal** based coordinate generation.
-* **Bump Mapping**: Use the "Set Bump Map" button in the Edit panel. Best visualized on the central **Parametric Sphere** to see the surface "crags" without changing the actual geometry.
-* **Skybox**: A snowy environment map is used for the room background and reflections.
+### 5. Mapeo de Texturas y Materiales
+* **Carga Automática**: Las texturas de los archivos OBJ/MTL se cargan automáticamente.
+* **Mapeo Interactivo**:
+  * **Ubicación**: Seleccione un objeto en la caja de **"Selection"** para abrir el panel de **"Edit"**.
+  * **s-mapping**: Elija entre **Standard** (UV), **Spherical** (Esférico) y **Squared** (Cuadrado). Para apreciar mejor este efecto, seleccione la **Esfera Paramétrica** (bola de nieve gigante flotante) en el centro de la escena.
+  * **o-mapping**: Cambie entre generación de coordenadas basada en **Position** (Posición) o **Normal**.
+* **Bump Mapping**: Use el botón "Set Bump Map" en el panel de edición. Se visualiza mejor en la **Esfera Paramétrica** central para ver las "grietas" de la superficie sin cambiar la geometría real.
+* **Skybox**: Se utiliza un mapa de entorno nevado para el fondo de la habitación y las reflexiones.
 
 ---
 
-## ✨ Extra Features (Beyond the PDF)
+## Funcionalidades Extra (Más allá del PDF)
 
-* **Asynchronous Loading**: The engine uses a **separate worker thread** to load the OBJ scene and textures. This prevents the OS from "hanging" or freezing the window during the heavy I/O phase. A loading screen is shown until the GPU upload is ready.
-* **Ambient Occlusion (AO)**: We utilize the **Ambient Texture** slot to render pre-baked AO maps. You can see these subtle, realistic shadows in the corners of the **Pot**, the **Trees**, the **House**, and the **Snowmen**.
-* **Specular Mapping**: Specific objects like the **Pot** and **Blue Snowmen** use specular maps to define which parts are shinier than others (e.g., the enamel of the pot vs. the metal rim).
-* **Environment Reflections**: The **Bauble/Decoration Ball** on the Christmas tree has a high reflectivity factor, acting as an opaque mirror that reflects the Skybox in real-time.
-* **Custom Textures**: The UI allows you to **add any image file** as a Diffuse or Bump map to **any object** in the scene.
-* **Light Shininess**: Each light's "focus" (shininess) can be adjusted, affecting how sharp or broad the specular reflections appear on surfaces.
-* **Submesh Abstraction**: To keep things simple for the user, applying a texture at the Object level automatically updates every submesh within that model simultaneously.
-* **High Complexity**: A large-scale scene with dozens of animated objects and complex hierarchies, all running at high FPS.
+* **Carga Asíncrona**: El motor utiliza un **hilo (thread) de trabajo separado** para cargar la escena OBJ y las texturas. Esto evita que el sistema operativo "congele" la ventana durante la fase pesada de entrada/salida. Se muestra una pantalla de carga hasta que la carga en la GPU esté lista.
+* **Oclusión Ambiental (AO)**: Utilizamos el slot de **Ambient Texture** para renderizar mapas de AO pre-calculados. Puede ver estas sombras sutiles y realistas en las esquinas de la **Maceta**, los **Árboles**, la **Casa** y los **Muñecos de Nieve**.
+* **Mapeo Especular**: Objetos específicos como la **Maceta** y los **Muñecos de Nieve Azules** usan mapas especulares para definir qué partes son más brillantes que otras (ej. el esmalte de la maceta vs. el borde metálico).
+* **Reflexiones de Entorno**: La **Bambalina/Esfera de Navidad** en el árbol central tiene un alto factor de reflectividad, actuando como un espejo opaco que refleja el Skybox en tiempo real.
+* **Texturas Personalizadas**: La interfaz le permite **agregar cualquier archivo de imagen** como mapa Difuso o de Relieve (Bump) a **cualquier objeto** de la escena.
+* **Brillo de la Luz (Shininess)**: El "foco" (brillo) de cada luz puede ser ajustado, afectando qué tan nítidos o amplios aparecen los reflejos especulares en las superficies.
+* **Abstracción de Submeshes**: Para simplificar la experiencia del usuario, aplicar una textura a nivel de Objeto actualiza automáticamente cada sub-malla dentro de ese modelo simultáneamente.
+* **Alta Complejidad**: Una escena a gran escala con docenas de objetos animados y jerarquías complejas, todo ejecutándose a altos FPS.
