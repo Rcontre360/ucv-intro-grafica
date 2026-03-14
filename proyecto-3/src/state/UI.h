@@ -24,15 +24,35 @@ struct UISceneContext {
 
 namespace UI {
 
-    inline void textureMapButton(const char* label, Object* selected, bool isNormalMap = false) {
+    // Helper for Object-level texture loading (affects all submeshes)
+    inline void textureMapButton(const char* label, Object* obj, bool isNormalMap = false) {
         if (ImGui::Button(label, ImVec2(-1, 0))) {
             auto res = pfd::open_file(label, ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
             if (!res.empty()) {
                 GLuint tex = FileLoader::loadTexture(res[0]);
                 if (tex) {
-                    for (auto sm : selected->submeshes) {
-                        if (isNormalMap) sm->normalMap = tex;
-                        else sm->diffuseMap = tex;
+                    for (auto sm : obj->submeshes) {
+                        if (isNormalMap) {
+                            if (sm->normalMap) {
+                                glDeleteTextures(1, &sm->normalMap);
+                                sm->normalMap = 0;
+                            }
+                            sm->normalMap = tex;
+                        } else {
+                            if (sm->diffuseMap) {
+                                glDeleteTextures(1, &sm->diffuseMap);
+                                sm->diffuseMap = 0;
+                            }
+                            if (sm->ambientMap) {
+                                glDeleteTextures(1, &sm->ambientMap);
+                                sm->ambientMap = 0;
+                            }
+                            if (sm->specularMap) {
+                                glDeleteTextures(1, &sm->specularMap);
+                                sm->specularMap = 0;
+                            }
+                            sm->diffuseMap = tex;
+                        }
                     }
                 }
             }
@@ -44,7 +64,7 @@ namespace UI {
         ImGui::SetNextWindowSize(ImVec2(240, 100));
         ImGui::Begin("Loading", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
         ImGui::SetCursorPos(ImVec2(80, 40));
-        ImGui::Text("LOADING");
+        ImGui::Text("...Loading...");
         ImGui::End();
     }
 
@@ -123,7 +143,7 @@ namespace UI {
                 if (ImGui::CollapsingHeader(editLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
                     textureMapButton("Set Diffuse Map", selected, false);
                     textureMapButton("Set Bump Map", selected, true);
-                    
+
                     ImGui::Separator();
                     const char* sMappings[] = { "Standard", "Spherical", "Squared" };
                     const char* oMappings[] = { "Position", "Normal" };
