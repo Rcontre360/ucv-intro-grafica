@@ -102,7 +102,7 @@ namespace Shaders {
 
             if (uUseAttenuation) {
                 float d = length(light.position - vPos);
-                result /= (1.0 + 0.09 * d + 0.032 * d * d);
+                result /= (1.0 + 0.12 * d + 0.052 * d * d);
             }
             return result;
         }
