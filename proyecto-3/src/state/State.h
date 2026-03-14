@@ -55,12 +55,12 @@ public:
         lights.push_back(l1);
 
         // green
-        Light* l2 = new Light(1, glm::vec3(0.0f, 4.0f, 0.0f));
+        Light* l2 = new Light(1, glm::vec3(-1.0f, 2.0f, -1.0f));
         l2->diffuse  = glm::vec3(0.196f, 1.0f, 0.098f);
         l2->ambient  = glm::vec3(0.3f);
         l2->specular = glm::vec3(0.5f);
         // circle 
-        l2->animation = new CircleAnimation(glm::vec3(-2.0f, -2.0f, -2.0f), 7.0f, 0.0f, false);
+        l2->animation = new CircleAnimation(glm::vec3(3.0f, 0.0f, -5.0f), 7.0f, 0.0f, false);
         lights.push_back(l2);
 
         // blue 
