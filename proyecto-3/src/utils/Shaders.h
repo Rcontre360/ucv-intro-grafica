@@ -110,6 +110,7 @@ namespace Shaders {
             if (uSMappingMode == 1)
                 return vec2(atan(p.z, p.x) / (2.0 * PI) + 0.5, asin(p.y) / PI + 0.5);
             vec3 a = abs(p);
+            // Side lookup for squared mapping
             vec2 uv = (a.x >= a.y && a.x >= a.z) ? vec2(p.z, p.y)
                     : (a.y >= a.x && a.y >= a.z)  ? vec2(p.x, p.z)
                     :                                vec2(p.x, p.y);

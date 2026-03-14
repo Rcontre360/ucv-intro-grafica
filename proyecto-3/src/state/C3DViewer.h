@@ -20,6 +20,7 @@
 #include "imgui/backends/imgui_impl_opengl3.h"
 
 #include "State.h"
+#include "UI.h"
 #include "../utils/Camera.h"
 #include "../utils/FPSCounter.h"
 #include "../utils/Utils.h"
@@ -35,11 +36,6 @@ using namespace std;
 
 class State;
 
-enum MovementMode {
-    FPS_MODE = 0,
-    GOD_MODE = 1
-};
-
 class C3DViewer {
 protected:
     State* appState = nullptr;
@@ -52,7 +48,7 @@ protected:
     int width = 720;
     int height = 480;
     bool firstMouse = false;
-    MovementMode movementMode = GOD_MODE;
+    UIMovementMode movementMode = UIMovementMode::FPS;
     pair<double,double> mousePos = {0.0,0.0};
 
     bool isFalling = false;
@@ -170,7 +166,7 @@ public:
         float speed = (float)(5.0 * deltaTime);
         float rotSpeed = (float)(10.0 * deltaTime);
 
-        bool ignoreY = (movementMode == FPS_MODE);
+        bool ignoreY = (movementMode == UIMovementMode::FPS);
 
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
             Camera::getInstance().processKeyboard(FORWARD, speed, ignoreY);
@@ -202,7 +198,7 @@ public:
                 if (!loadedSceneData.empty()) {
                     appState->createFromData(loadedSceneData);
                     loadedSceneData.clear();
-                    initialCameraPos = glm::vec3(0.0f, 0.6f, -2.6f);
+                    initialCameraPos = glm::vec3(0.0f, targetY, -2.6f);
                     Camera::getInstance().position = initialCameraPos;
                 }
             }
@@ -337,108 +333,13 @@ private:
         ImGui::NewFrame();
 
         if (isLoading) {
-            ImGui::SetNextWindowPos(ImVec2(width / 2.0f - 120.0f, height / 2.0f - 50.0f));
-            ImGui::SetNextWindowSize(ImVec2(240, 100));
-            ImGui::Begin("Loading", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
-            ImGui::SetCursorPos(ImVec2(80, 40));
-            ImGui::Text("...Loading...");
-            ImGui::End();
-        } else if (appState) {
-            ImGui::SetNextWindowPos(ImVec2(0, 0));
-            ImGui::SetNextWindowSize(ImVec2(300, height));
-            ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
-
-            if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
-                for (int i = 0; i < (int)appState->lights.size(); i++) {
-                    string label = "Light " + to_string(i + 1);
-                    if (ImGui::TreeNode(label.c_str())) {
-                        Light* l = appState->lights[i];
-                        ImGui::Checkbox("Enabled", &l->enabled);
-                        ImGui::SliderFloat("Intensity", &l->intensity, 0.0f, 5.0f);
-                        ImGui::ColorEdit3("Diffuse",  &l->diffuse.x);
-                        ImGui::ColorEdit3("Ambient",  &l->ambient.x);
-                        ImGui::ColorEdit3("Specular", &l->specular.x);
-                        ImGui::SliderFloat("Anim Speed", &l->animationSpeed, 0.0f, 5.0f);
-                        const char* modes[] = { "Phong", "Blinn-Phong", "Flat" };
-                        int currentMode = (int)l->shadingMode;
-                        if (ImGui::Combo("Shading", &currentMode, modes, IM_ARRAYSIZE(modes)))
-                            l->shadingMode = (ShadingMode)currentMode;
-                        ImGui::TreePop();
-                    }
-                }
-            }
-
-            if (ImGui::CollapsingHeader("Movement")) {
-                const char* moveModes[] = { "FPS", "GOD" };
-                int currentMoveMode = (int)movementMode;
-                if (ImGui::Combo("Mode", &currentMoveMode, moveModes, IM_ARRAYSIZE(moveModes))) {
-                    MovementMode newMode = (MovementMode)currentMoveMode;
-                    if (movementMode == GOD_MODE && newMode == FPS_MODE) {
-                        float curY = Camera::getInstance().position.y;
-                        if (curY > targetY) {
-                            isFalling = true;
-                            verticalVelocity = 0.0f;
-                        } else if (curY < targetY - 0.01f) {
-                            Camera::getInstance().position = initialCameraPos;
-                        }
-                    }
-                    movementMode = newMode;
-                }
-                if (ImGui::Button("Mouse Camera")) {
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                    firstMouse = true;
-                }
-                ImGui::SameLine();
-                ImGui::TextDisabled("(?)");
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Press ESC to release");
-            }
-
-            if (ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::BeginChild("obj_list", ImVec2(-1, 200), false);
-                for (auto obj : appState->objects) {
-                    bool sel = obj->isSelected;
-                    if (ImGui::Selectable(obj->name.c_str(), sel)) {
-                        for (auto o : appState->objects) o->isSelected = false;
-                        if (!sel) obj->isSelected = true;
-                    }
-                }
-                ImGui::EndChild();
-            }
-
-            Object* selected = nullptr;
-            for (auto obj : appState->objects)
-                if (obj->isSelected) { selected = obj; break; }
-
-            if (selected) {
-                string editLabel = "Edit - " + selected->name;
-                if (ImGui::CollapsingHeader(editLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-                    if (ImGui::Button("Set Diffuse Map", ImVec2(-1, 0))) {
-                        auto res = pfd::open_file("Select Diffuse Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
-                        if (!res.empty()) {
-                            GLuint tex = FileLoader::loadTexture(res[0]);
-                            if (tex) for (auto sm : selected->submeshes) sm->diffuseMap = tex;
-                        }
-                    }
-                    if (ImGui::Button("Set Bump Map", ImVec2(-1, 0))) {
-                        auto res = pfd::open_file("Select Bump Map", ".", { "Image Files", "*.png *.jpg *.jpeg *.bmp *.tga" }).result();
-                        if (!res.empty()) {
-                            GLuint tex = FileLoader::loadTexture(res[0]);
-                            if (tex) for (auto sm : selected->submeshes) sm->normalMap = tex;
-                        }
-                    }
-                    ImGui::Separator();
-                    const char* sMappings[] = { "Standard", "Spherical", "Squared" };
-                    const char* oMappings[] = { "Position", "Normal" };
-                    int currentS = selected->submeshes.empty() ? 0 : selected->submeshes[0]->sMappingMode;
-                    if (ImGui::Combo("s-mapping", &currentS, sMappings, IM_ARRAYSIZE(sMappings)))
-                        for (auto sm : selected->submeshes) sm->sMappingMode = currentS;
-                    int currentO = selected->submeshes.empty() ? 0 : selected->submeshes[0]->oMappingMode;
-                    if (ImGui::Combo("o-mapping", &currentO, oMappings, IM_ARRAYSIZE(oMappings)))
-                        for (auto sm : selected->submeshes) sm->oMappingMode = currentO;
-                }
-            }
-            ImGui::End();
+            UI::renderLoadingScreen(width, height);
+        } else {
+            UISceneContext ctx = { 
+                width, height, movementMode, isFalling, verticalVelocity, 
+                targetY, initialCameraPos, window, firstMouse 
+            };
+            UI::renderSettings(appState, ctx);
         }
 
         ImGui::Render();

@@ -21,7 +21,7 @@ public:
     glm::vec3 specular = glm::vec3(0.5f);
     bool enabled = true;
     float animationSpeed = 1.0f;
-    float intensity = 1.5f;
+    float intensity = 1.6f;
     ShadingMode shadingMode = PHONG;
 
     Light(int _id, glm::vec3 pos) : Sphere(0.15f, pos) {

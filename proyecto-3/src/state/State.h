@@ -45,25 +45,31 @@ public:
     }
 
     void initializeLights() {
-        Light* l1 = new Light(0, glm::vec3(-2.0f, 5.0f, -2.0f));
+        // red 
+        Light* l1 = new Light(0, glm::vec3(-1.0f, 0.5f, -1.0f));
         l1->diffuse  = glm::vec3(1.0f, 0.196f, 0.098f);
-        l1->ambient  = glm::vec3(1.0f, 0.196f, 0.098f) * 0.144f;
+        l1->ambient  = glm::vec3(0.3f);
         l1->specular = glm::vec3(0.5f);
-        l1->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, true);
+        // circle  
+        l1->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -1.0f), 7.0f, 0.0f, true);
         lights.push_back(l1);
 
-        Light* l2 = new Light(1, glm::vec3(0.0f, 5.0f, 0.0f));
+        // green
+        Light* l2 = new Light(1, glm::vec3(0.0f, 4.0f, 0.0f));
         l2->diffuse  = glm::vec3(0.196f, 1.0f, 0.098f);
-        l2->ambient  = glm::vec3(0.196f, 1.0f, 0.098f) * 0.144f;
+        l2->ambient  = glm::vec3(0.3f);
         l2->specular = glm::vec3(0.5f);
+        // circle 
         l2->animation = new CircleAnimation(glm::vec3(-2.0f, -2.0f, -2.0f), 7.0f, 0.0f, false);
         lights.push_back(l2);
 
-        Light* l3 = new Light(2, glm::vec3(2.0f, 5.0f, 2.0f));
+        // blue 
+        Light* l3 = new Light(2, glm::vec3(-4.5f, 1.0f, 2.0f));
         l3->diffuse  = glm::vec3(0.098f, 0.196f, 1.0f);
-        l3->ambient  = glm::vec3(0.098f, 0.196f, 1.0f) * 0.144f;
+        l3->ambient  = glm::vec3(0.3f);
         l3->specular = glm::vec3(0.5f);
-        l3->animation = new CircleAnimation(glm::vec3(-3.0f, -3.0f, -3.0f), 7.0f, 0.0f, false);
+        // circle
+        l3->animation = new CircleAnimation(glm::vec3(5.0f, -3.0f, -3.0f), 7.0f, 0.0f, false);
         lights.push_back(l3);
     }
 
