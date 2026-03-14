@@ -78,9 +78,6 @@ public:
 
     void loadScene(const string& path)
     {
-        for (auto obj : objects) delete obj;
-        objects.clear();
-
         vector<ObjectData> sceneData = FileLoader::loadScene(path);
         for (const auto& objData : sceneData) {
             Object* newObj = new Object();
@@ -104,7 +101,7 @@ public:
             objects.push_back(newObj);
         }
 
-        Sphere* sphere = new Sphere(0.4f, glm::vec3(0.0f, 0.5f, 0.0f));
+        Sphere* sphere = new Sphere(1.2f, glm::vec3(-3.0f, 0.5f, -2.5f));
         sphere->name = "parametric_sphere";
         objects.push_back(sphere);
 
