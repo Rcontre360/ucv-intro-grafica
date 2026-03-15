@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+	<PropertyGroup Label="Globals">
+		<VCProjectVersion>17.0</VCProjectVersion>
+		<Keyword>Win32Proj</Keyword>
+		<ProjectGuid>{eeeb3bbc-cfd9-4e29-9fca-300e117bc351}</ProjectGuid>
+		<RootNamespace>Proyecto1</RootNamespace>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<PropertyGroup Label="Configuration">
+		<ConfigurationType>Application</ConfigurationType>
+		<PlatformToolset>v143</PlatformToolset>
+		<CharacterSet>Unicode</CharacterSet>
+	</PropertyGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<WarningLevel>Level3</WarningLevel>
+			<SDLCheck>true</SDLCheck>
+			<ConformanceMode>true</ConformanceMode>
+			<LanguageStandard>stdcpp20</LanguageStandard>
+			<PreprocessorDefinitions>NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)include\stb;$(ProjectDir)include\glm;$(ProjectDir)include\GLFW;$(ProjectDir)include\glad;$(ProjectDir)include\assimp;$(ProjectDir)include\imgui;$(ProjectDir)include\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Console</SubSystem>
+			<AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<AdditionalDependencies>glfw3.lib;opengl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+		<ClCompile>
+			<UseDebugLibraries>true</UseDebugLibraries>
+			<PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+		</ClCompile>
+		<Link>
+			<GenerateDebugInformation>true</GenerateDebugInformation>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+		<ClCompile>
+			<UseDebugLibraries>false</UseDebugLibraries>
+			<WholeProgramOptimization>true</WholeProgramOptimization>
+			<FunctionLevelLinking>true</FunctionLevelLinking>
+			<IntrinsicFunctions>true</IntrinsicFunctions>
+			<PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+		</ClCompile>
+		<Link>
+			<EnableCOMDATFolding>true</EnableCOMDATFolding>
+			<OptimizeReferences>true</OptimizeReferences>
+			<GenerateDebugInformation>true</GenerateDebugInformation>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<ItemGroup>
+		<ClCompile Include="include\imgui\backends\imgui_impl_glfw.cpp" />
+		<ClCompile Include="include\imgui\backends\imgui_impl_opengl3.cpp" />
+		<ClCompile Include="include\imgui\imgui.cpp" />
+		<ClCompile Include="include\imgui\imgui_demo.cpp" />
+		<ClCompile Include="include\imgui\imgui_draw.cpp" />
+		<ClCompile Include="include\imgui\imgui_tables.cpp" />
+		<ClCompile Include="include\imgui\imgui_widgets.cpp" />
+		<ClCompile Include="src\glad.c" />
+		<ClCompile Include="src\Main.cpp" />
+		<ClCompile Include="src\stb_image.cpp" />
+	</ItemGroup>
+	<ItemGroup>
+		<Library Include="lib\glfw3.lib" />
+	</ItemGroup>
+	<ItemGroup>
+		<ClInclude Include="src\PixelRender.h" />
+		<ClInclude Include="src\state\C3DViewer.h" />
+		<ClInclude Include="src\state\State.h" />
+		<ClInclude Include="src\submesh\Base.h" />
+		<ClInclude Include="src\submesh\Submesh.h" />
+		<ClInclude Include="src\utils\Camera.h" />
+		<ClInclude Include="src\utils\FileLoader.h" />
+		<ClInclude Include="src\utils\FPSCounter.h" />
+		<ClInclude Include="src\utils\Shaders.h" />
+		<ClInclude Include="src\utils\Utils.h" />
+	</ItemGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
