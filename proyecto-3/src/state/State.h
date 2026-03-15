@@ -84,12 +84,6 @@ public:
         for (Object* obj : objects) obj->draw(config);
     }
 
-    void loadScene(const string& path)
-    {
-        vector<ObjectData> sceneData = FileLoader::loadScene(path);
-        createFromData(sceneData);
-    }
-
     void createFromData(vector<ObjectData>& sceneData) {
         for (auto& objData : sceneData) {
             Object* newObj = new Object();
