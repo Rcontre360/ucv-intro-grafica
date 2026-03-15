@@ -68,7 +68,7 @@ public:
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
         if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
-        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); // New: Clean up normal shader program
+        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); 
         if (pickingTexture) glDeleteTextures(1, &pickingTexture);
         if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
         if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
@@ -142,15 +142,19 @@ public:
         return true;
     }
 
-    void mouseCameraMovement(double deltaTime) {
-        float speed = (float)(1.0 * deltaTime); // Adjust speed constant as needed
+    void processContinuousInput() {
+        float speed = 0.02;
+        float rotationSpeed = 5.0;
 
-        if (isFPSMode) {
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                Camera::getInstance().processKeyboard(FORWARD, speed);
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                Camera::getInstance().processKeyboard(BACKWARD, speed);
-        }
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(FORWARD, speed);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            Camera::getInstance().processKeyboard(BACKWARD, speed);
+
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+            Camera::getInstance().processMouseMovement(-rotationSpeed, 0, false);
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+            Camera::getInstance().processMouseMovement(rotationSpeed, 0, false);
     }
 
     void mainLoop()
@@ -160,16 +164,21 @@ public:
             fpsCounter->framesPerSecondAvg(glfwGetTime());
             sprintf(fpsText, "FPS: %.1f",fpsCounter->getCount()); 
 
-            mouseCameraMovement(fpsCounter->getDelta(glfwGetTime()));
+            processContinuousInput();
             glfwPollEvents();
 
             if (appState && appState->lineAntialiasing) {
                 glEnable(GL_MULTISAMPLE);
+                glEnable(GL_LINE_SMOOTH);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
             } else {
                 glDisable(GL_MULTISAMPLE);
                 glDisable(GL_LINE_SMOOTH);
+                glDisable(GL_BLEND);
             }
+            
 
             if (appState && appState->enableBackfaceCulling) {
                 glEnable(GL_CULL_FACE);
@@ -198,14 +207,6 @@ private:
         {
             if (key == GLFW_KEY_ESCAPE)
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
-            if (key == GLFW_KEY_UP)
-                Camera::getInstance().processKeyboard(FORWARD, 1);
-            if (key == GLFW_KEY_DOWN)
-                Camera::getInstance().processKeyboard(BACKWARD, 1);
-            if (key == GLFW_KEY_LEFT)
-                Camera::getInstance().processMouseMovement(-10, 0, false);
-            if (key == GLFW_KEY_RIGHT)
-                Camera::getInstance().processMouseMovement(10, 0, false);
 
             if (key == GLFW_KEY_SPACE) {
                 isFPSMode = !isFPSMode;
@@ -436,7 +437,7 @@ private:
                     }
                 }
                 // FPS Display
-                ImGui::Checkbox("Show##FPS", &showFramesSecond);
+                ImGui::Checkbox("Show FPS##FPS", &showFramesSecond);
                 if (showFramesSecond)
                     ImGui::TextUnformatted(fpsText); // Display FPS
             }

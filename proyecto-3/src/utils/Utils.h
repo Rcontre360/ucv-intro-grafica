@@ -56,6 +56,8 @@ inline BoundingBox getBoundingBox(const vector<Vertex>& vertices) {
     return box;
 }
 
+// i had performance issues when loading locations on each frame. So this is a cache for it
+// the performance issue manifests as an OS warning telling that the program is unresponsive
 inline GLint getCachedUniformLocation(GLuint program, const string& name) {
     static unordered_map<GLuint, unordered_map<string, GLint>> cache;
     auto& programCache = cache[program];

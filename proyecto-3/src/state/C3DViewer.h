@@ -139,6 +139,8 @@ public:
         glViewport(0, 0, width, height);
 
         // Start loading scene in a background thread
+        // when starting the app linux throws a "unresponsive" issue that disappears when the program
+        // fully loads. So we added a loading screen and a separated thread to load the scene
         loadingThread = thread([this]() {
             try {
                 auto data = FileLoader::loadScene("assets/scene/scene.obj");
