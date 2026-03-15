@@ -68,7 +68,7 @@ public:
 
         if (shaderProgram) glDeleteProgram(shaderProgram);
         if (pickingShaderProgram) glDeleteProgram(pickingShaderProgram);
-        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); // New: Clean up normal shader program
+        if (normalShaderProgram) glDeleteProgram(normalShaderProgram); 
         if (pickingTexture) glDeleteTextures(1, &pickingTexture);
         if (pickingDepthStencilRBO) glDeleteRenderbuffers(1, &pickingDepthStencilRBO);
         if (pickingFBO) glDeleteFramebuffers(1, &pickingFBO);
@@ -143,7 +143,7 @@ public:
     }
 
     void processContinuousInput() {
-        float speed = 0.04;
+        float speed = 0.02;
         float rotationSpeed = 5.0;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
@@ -437,7 +437,7 @@ private:
                     }
                 }
                 // FPS Display
-                ImGui::Checkbox("Show##FPS", &showFramesSecond);
+                ImGui::Checkbox("Show FPS##FPS", &showFramesSecond);
                 if (showFramesSecond)
                     ImGui::TextUnformatted(fpsText); // Display FPS
             }

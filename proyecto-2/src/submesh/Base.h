@@ -149,15 +149,18 @@ public:
 
     // gets vertex object in the world. Basically apply transformations to the vertex we have on cpu
     vector<Vertex> getWorldVertices() const {
-        glm::mat4 transformMat = getTransform();
+        glm::mat4 model = getTransform();
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
 
         vector<Vertex> worldV;
         worldV.reserve(vertices.size());
 
         for (const auto& v : vertices) {
             Vertex res = v;
-            glm::vec4 worldPos = transformMat * glm::vec4(v.position, 1.0f);
+            glm::vec4 worldPos = model * glm::vec4(v.position, 1.0f);
             res.position = glm::vec3(worldPos);
+
+            res.normal = glm::normalize(normalMatrix * v.normal);
 
             worldV.push_back(res);
         }

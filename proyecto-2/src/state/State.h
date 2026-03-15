@@ -13,7 +13,7 @@
 #include "../utils/FileLoader.h"
 #include "../utils/Utils.h"
 #include "../utils/Shaders.h"
-#include "../utils/Camera.h" // Added this line to include Camera.h
+#include "../utils/Camera.h" 
 
 using namespace std;
 
@@ -191,7 +191,7 @@ public:
         if (globalBoundingBox)
             globalBoundingBox->setTranslate(offset);
             
-        center += offset; // Update global center
+        center += offset; 
     }
 
     void translateSubmesh(int index, const glm::vec3& offset)
@@ -211,7 +211,6 @@ public:
             shouldUpdateCenter = false;
         }
 
-        // Use camera basis for intuitive rotation
         glm::vec3 camRight = Camera::getInstance().right;
         glm::vec3 camUp = Camera::getInstance().up;
 

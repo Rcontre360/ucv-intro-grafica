@@ -21,9 +21,11 @@ public:
     float boundingBoxColor[3] = { 1.0f, 0.0f, 1.0f };
     BaseSubmesh* boundingBox = nullptr;
     BaseSubmesh* normals = nullptr;
+    float localDiagonal = 0.0f; 
 
     Submesh(const vector<Vertex>& vertices) : BaseSubmesh(vertices){
         BoundingBox box = setupBoundingBox(vertices);
+        localDiagonal = glm::distance(box.min, box.max); 
         setupNormals(vertices,box);
     }
 
@@ -43,11 +45,9 @@ public:
 
         if (config.showNormals && normals) {
             glm::mat4 model = getTransform();
-            BoundingBox localBounds = makeBoundingBox(this->vertices);
 
             float scaleFactor = std::max({scale.x, scale.y, scale.z});
-            float diagonalLength = glm::distance(localBounds.min, localBounds.max) * scaleFactor;
-            float currentNormalLength = diagonalLength / 100 * config.normalWidth;
+            float currentNormalLength = (localDiagonal * scaleFactor) / 100.0f * config.normalWidth;
 
             normals->drawAsNormals(config, model, config.normalColor, currentNormalLength);
             glUseProgram(config.shaderProgram); 

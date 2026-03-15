@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
 #include <vector>
+#include <map>
 
 using namespace std;
 
@@ -55,49 +56,61 @@ BoundingBox makeBoundingBox(const vector<Vertex>& vertices){
     return { minBound, maxBound, center };
 }
 
-void setGpuVariable(GLuint program, const string& name, const glm::mat4& value) {
+static GLint getCachedUniformLocation(GLuint program, const string& name) {
+    static map<pair<GLuint, string>, GLint> locationCache;
+    auto key = make_pair(program, name);
+    auto it = locationCache.find(key);
+    if (it != locationCache.end()) return it->second;
+
     GLint location = glGetUniformLocation(program, name.c_str());
+    locationCache[key] = location;
+    return location;
+}
+
+void setGpuVariable(GLuint program, const string& name, const glm::mat4& value) {
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
     }
 }
 
 void setGpuVariable(GLuint program, const string& name, const glm::mat3& value) {
-    GLint location = glGetUniformLocation(program, name.c_str());
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
     }
 }
 
-void setGpuVariable(GLuint program, const string& name, const glm::vec3& value) {    GLint location = glGetUniformLocation(program, name.c_str());
+void setGpuVariable(GLuint program, const string& name, const glm::vec3& value) {    
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniform3fv(location, 1, glm::value_ptr(value));
     }
 }
 
 void setGpuVariable(GLuint program, const string& name, const glm::vec4& value) {
-    GLint location = glGetUniformLocation(program, name.c_str());
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniform4fv(location, 1, glm::value_ptr(value));
     }
 }
 
 void setGpuVariable(GLuint program, const string& name, float value) {
-    GLint location = glGetUniformLocation(program, name.c_str());
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniform1f(location, value);
     }
 }
 
 void setGpuVariable(GLuint program, const string& name, int value) {
-    GLint location = glGetUniformLocation(program, name.c_str());
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniform1i(location, value);
     }
 }
 
 void setGpuVariable(GLuint program, const string& name, bool value) {
-    GLint location = glGetUniformLocation(program, name.c_str());
+    GLint location = getCachedUniformLocation(program, name);
     if (location != -1) {
         glUniform1i(location, static_cast<int>(value));
     }
