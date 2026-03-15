@@ -190,6 +190,8 @@ public:
         }
         if (globalBoundingBox)
             globalBoundingBox->setTranslate(offset);
+            
+        center += offset; // Update global center
     }
 
     void translateSubmesh(int index, const glm::vec3& offset)
@@ -209,14 +211,18 @@ public:
             shouldUpdateCenter = false;
         }
 
+        // Use camera basis for intuitive rotation
+        glm::vec3 camRight = Camera::getInstance().right;
+        glm::vec3 camUp = Camera::getInstance().up;
+
         for (Submesh* obj : shapes) {
-            obj->setRotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
-            obj->setRotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+            obj->setRotate(angleX, camRight, center); 
+            obj->setRotate(angleY, camUp, center);
         }
 
         if (globalBoundingBox){
-            globalBoundingBox->setRotate(angleX, glm::vec3(1.0f, 0.0f, 0.0f), center); 
-            globalBoundingBox->setRotate(angleY, glm::vec3(0.0f, 1.0f, 0.0f), center);
+            globalBoundingBox->setRotate(angleX, camRight, center); 
+            globalBoundingBox->setRotate(angleY, camUp, center);
         }
     }
 

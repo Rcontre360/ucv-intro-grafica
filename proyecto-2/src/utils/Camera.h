@@ -22,15 +22,16 @@ public:
     Camera& operator=(const Camera&) = delete;
 
     glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
+    
     glm::vec3 front = glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 up;
-    glm::vec3 right;
+    glm::vec3 up    = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
     glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
     float yaw = -90.0f;
     float pitch = 0.0f;
 
-    float movementSpeed = 0.5f;
+    float movementSpeed = 2.5f;
     float mouseSensitivity = 0.1f;
     float zoom = 45.0f;
 
@@ -58,8 +59,6 @@ public:
             position += front * velocity;
         if (direction == BACKWARD)
             position -= front * velocity;
-
-        updateCameraVectors();
     }
 
     void processMouseMovement(float xoffset, float yoffset, bool constrainPitch = true) {
@@ -80,7 +79,7 @@ public:
     }
 
 private:
-    inline static Camera* instance = nullptr; // Initialize static member here
+    inline static Camera* instance = nullptr; 
 
     Camera(){
         updateCameraVectors();
@@ -92,7 +91,8 @@ private:
         newFront.y = sin(glm::radians(pitch));
         newFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
         front = glm::normalize(newFront);
+        
         right = glm::normalize(glm::cross(front, worldUp));
-        up = glm::normalize(glm::cross(right, front));
+        up    = glm::normalize(glm::cross(right, front));
     }
 };
